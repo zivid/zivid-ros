@@ -1,0 +1,20 @@
+__version__: 4
+Configuration:
+  ComputeDevice:
+    SelectionFilter: ""
+    Type: CPU
+    Vendor: Any
+  DriverConfig:
+    ToshibaTeli:
+      VersionCheck: yes
+  Logging:
+    Asynchronous: yes
+    CrashHandler: yes
+    Directory: ""
+    Enabled: yes
+    FlushOnExit: yes
+    HistorySize: 30
+    MaxFileSizeMB: 50
+    MaxTotalSizeMB: 1000
+    RotationCount: 0
+    WriteInterval: 200

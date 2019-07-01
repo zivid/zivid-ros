@@ -1,0 +1,32 @@
+stages:
+  - stage: Code_Analysis
+    jobs:
+    - job: Code_Analysis
+      pool:
+        vmImage: ubuntu-16.04
+      steps:
+      - script: "CI_TEST_OS=ros:melodic-ros-base-bionic ./continuous-integration/run_code_analysis_in_docker.sh"
+  - stage: Build_And_Test
+    jobs:
+    - job: Build_And_Test
+      pool:
+        vmImage: ubuntu-16.04
+      strategy:
+        matrix:
+          Ubuntu1604_G++_7:
+            os: 'ros:kinetic-ros-base-xenial'
+            compiler: 'g++-7'
+          Ubuntu1804_G++_7:
+            os: 'ros:melodic-ros-base-bionic'
+            compiler: 'g++-7'
+          Ubuntu1804_G++_8:
+            os: 'ros:melodic-ros-base-bionic'
+            compiler: 'g++-8'
+          Ubuntu1804_G++_9:
+            os: 'ros:melodic-ros-base-bionic'
+            compiler: 'g++-9'
+          Ubuntu1804_Clang:
+            os: 'ros:melodic-ros-base-bionic'
+            compiler: 'clang++-7'
+      steps:
+      - script: "CI_TEST_OS=$(os) CI_TEST_COMPILER=$(compiler) ./continuous-integration/run_build_and_test_in_docker.sh"

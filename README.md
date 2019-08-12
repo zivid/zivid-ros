@@ -5,7 +5,7 @@ This is the official ROS driver for [Zivid 3D cameras](https://www.zivid.com/).
 **Note:** Current version is 0.9.0. API and behavior are still subject to changes. When 1.0.0 is
 released the API will be stable.
 
-[![Build Status](https://img.shields.io/azure-devops/build/zivid-devops/83f1ca39-6eb0-4fd3-939c-c9cec95a5b26/1/master.svg)](https://dev.azure.com/zivid-devops/zivid-ros/_build/latest?definitionId=1&branchName=master)
+[![Build Status][ci-badge]][ci-url]
 
 ---
 
@@ -456,3 +456,7 @@ cameras. If you cannot find a solution to your issue, please contact support@ziv
 This FTP (Focused Technical Project) has received funding from the European Union's
 Horizon 2020 research and innovation programme under the project ROSIN with the
 grant agreement No 732287. For more information, visit [rosin-project.eu](http://rosin-project.eu/).
+
+
+[ci-badge]: https://img.shields.io/azure-devops/build/zivid-devops/376f5fda-ba80-4d6c-aaaa-cbcd5e0ad6c0/2/master.svg
+[ci-url]: https://dev.azure.com/zivid-devops/zivid-ros/_build/latest?definitionId=1&branchName=master

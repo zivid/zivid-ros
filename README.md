@@ -121,7 +121,7 @@ tool available in the "Zivid Tools" package to confirm that your system has been
 that the camera is discovered by your PC. You can also open Zivid Studio and connect to the camera.
 Close Zivid Studio before continuing with the rest of this guide.
 
-Run the sample_capture.launch file to test that everything is working:
+Run the sample_capture_cpp.launch file to test that everything is working:
 
 ```bash
 cd ~/catkin_ws && source devel/setup.bash

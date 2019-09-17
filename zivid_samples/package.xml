@@ -6,6 +6,9 @@
   use of the zivid_camera package.</description>
   <maintainer email="support@zivid.com">Zivid</maintainer>
   <license>BSD3</license>
+  <url type="website>">https://zivid.com</url>
+  <url type="repository">https://github.com/zivid/zivid-ros</url>
+  <url type="bugtracker">https://github.com/zivid/zivid-ros/issues</url>
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>rospy</build_depend>

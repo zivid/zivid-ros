@@ -38,6 +38,7 @@ install_opencl_cpu_runtime || exit $?
 function install_www_deb {
     TMP_DIR=$(mktemp --tmpdir --directory install_www_deb-XXXX) || exit $?
     pushd $TMP_DIR || exit $?
+    echo "Downloading Zivid debian package $1"
     wget -q "$@" || exit $?
     echo "Installing Zivid debian package $1"
     apt-yes install --fix-broken ./*deb || exit $?
@@ -60,17 +61,27 @@ else
     exit 1
 fi
 
-echo "Install Zivid debian packages"
+echo "Install Zivid and Telicam debian packages"
+
+ZIVID_RELEASE_DIR="https://www.zivid.com/hubfs/softwarefiles/releases/$CI_TEST_ZIVID_VERSION"
+ZIVID_TELICAM_SDK_DEB="zivid-telicam-driver_2.0.0.1-1_amd64.deb"
+
+if [[ "$CI_TEST_ZIVID_VERSION" =~ ^1\.[3-4]\..* ]]; then
+    # This can be removed when the minimum required Zivid version is bumped to
+    # 1.5.0 or newer.
+    echo "Zivid API version is 1.3 or 1.4, use old telicam-sdk deb."
+    ZIVID_TELICAM_SDK_DEB="telicam-sdk_2.0.0.1-1_amd64.deb"
+fi
 
 if [[ "$UBUNTU_VERSION" == "16.04" ]]; then
 
-    install_www_deb https://www.zivid.com/hubfs/softwarefiles/releases/1.3.0+bb9ee328-10/u16/telicam-sdk_2.0.0.1-1_amd64.deb || exit $?
-    install_www_deb https://www.zivid.com/hubfs/softwarefiles/releases/1.3.0+bb9ee328-10/u16/zivid_1.3.0+bb9ee328-10_amd64.deb || exit $?
+    install_www_deb "$ZIVID_RELEASE_DIR/u16/${ZIVID_TELICAM_SDK_DEB}" || exit $?
+    install_www_deb "$ZIVID_RELEASE_DIR/u16/zivid_${CI_TEST_ZIVID_VERSION}_amd64.deb" || exit $?
 
 elif [[ "$UBUNTU_VERSION" == "18.04" ]]; then
 
-    install_www_deb https://www.zivid.com/hubfs/softwarefiles/releases/1.3.0+bb9ee328-10/u18/telicam-sdk_2.0.0.1-1_amd64.deb || exit $?
-    install_www_deb https://www.zivid.com/hubfs/softwarefiles/releases/1.3.0+bb9ee328-10/u18/zivid_1.3.0+bb9ee328-10_amd64.deb || exit $?
+    install_www_deb "$ZIVID_RELEASE_DIR/u18/${ZIVID_TELICAM_SDK_DEB}" || exit $?
+    install_www_deb "$ZIVID_RELEASE_DIR/u18/zivid_${CI_TEST_ZIVID_VERSION}_amd64.deb" || exit $?
 
 else
     echo "Unhandled OS $UBUNTU_VERSION"

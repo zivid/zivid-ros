@@ -1,3 +1,5 @@
+variables:
+  newest_zivid_version: '1.5.0+63f281e2-26'
 stages:
   - stage: Code_Analysis
     jobs:
@@ -5,28 +7,25 @@ stages:
       pool:
         vmImage: ubuntu-16.04
       steps:
-      - script: "CI_TEST_OS=ros:melodic-ros-base-bionic ./continuous-integration/run_code_analysis_in_docker.sh"
-  - stage: Build_And_Test
+      - script: 'CI_TEST_OS=ros:melodic-ros-base-bionic ./continuous-integration/run_code_analysis_in_docker.sh'
+  - stage: Build_And_Test_Newest_Zivid_Melodic
     jobs:
-    - job: Build_And_Test
-      pool:
-        vmImage: ubuntu-16.04
-      strategy:
-        matrix:
-          Ubuntu1604_G++_7:
-            os: 'ros:kinetic-ros-base-xenial'
-            compiler: 'g++-7'
-          Ubuntu1804_G++_7:
-            os: 'ros:melodic-ros-base-bionic'
-            compiler: 'g++-7'
-          Ubuntu1804_G++_8:
-            os: 'ros:melodic-ros-base-bionic'
-            compiler: 'g++-8'
-          Ubuntu1804_G++_9:
-            os: 'ros:melodic-ros-base-bionic'
-            compiler: 'g++-9'
-          Ubuntu1804_Clang:
-            os: 'ros:melodic-ros-base-bionic'
-            compiler: 'clang++-7'
-      steps:
-      - script: "CI_TEST_OS=$(os) CI_TEST_COMPILER=$(compiler) ./continuous-integration/run_build_and_test_in_docker.sh"
+    - template: continuous-integration/azure-pipelines/templates/build_and_test.yml
+      parameters:
+        zivid_versions: ["${{ variables['newest_zivid_version'] }}"]
+        ros_distros: ['ros:melodic-ros-base-bionic']
+        compilers: ['g++-7', 'g++-8', 'g++-9', 'clang++-7']
+  - stage: Build_And_Test_Newest_Zivid_Kinetic
+    jobs:
+    - template: continuous-integration/azure-pipelines/templates/build_and_test.yml
+      parameters:
+        zivid_versions: ["${{ variables['newest_zivid_version'] }}"]
+        ros_distros: ['ros:kinetic-ros-base-xenial']
+        compilers: ['g++-7']
+  - stage: Build_And_Test_Old_Zivid_Melodic_And_Kinetic
+    jobs:
+    - template: continuous-integration/azure-pipelines/templates/build_and_test.yml
+      parameters:
+        zivid_versions: ['1.3.0+bb9ee328-10', '1.4.0+956f554d-12']
+        ros_distros: ['ros:melodic-ros-base-bionic', 'ros:kinetic-ros-base-xenial']
+        compilers: ['g++-7']

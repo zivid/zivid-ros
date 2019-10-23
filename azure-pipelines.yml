@@ -1,3 +1,10 @@
+schedules:
+- cron: "10 22 * * *"
+  displayName: Master nightly build
+  branches:
+    include:
+    - master
+  always: true
 variables:
   newest_zivid_version: '1.5.0+63f281e2-26'
 stages:

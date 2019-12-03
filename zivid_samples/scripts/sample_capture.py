@@ -10,7 +10,7 @@ from sensor_msgs.msg import PointCloud2
 
 class Sample:
     def __init__(self):
-        rospy.init_node("zivid_sample", anonymous=True)
+        rospy.init_node("sample_capture_py", anonymous=True)
 
         rospy.loginfo("Starting sample_capture.py")
 

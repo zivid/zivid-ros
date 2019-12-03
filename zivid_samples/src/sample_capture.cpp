@@ -36,7 +36,7 @@ void on_points(const sensor_msgs::PointCloud2ConstPtr&)
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "sample_capture");
+  ros::init(argc, argv, "sample_capture_cpp");
   ros::NodeHandle n;
 
   ROS_INFO("Starting sample_capture.cpp");

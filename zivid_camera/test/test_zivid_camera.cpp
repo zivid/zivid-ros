@@ -114,6 +114,28 @@ protected:
       ASSERT_FLOAT_EQ(actual[i], expected[i]);
     }
   }
+
+  void assertCameraInfoForFileCamera(const sensor_msgs::CameraInfo& ci)
+  {
+    ASSERT_EQ(ci.width, 1920U);
+    ASSERT_EQ(ci.height, 1200U);
+    ASSERT_EQ(ci.distortion_model, "plumb_bob");
+
+    //     [fx  0 cx]
+    // K = [ 0 fy cy]
+    //     [ 0  0  1]
+    assertArrayFloatEq(
+        ci.K, std::array<double, 9>{ 2759.12329102, 0, 958.78460693, 0, 2758.73681641, 634.94018555, 0, 0, 1 });
+
+    // R = I
+    assertArrayFloatEq(ci.R, std::array<double, 9>{ 1, 0, 0, 0, 1, 0, 0, 0, 1 });
+
+    //     [fx'  0  cx' Tx]
+    // P = [ 0  fy' cy' Ty]
+    //     [ 0   0   1   0]
+    assertArrayFloatEq(ci.P, std::array<double, 12>{ 2759.12329102, 0, 958.78460693, 0, 0, 2758.73681641, 634.94018555,
+                                                     0, 0, 0, 1, 0 });
+  }
 };
 
 TEST_F(ZividNodeTest, testServiceCameraInfoModelName)
@@ -240,27 +262,6 @@ TEST_F(ZividNodeTest, testCaptureCameraInfo)
   auto depth_camera_info_sub =
       subscribe<sensor_msgs::CameraInfo>(depth_camera_info_topic_name, [&](const auto& r) { depth_camera_info = *r; });
 
-  auto assert_camera_info_for_file_camera = [this](const sensor_msgs::CameraInfo& ci) {
-    ASSERT_EQ(ci.width, 1920U);
-    ASSERT_EQ(ci.height, 1200U);
-    ASSERT_EQ(ci.distortion_model, "plumb_bob");
-
-    //     [fx  0 cx]
-    // K = [ 0 fy cy]
-    //     [ 0  0  1]
-    assertArrayFloatEq(
-        ci.K, std::array<double, 9>{ 2759.12329102, 0, 958.78460693, 0, 2758.73681641, 634.94018555, 0, 0, 1 });
-
-    // R = I
-    assertArrayFloatEq(ci.R, std::array<double, 9>{ 1, 0, 0, 0, 1, 0, 0, 0, 1 });
-
-    //     [fx'  0  cx' Tx]
-    // P = [ 0  fy' cy' Ty]
-    //     [ 0   0   1   0]
-    assertArrayFloatEq(ci.P, std::array<double, 12>{ 2759.12329102, 0, 958.78460693, 0, 0, 2758.73681641, 634.94018555,
-                                                     0, 0, 0, 1, 0 });
-  };
-
   enableFirstFrame();
   zivid_camera::Capture capture;
   ASSERT_TRUE(ros::service::call(capture_service_name, capture));
@@ -270,9 +271,9 @@ TEST_F(ZividNodeTest, testCaptureCameraInfo)
   ASSERT_EQ(depth_camera_info_sub.numMessages(), 1U);
 
   ASSERT_TRUE(color_camera_info.has_value());
-  assert_camera_info_for_file_camera(*color_camera_info);
+  assertCameraInfoForFileCamera(*color_camera_info);
   ASSERT_TRUE(depth_camera_info.has_value());
-  assert_camera_info_for_file_camera(*depth_camera_info);
+  assertCameraInfoForFileCamera(*depth_camera_info);
 }
 
 TEST_F(ZividNodeTest, testDynamicReconfigureNodesAreAvailable)

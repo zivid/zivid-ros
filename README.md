@@ -16,7 +16,7 @@ released the API will be stable.
 [**Services**](#services) |
 [**Topics**](#topics) |
 [**Configuration**](#configuration) |
-[**Samples**](#sample-nodes) |
+[**Samples**](#samples) |
 [**FAQ**](#frequently-asked-questions)
 
 ---
@@ -121,11 +121,11 @@ tool available in the "Zivid Tools" package to confirm that your system has been
 that the camera is discovered by your PC. You can also open Zivid Studio and connect to the camera.
 Close Zivid Studio before continuing with the rest of this guide.
 
-Run the sample_capture_cpp.launch file to test that everything is working:
+Launch sample_capture_cpp to test that everything is working:
 
 ```bash
 cd ~/catkin_ws && source devel/setup.bash
-roslaunch zivid_samples sample_capture_cpp.launch
+roslaunch zivid_samples sample.launch type:=sample_capture_cpp
 ```
 
 This launch file starts the `zivid_camera` driver node, the `sample_capture_cpp` node, as well as
@@ -144,7 +144,7 @@ configuration tree.
 
 A more detailed description of the `zivid_camera` driver follows below.
 
-For sample code in C++ and Python, see the [Sample nodes](#sample-nodes) section.
+For sample code in C++ and Python, see the [Samples](#samples) section.
 
 ## Launching the driver
 
@@ -326,7 +326,7 @@ In order to capture a point cloud at least one frame needs to be enabled.
 | `capture/general/filters_saturated_enabled`   | bool   | [Zivid::Settings::Filters::Saturated::Enabled](https://www.zivid.com/software/releases/1.7.0+a115eaa4-4/doc/cpp/classZivid_1_1Settings_1_1Filters_1_1Saturated_1_1Enabled.html)
 | `capture/general/red_balance`                 | double | [Zivid::Settings::RedBalance](https://www.zivid.com/software/releases/1.7.0+a115eaa4-4/doc/cpp/classZivid_1_1Settings_1_1RedBalance.html)
 
-## Sample nodes
+## Samples
 
 In the `zivid_samples` package we have added samples in C++ and Python that demonstrate how to use
 the Zivid ROS driver. These samples can be used as a starting point for your project.
@@ -336,25 +336,16 @@ the Zivid ROS driver. These samples can be used as a starting point for your pro
 This sample performs single 3D captures repeatedly. This sample shows how to [configure](#configuration)
 the capture settings, how to subscribe to the `points` topic, and how to invoke the `capture` service.
 
-**C++**  [(Source code)](./zivid_samples/src/sample_capture.cpp)
+Source code: [C++](./zivid_samples/src/sample_capture.cpp), [Python](./zivid_samples/scripts/sample_capture.py)
 
 Using roslaunch (also launches `roscore`, `zivid_camera`, `rviz` and `rqt_reconfigure`):
 ```bash
-roslaunch zivid_samples sample_capture_cpp.launch
+roslaunch zivid_samples sample.launch type:=sample_capture_cpp
+roslaunch zivid_samples sample.launch type:=sample_capture.py
 ```
 Using rosrun (when `roscore` and `zivid_camera` are running):
 ```bash
 rosrun zivid_samples sample_capture_cpp
-```
-
-**Python** [(Source code)](./zivid_samples/scripts/sample_capture.py)
-
-Using roslaunch (also launches `roscore`, `zivid_camera`, `rviz` and `rqt_reconfigure`):
-```bash
-roslaunch zivid_samples sample_capture_py.launch
-```
-Using rosrun (when `roscore` and `zivid_camera` are running):
-```bash
 rosrun zivid_samples sample_capture.py
 ```
 

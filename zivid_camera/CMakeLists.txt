@@ -30,20 +30,8 @@ find_package(catkin REQUIRED COMPONENTS
   nodelet
 )
 
-find_package(Zivid COMPONENTS Core REQUIRED)
+find_package(Zivid 1.6.0 COMPONENTS Core REQUIRED)
 message(STATUS "Found Zivid version ${Zivid_VERSION}")
-
-set(SUPPORTED_ZIVID_MAJOR_VERSION 1)
-set(MIN_SUPPORTED_ZIVID_VERSION 1.3.0)
-
-if((NOT Zivid_VERSION_MAJOR EQUAL SUPPORTED_ZIVID_MAJOR_VERSION) OR
-   (Zivid_VERSION VERSION_LESS MIN_SUPPORTED_ZIVID_VERSION))
-  MATH(EXPR SUPPORTED_MAJOR_VERSION_PLUS_ONE "${SUPPORTED_ZIVID_MAJOR_VERSION}+1")
-  message(FATAL_ERROR "Zivid version ${Zivid_VERSION} is not supported by this ROS driver! \
-    Zivid ${MIN_SUPPORTED_ZIVID_VERSION} or higher, and less than \
-    ${SUPPORTED_MAJOR_VERSION_PLUS_ONE}.0.0, is required. Hint: Download/install the \
-    newest versions of the Zivid ROS driver and the Zivid SDK.")
-endif()
 
 find_package(OpenMP REQUIRED)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")

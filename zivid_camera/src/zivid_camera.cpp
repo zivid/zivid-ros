@@ -58,6 +58,36 @@ std::string toString(zivid_camera::CameraStatus camera_status)
   return "N/A";
 }
 
+template <typename ConfigDRServerType, typename ZividSettings>
+std::unique_ptr<ConfigDRServerType> setupConfigDRServer(const std::string& serverName, ros::NodeHandle& nh,
+                                                        const ZividSettings& defaultSettings)
+{
+  auto server = std::make_unique<ConfigDRServerType>(serverName, nh);
+
+  // Setup min/max/default and current config based on the provided defaultSettings
+  using ConfigType = typename ConfigDRServerType::ConfigType;
+  const auto min_config = getMinConfigFromZividSettings<ConfigType>(defaultSettings);
+  server->dr_server.setConfigMin(min_config);
+
+  const auto max_config = getMaxConfigFromZividSettings<ConfigType>(defaultSettings);
+  server->dr_server.setConfigMax(max_config);
+
+  const auto default_config = getDefaultConfigFromZividSettings<ConfigType>(defaultSettings);
+  server->dr_server.setConfigDefault(default_config);
+  server->dr_server.updateConfig(default_config);
+
+  // Setup the callback. This will invoke the callback, ensuring that the locally cached
+  // copy of config is updated.
+  auto cb = [& s = *server](const ConfigType& config, uint32_t /*level*/) {
+    ROS_INFO("Config node changed! name='%s'", s.name.c_str());
+    s.config = config;
+  };
+  using CallbackType = typename decltype(server->dr_server)::CallbackType;
+  server->dr_server.setCallback(CallbackType(cb));
+
+  return server;
+}
+
 }  // namespace
 
 namespace zivid_camera
@@ -66,7 +96,6 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   : nh_(nh)
   , priv_(priv)
   , camera_status_(CameraStatus::Idle)
-  , current_capture_general_config_(decltype(current_capture_general_config_)::__getDefault__())
   , use_latched_publisher_for_points_(false)
   , use_latched_publisher_for_color_image_(false)
   , use_latched_publisher_for_depth_image_(false)
@@ -173,13 +202,15 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   camera_connection_keepalive_timer_ =
       nh_.createTimer(ros::Duration(10), &ZividCamera::onCameraConnectionKeepAliveTimeout, this);
 
-  const auto camera_settings = camera_.settings();
-  setupCaptureGeneralConfigNode(camera_settings);
+  const auto defaultSettings = camera_.settings();
+  capture_general_config_dr_server_ =
+      setupConfigDRServer<CaptureGeneralConfigDRServer>("capture/general", nh_, defaultSettings);
 
-  ROS_INFO("Setting up %d capture_frame dynamic_reconfigure nodes", num_capture_frames);
+  ROS_INFO("Setting up %d capture/frame dynamic_reconfigure servers", num_capture_frames);
   for (int i = 0; i < num_capture_frames; i++)
   {
-    setupCaptureFrameConfigNode(i, camera_settings);
+    capture_frame_config_dr_servers_.push_back(
+        setupConfigDRServer<CaptureFrameConfigDRServer>("capture/frame_" + std::to_string(i), nh_, defaultSettings));
   }
 
   ROS_INFO("Advertising topics");
@@ -270,59 +301,6 @@ void ZividCamera::setCameraStatus(CameraStatus camera_status)
   }
 }
 
-void ZividCamera::setupCaptureGeneralConfigNode(const Zivid::Settings& defaultSettings)
-{
-  capture_general_dr_server_ = std::make_unique<dynamic_reconfigure::Server<CaptureGeneralConfig>>(
-      capture_general_dr_server_mutex_, ros::NodeHandle(nh_, "capture/general"));
-
-  // Setup min, max, default and current config
-  const auto min_config = getCaptureGeneralConfigMinFromZividSettings(defaultSettings);
-  capture_general_dr_server_->setConfigMin(min_config);
-
-  const auto max_config = getCaptureGeneralConfigMaxFromZividSettings(defaultSettings);
-  capture_general_dr_server_->setConfigMax(max_config);
-
-  const auto default_config = getCaptureGeneralConfigDefaultFromZividSettings(defaultSettings);
-  capture_general_dr_server_->setConfigDefault(default_config);
-  capture_general_dr_server_->updateConfig(default_config);
-
-  // Setup the cb, this will invoke the cb, ensuring that the locally cached
-  // config is updated.
-  capture_general_dr_server_->setCallback(boost::bind(&ZividCamera::onCaptureGeneralConfigChanged, this, _1));
-}
-
-void ZividCamera::setupCaptureFrameConfigNode(int nodeIdx, const Zivid::Settings& defaultSettings)
-{
-  auto frame_config = std::make_unique<DRFrameConfig>("capture/frame_" + std::to_string(nodeIdx), nh_);
-
-  // Setup min, max, default and current config
-  const auto minConfig = getCaptureFrameConfigMinFromZividSettings(defaultSettings);
-  frame_config->dr_server.setConfigMin(minConfig);
-
-  const auto max_config = getCaptureFrameConfigMaxFromZividSettings(defaultSettings);
-  frame_config->dr_server.setConfigMax(max_config);
-
-  const auto default_config = getCaptureFrameConfigDefaultFromZividSettings(defaultSettings);
-  frame_config->dr_server.setConfigDefault(default_config);
-  frame_config->dr_server.updateConfig(default_config);
-  frame_config->dr_server.setCallback(
-      boost::bind(&ZividCamera::onCaptureFrameConfigChanged, this, _1, std::ref(*frame_config.get())));
-
-  frame_configs_.push_back(std::move(frame_config));
-}
-
-void ZividCamera::onCaptureGeneralConfigChanged(CaptureGeneralConfig& config)
-{
-  ROS_INFO("%s", __func__);
-  current_capture_general_config_ = config;
-}
-
-void ZividCamera::onCaptureFrameConfigChanged(CaptureFrameConfig& config, DRFrameConfig& frame_config)
-{
-  ROS_INFO("%s name='%s'", __func__, frame_config.name.c_str());
-  frame_config.config = config;
-}
-
 bool ZividCamera::cameraInfoModelNameServiceHandler(zivid_camera::CameraInfoModelName::Request&,
                                                     zivid_camera::CameraInfoModelName::Response& res)
 {
@@ -351,15 +329,15 @@ bool ZividCamera::captureServiceHandler(Capture::Request&, Capture::Response&)
   std::vector<Zivid::Settings> settings;
 
   Zivid::Settings base_setting = camera_.settings();
-  applyCaptureGeneralConfigToZividSettings(current_capture_general_config_, base_setting);
+  applyCaptureGeneralConfigToZividSettings(capture_general_config_dr_server_->config, base_setting);
 
-  for (const auto& frame_config : frame_configs_)
+  for (const auto& dr_config_server : capture_frame_config_dr_servers_)
   {
-    if (frame_config->config.enabled)
+    if (dr_config_server->config.enabled)
     {
-      ROS_DEBUG("Config %s is enabled", frame_config->name.c_str());
+      ROS_DEBUG("Config %s is enabled", dr_config_server->name.c_str());
       Zivid::Settings s{ base_setting };
-      applyCaptureFrameConfigToZividSettings(frame_config->config, s);
+      applyCaptureFrameConfigToZividSettings(dr_config_server->config, s);
       settings.push_back(s);
     }
   }

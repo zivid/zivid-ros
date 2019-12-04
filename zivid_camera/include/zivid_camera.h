@@ -34,31 +34,14 @@ public:
   ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv);
 
 private:
-  struct DRFrameConfig
-  {
-    DRFrameConfig(const std::string& _name, ros::NodeHandle& nh)
-      : name(_name), dr_server(dr_server_mutex, ros::NodeHandle(nh, name)), config(CaptureFrameConfig::__getDefault__())
-    {
-    }
-    std::string name;
-    boost::recursive_mutex dr_server_mutex;
-    dynamic_reconfigure::Server<CaptureFrameConfig> dr_server;
-    CaptureFrameConfig config;
-  };
-
   void onCameraConnectionKeepAliveTimeout(const ros::TimerEvent& event);
   void reconnectToCameraIfNecessary();
   void setCameraStatus(CameraStatus camera_status);
-  void setupCaptureGeneralConfigNode(const Zivid::Settings& camera_settings);
-  void setupCaptureFrameConfigNode(int nodeIdx, const Zivid::Settings& camera_settings);
-  void onCaptureGeneralConfigChanged(CaptureGeneralConfig& config);
-  void onCaptureFrameConfigChanged(CaptureFrameConfig& config, DRFrameConfig& frame_config);
   bool cameraInfoModelNameServiceHandler(CameraInfoModelName::Request& req, CameraInfoModelName::Response& res);
   bool cameraInfoSerialNumberServiceHandler(CameraInfoSerialNumber::Request& req,
                                             CameraInfoSerialNumber::Response& res);
   bool captureServiceHandler(Capture::Request& req, Capture::Response& res);
   bool isConnectedServiceHandler(IsConnected::Request& req, IsConnected::Response& res);
-
   void publishFrame(Zivid::Frame&& frame);
   sensor_msgs::PointCloud2ConstPtr makePointCloud2(const std_msgs::Header& header,
                                                    const Zivid::PointCloud& point_cloud);
@@ -67,13 +50,28 @@ private:
   sensor_msgs::CameraInfoConstPtr makeCameraInfo(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud,
                                                  const Zivid::CameraIntrinsics& intrinsics);
 
+  template <class ConfigType_>
+  struct ConfigDRServer
+  {
+    using ConfigType = ConfigType_;
+    ConfigDRServer(const std::string& _name, ros::NodeHandle& nh)
+      : name(_name), dr_server(dr_server_mutex, ros::NodeHandle(nh, name)), config(ConfigType::__getDefault__())
+    {
+    }
+    std::string name;
+    boost::recursive_mutex dr_server_mutex;
+    dynamic_reconfigure::Server<ConfigType> dr_server;
+    ConfigType config;
+  };
+
+  using CaptureGeneralConfigDRServer = ConfigDRServer<CaptureGeneralConfig>;
+  using CaptureFrameConfigDRServer = ConfigDRServer<CaptureFrameConfig>;
+
   ros::NodeHandle nh_;
   ros::NodeHandle priv_;
   ros::Timer camera_connection_keepalive_timer_;
   CameraStatus camera_status_;
-  boost::recursive_mutex capture_general_dr_server_mutex_;
-  std::unique_ptr<dynamic_reconfigure::Server<CaptureGeneralConfig>> capture_general_dr_server_;
-  CaptureGeneralConfig current_capture_general_config_;
+  std::unique_ptr<CaptureGeneralConfigDRServer> capture_general_config_dr_server_;
   bool use_latched_publisher_for_points_;
   bool use_latched_publisher_for_color_image_;
   bool use_latched_publisher_for_depth_image_;
@@ -85,7 +83,7 @@ private:
   ros::ServiceServer camera_info_model_name_service_;
   ros::ServiceServer capture_service_;
   ros::ServiceServer is_connected_service_;
-  std::vector<std::unique_ptr<DRFrameConfig>> frame_configs_;
+  std::vector<std::unique_ptr<CaptureFrameConfigDRServer>> capture_frame_config_dr_servers_;
   Zivid::Application zivid_;
   Zivid::Camera camera_;
   std::string frame_id_;

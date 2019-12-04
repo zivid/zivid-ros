@@ -136,6 +136,18 @@ protected:
     assertArrayFloatEq(ci.P, std::array<double, 12>{ 2759.12329102, 0, 958.78460693, 0, 0, 2758.73681641, 634.94018555,
                                                      0, 0, 0, 1, 0 });
   }
+
+  struct FileCameraExpectedRGB
+  {
+    std::size_t row, col;
+    unsigned char r, g, b;
+  };
+  // The expected RGB's are found by checking the color image of a frame produced by the file
+  // camera (MiscObjects.zdf)
+  std::array<FileCameraExpectedRGB, 4> miscObjectsExpectedRGBs = { FileCameraExpectedRGB{ 0, 0, 4, 4, 2 },
+                                                                   FileCameraExpectedRGB{ 1199, 1919, 10, 8, 7 },
+                                                                   FileCameraExpectedRGB{ 280, 1500, 255, 183, 42 },
+                                                                   FileCameraExpectedRGB{ 700, 800, 120, 105, 82 } };
 };
 
 TEST_F(ZividNodeTest, testServiceCameraInfoModelName)
@@ -248,6 +260,39 @@ TEST_F(ZividNodeTest, testCapturePoints)
   ASSERT_NEAR(z, point.z / 1000, delta);
   ASSERT_NEAR(contrast, point.contrast, delta);
   ASSERT_EQ(rgba, point.rgba);
+}
+
+TEST_F(ZividNodeTest, testCaptureImage)
+{
+  waitForReady();
+
+  std::optional<sensor_msgs::Image> image;
+  auto color_image_sub =
+      subscribe<sensor_msgs::Image>(color_image_color_topic_name, [&](const auto& i) { image = *i; });
+  enableFirstFrame();
+  zivid_camera::Capture capture;
+  ASSERT_TRUE(ros::service::call(capture_service_name, capture));
+  sleepAndSpin(ros::Duration(0.1));
+  ASSERT_TRUE(image.has_value());
+  ASSERT_EQ(image->width, 1920U);
+  ASSERT_EQ(image->height, 1200U);
+  constexpr uint32_t bytes_per_pixel = 3U;
+  ASSERT_EQ(image->step, bytes_per_pixel * 1920U);
+  ASSERT_EQ(image->data.size(), image->step * image->height);
+  ASSERT_EQ(image->encoding, "rgb8");
+  ASSERT_EQ(image->is_bigendian, false);
+
+  auto verifyPixelColor = [&](const FileCameraExpectedRGB& expectedRGB) {
+    const auto index = expectedRGB.row * image->step + 3 * expectedRGB.col;
+    ASSERT_EQ(image->data[index], expectedRGB.r);
+    ASSERT_EQ(image->data[index + 1], expectedRGB.g);
+    ASSERT_EQ(image->data[index + 2], expectedRGB.b);
+  };
+
+  for (const auto& expectedRGB : miscObjectsExpectedRGBs)
+  {
+    verifyPixelColor(expectedRGB);
+  }
 }
 
 TEST_F(ZividNodeTest, testCaptureCameraInfo)

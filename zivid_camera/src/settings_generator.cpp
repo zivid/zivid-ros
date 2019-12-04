@@ -41,10 +41,9 @@ struct HasRange<C, std::void_t<decltype(std::declval<C>().range())>> : std::true
 {
 };
 
-template <typename ZividSetting>
-struct AssertValue
+template <typename T>
+struct DependentFalse : std::false_type
 {
-  static constexpr bool value = false;
 };
 
 void writeToFile(const std::string& file_name, const std::string& text)
@@ -101,7 +100,7 @@ public:
     }
     else
     {
-      static_assert(AssertValue<ValueType>::value, "Could not convert ValueType to ROS type.");
+      static_assert(DependentFalse<ValueType>::value, "Could not convert ValueType to ROS type.");
     }
   }
 
@@ -122,7 +121,7 @@ public:
     }
     else
     {
-      static_assert(AssertValue<RosType>::value, "Could not convert RosType to a ROS typename string.");
+      static_assert(DependentFalse<RosType>::value, "Could not convert RosType to a ROS typename string.");
     }
   }
 
@@ -139,7 +138,7 @@ public:
     }
     else
     {
-      static_assert(AssertValue<RosType>::value, "Could not convert RosType to a string value.");
+      static_assert(DependentFalse<RosType>::value, "Could not convert RosType to a string value.");
     }
   }
 

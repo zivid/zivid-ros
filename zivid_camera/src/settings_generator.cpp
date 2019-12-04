@@ -1,4 +1,5 @@
 #include <Zivid/Settings.h>
+#include <Zivid/Settings2D.h>
 
 #include <dynamic_reconfigure/config_tools.h>
 
@@ -455,6 +456,11 @@ void traverseSettingsTree(const ZividSettingNode& s, Generator& general_settings
   }
 }
 
+void traverseSettings2DTree(const Zivid::Settings2D& s, Generator& frame_settings)
+{
+  s.forEach([&](const auto& c) { frame_settings.apply(c); });
+}
+
 }  // namespace
 
 int main(int /*argc*/, char** /*argv*/)
@@ -465,9 +471,14 @@ int main(int /*argc*/, char** /*argv*/)
 
   traverseSettingsTree(settings, capture_general_gen, capture_frame_gen);
   capture_frame_gen.insertEnabled();
-
   capture_general_gen.writeToFiles();
   capture_frame_gen.writeToFiles();
+
+  const auto settings2D = Zivid::Settings2D{};
+  Generator capture2D_frame_gen(settings2D, "Capture2DFrame");
+  traverseSettings2DTree(settings2D, capture2D_frame_gen);
+  capture2D_frame_gen.insertEnabled();
+  capture2D_frame_gen.writeToFiles();
 
   return 0;
 }

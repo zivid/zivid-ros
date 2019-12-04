@@ -210,9 +210,14 @@ ROS_NAMESPACE=zivid_camera rosrun zivid_camera zivid_camera_node _frame_id:=zivi
 
 `capture` ([zivid_camera/Capture](./zivid_camera/srv/Capture.srv))
 > Invoke this service to trigger a 3D capture. See section [Configuration](#configuration) for how to
-> configure the capture settings. The resulting point cloud is published on topic `points`, color image
+> configure the 3D capture settings. The resulting point cloud is published on topic `points`, color image
 > is published on topic `color/image_color`, and depth image is published on topic `depth/image_raw`.
 > Camera calibration is published on topics `color/camera_info` and `depth/camera_info`.
+
+`capture_2d` ([zivid_camera/Capture2D](./zivid_camera/srv/Capture2D.srv))
+> Invoke this service to trigger a 2D capture. See section [Configuration](#configuration) for how to
+> configure the 2D capture settings. The resulting 2D image is published to topic `color/image_color`.
+> Note: 2D RGB image is also published as a part of 3D capture (see `capture` above.)
 
 `camera_info/model_name` ([zivid_camera/CameraInfoModelName](./zivid_camera/srv/CameraInfoModelName.srv))
 > Returns the camera's model name.
@@ -233,7 +238,9 @@ ROS_NAMESPACE=zivid_camera rosrun zivid_camera zivid_camera_node _frame_id:=zivi
 > Camera calibration and metadata.
 
 `color/image_color` ([sensor_msgs/Image](http://docs.ros.org/api/sensor_msgs/html/msg/Image.html))
-> RGB image. The image is encoded as "rgb8".
+> Color/RGB image. For 3D captures (triggered via `capture` service) the image is encoded as "rgb8".
+> For 2D captures (triggered via `capture_2d` service) the image is encoded as "rgba8", where the
+> alpha channel is always 255.
 
 `depth/camera_info` ([sensor_msgs/CameraInfo](http://docs.ros.org/api/sensor_msgs/html/msg/CameraInfo.html))
 > Camera calibration and metadata.
@@ -250,31 +257,33 @@ ROS_NAMESPACE=zivid_camera rosrun zivid_camera zivid_camera_node _frame_id:=zivi
 
 ## Configuration
 
-The capture settings can be configured using [dynamic_reconfigure](https://wiki.ros.org/dynamic_reconfigure).
+The `zivid_camera` node supports both single-capture (2D and 3D) and HDR-capture (3D). 3D HDR-capture works by taking
+several individual captures (called frames) with different settings (for example different exposure time)
+and combining the captures into one high-quality point cloud. For more information about HDR capture, visit our
+[knowledge base](https://zivid.atlassian.net/wiki/spaces/ZividKB/pages/428143/HDR+Imaging+for+Challenging+Objects).
+
+The capture settings available in the `zivid_camera` node matches the settings in the Zivid API.
+To become more familiar with the available settings and what they do, see the API reference for the
+[Settings](http://www.zivid.com/hubfs/softwarefiles/releases/1.7.0+a115eaa4-4/doc/cpp/classZivid_1_1Settings.html)
+and [Settings2D](http://www.zivid.com/hubfs/softwarefiles/releases/1.7.0+a115eaa4-4/doc/cpp/classZivid_1_1Settings2D.html)
+classes, or use Zivid Studio.
+
+The settings can be configured using [dynamic_reconfigure](https://wiki.ros.org/dynamic_reconfigure).
 Use [rqt_reconfigure](https://wiki.ros.org/rqt_reconfigure) to view or change the settings using a GUI.
 
 ```bash
 rosrun rqt_reconfigure rqt_reconfigure
 ```
 
-The capture settings available in the `zivid_camera` node matches the settings in the Zivid API.
-To become more familiar with the available settings and what they do, see the API reference for the
-[Settings](http://www.zivid.com/hubfs/softwarefiles/releases/1.7.0+a115eaa4-4/doc/cpp/classZivid_1_1Settings.html)
-class or use Zivid Studio.
-
-The `zivid_camera` node supports both single-capture and HDR-capture. HDR-capture works by taking
-several individual captures (called frames) with different settings (for example different exposure time)
-and combining the captures into one high-quality point cloud. For more information about HDR capture, visit our
-[knowledge base](https://zivid.atlassian.net/wiki/spaces/ZividKB/pages/428143/HDR+Imaging+for+Challenging+Objects).
-
 Note that the min, max and default value of the settings can change dependent on what Zivid camera
 model you are using. Therefore you should **not** use the static `__getMin()__`, `__getMax()__` and
-`__getDefault()__` methods of the auto-generated C++ config classes (`zivid_camera::CaptureGeneralConfig` and
-`zivid_camera::CaptureFrameConfig`). Instead, you should query the server for the default values using
-`dynamic_reconfigure::Client<T>::getDefaultConfiguration()`. See the [C++ samples](#samples) for how
-to do this.
+`__getDefault()__` methods of the auto-generated C++ config classes (`zivid_camera::CaptureGeneralConfig`,
+`zivid_camera::CaptureFrameConfig` and `zivid_camera::Capture2DFrameConfig`). Instead, you should
+query the server for the default values using `dynamic_reconfigure::Client<T>::getDefaultConfiguration()`.
+See the [C++ samples](#samples) for how to do this.
 
-The available capture settings are organized into a hierarchy of configuration nodes:
+The available capture settings are organized into a hierarchy of configuration nodes. 3D settings are available
+under the `/capture` namespace, while 2D settings are available under `/capture_2d`.
 
 ```
 /capture
@@ -287,9 +296,11 @@ The available capture settings are organized into a hierarchy of configuration n
         ...
     /general
         ...
+/capture_2d
+    /frame_0
 ```
 
-### Frame settings
+### Frame settings for 3D
 
 `capture/frame_<n>/` contains settings for an individual frame. By default `<n>` can be 0 to 9 for a
 total of 10 frames. The total number of frames can be configured using the launch parameter `num_capture_frames`
@@ -309,9 +320,9 @@ In order to capture a point cloud at least one frame needs to be enabled.
 | `capture/frame_<n>/gain`           | double | [Zivid::Settings::Gain](https://www.zivid.com/software/releases/1.7.0+a115eaa4-4/doc/cpp/classZivid_1_1Settings_1_1Gain.html)
 | `capture/frame_<n>/iris`           | int    | [Zivid::Settings::Iris](https://www.zivid.com/software/releases/1.7.0+a115eaa4-4/doc/cpp/classZivid_1_1Settings_1_1Iris.html)
 
-### General capture settings
+### General settings for 3D
 
-`capture/general` contains settings that apply to all frames in a capture.
+`capture/general` contains settings that apply to all frames in a 3D capture.
 
 | Name                                          | Type   |  Zivid API Setting                     |
 |-----------------------------------------------|--------|----------------------------------------|
@@ -325,6 +336,20 @@ In order to capture a point cloud at least one frame needs to be enabled.
 | `capture/general/filters_reflection_enabled`  | bool   | [Zivid::Settings::Filters::Reflection::Enabled](https://www.zivid.com/software/releases/1.7.0+a115eaa4-4/doc/cpp/classZivid_1_1Settings_1_1Filters_1_1Reflection_1_1Enabled.html)
 | `capture/general/filters_saturated_enabled`   | bool   | [Zivid::Settings::Filters::Saturated::Enabled](https://www.zivid.com/software/releases/1.7.0+a115eaa4-4/doc/cpp/classZivid_1_1Settings_1_1Filters_1_1Saturated_1_1Enabled.html)
 | `capture/general/red_balance`                 | double | [Zivid::Settings::RedBalance](https://www.zivid.com/software/releases/1.7.0+a115eaa4-4/doc/cpp/classZivid_1_1Settings_1_1RedBalance.html)
+
+### Frame settings for 2D
+
+2D settings are available under `capture_2d/frame_0/`. To trigger a 2D capture, invoke the `capture_2d`
+service. Note that `capture_2d/frame_0/enabled` is default false, and must be set to true before
+calling `capture_2d` service, otherwise the service will return an error.
+
+| Name                               | Type   |  Zivid API Setting             |      Note        |
+|------------------------------------|--------|--------------------------------|------------------|
+| `capture_2d/frame_0/brightness`    | double | [Zivid::Settings2D::Brightness](https://www.zivid.com/software/releases/1.7.0+a115eaa4-4/doc/cpp/classZivid_1_1Settings2D_1_1Brightness.html)
+| `capture_2d/frame_0/enabled`       | bool   | |
+| `capture_2d/frame_0/exposure_time` | int    | [Zivid::Settings2D::ExposureTime](https://www.zivid.com/software/releases/1.7.0+a115eaa4-4/doc/cpp/classZivid_1_1Settings2D_1_1ExposureTime.html) | Specified in microseconds (µs)
+| `capture_2d/frame_0/gain`          | double | [Zivid::Settings2D::Gain](https://www.zivid.com/software/releases/1.7.0+a115eaa4-4/doc/cpp/classZivid_1_1Settings2D_1_1Gain.html)
+| `capture_2d/frame_0/iris`          | int    | [Zivid::Settings2D::Iris](https://www.zivid.com/software/releases/1.7.0+a115eaa4-4/doc/cpp/classZivid_1_1Settings2D_1_1Iris.html)
 
 ## Samples
 
@@ -349,12 +374,31 @@ rosrun zivid_samples sample_capture_cpp
 rosrun zivid_samples sample_capture.py
 ```
 
+### Sample Capture 2D
+
+This sample performs 2D captures repeatedly. This sample shows how to [configure](#configuration)
+the 2D capture settings, how to subscribe to the `color/image_color` topic, and how to invoke
+the `capture_2d` service.
+
+Source code: [C++](./zivid_samples/src/sample_capture_2d.cpp), [Python](./zivid_samples/scripts/sample_capture_2d.py)
+
+Using roslaunch (also launches `roscore`, `zivid_camera`, `rviz` and `rqt_reconfigure`):
+```bash
+roslaunch zivid_samples sample.launch type:=sample_capture_2d_cpp
+roslaunch zivid_samples sample.launch type:=sample_capture_2d.py
+```
+Using rosrun (when `roscore` and `zivid_camera` are running):
+```bash
+rosrun zivid_samples sample_capture_2d_cpp
+rosrun zivid_samples sample_capture_2d.py
+```
+
 ## Sample .launch files
 
 ### zivid_camera_with_settings.launch
 
 [zivid_camera_with_settings.launch](./zivid_samples/launch/zivid_camera_with_settings.launch) starts
-the `zivid_camera` node with capture settings set to 3-frame HDR. Modify the settings in this .launch
+the `zivid_camera` node with 3D capture settings set to 3-frame HDR. Modify the settings in this .launch
 file to match your scene.
 
 ```bash

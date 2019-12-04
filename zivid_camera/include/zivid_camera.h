@@ -13,6 +13,7 @@
 
 #include <Zivid/Application.h>
 #include <Zivid/Camera.h>
+#include <Zivid/Image.h>
 
 namespace Zivid
 {
@@ -41,13 +42,20 @@ private:
   bool cameraInfoSerialNumberServiceHandler(CameraInfoSerialNumber::Request& req,
                                             CameraInfoSerialNumber::Response& res);
   bool captureServiceHandler(Capture::Request& req, Capture::Response& res);
+  bool capture2DServiceHandler(Capture::Request& req, Capture::Response& res);
+  void serviceHandlerHandleCameraConnectionLoss();
   bool isConnectedServiceHandler(IsConnected::Request& req, IsConnected::Response& res);
   void publishFrame(Zivid::Frame&& frame);
+  bool shouldPublishPoints() const;
+  bool shouldPublishColorImg() const;
+  bool shouldPublishDepthImg() const;
+  std_msgs::Header makeHeader();
   sensor_msgs::PointCloud2ConstPtr makePointCloud2(const std_msgs::Header& header,
                                                    const Zivid::PointCloud& point_cloud);
   sensor_msgs::ImageConstPtr makeColorImage(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud);
+  sensor_msgs::ImageConstPtr makeColorImage(const std_msgs::Header& header, const Zivid::Image<Zivid::RGBA8>& image);
   sensor_msgs::ImageConstPtr makeDepthImage(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud);
-  sensor_msgs::CameraInfoConstPtr makeCameraInfo(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud,
+  sensor_msgs::CameraInfoConstPtr makeCameraInfo(const std_msgs::Header& header, std::size_t width, std::size_t height,
                                                  const Zivid::CameraIntrinsics& intrinsics);
 
   template <class ConfigType_>
@@ -66,6 +74,7 @@ private:
 
   using CaptureGeneralConfigDRServer = ConfigDRServer<CaptureGeneralConfig>;
   using CaptureFrameConfigDRServer = ConfigDRServer<CaptureFrameConfig>;
+  using Capture2DFrameConfigDRServer = ConfigDRServer<Capture2DFrameConfig>;
 
   ros::NodeHandle nh_;
   ros::NodeHandle priv_;
@@ -82,8 +91,10 @@ private:
   ros::ServiceServer camera_info_serial_number_service_;
   ros::ServiceServer camera_info_model_name_service_;
   ros::ServiceServer capture_service_;
+  ros::ServiceServer capture_2d_service_;
   ros::ServiceServer is_connected_service_;
   std::vector<std::unique_ptr<CaptureFrameConfigDRServer>> capture_frame_config_dr_servers_;
+  std::vector<std::unique_ptr<Capture2DFrameConfigDRServer>> capture_2d_frame_config_dr_servers_;
   Zivid::Application zivid_;
   Zivid::Camera camera_;
   std::string frame_id_;

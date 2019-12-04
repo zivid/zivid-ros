@@ -56,10 +56,13 @@ add_custom_target(
   COMMAND ${SETTINGS_GENERATOR_TARGET_NAME}
   COMMAND chmod a+x ${CMAKE_CURRENT_BINARY_DIR}/CaptureFrame.cfg
   COMMAND chmod a+x ${CMAKE_CURRENT_BINARY_DIR}/CaptureGeneral.cfg
+  COMMAND chmod a+x ${CMAKE_CURRENT_BINARY_DIR}/Capture2DFrame.cfg
   BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/CaptureFrame.cfg
              ${CMAKE_CURRENT_BINARY_DIR}/CaptureGeneral.cfg
+             ${CMAKE_CURRENT_BINARY_DIR}/Capture2DFrame.cfg
              ${CMAKE_CURRENT_BINARY_DIR}/generated_headers/CaptureFrameConfigUtils.h
              ${CMAKE_CURRENT_BINARY_DIR}/generated_headers/CaptureGeneralConfigUtils.h
+             ${CMAKE_CURRENT_BINARY_DIR}/generated_headers/Capture2DFrameConfigUtils.h
   COMMENT "Running generator"
 )
 
@@ -68,6 +71,7 @@ set(LIBRARY_NAME ${PROJECT_NAME})
 generate_dynamic_reconfigure_options(
   ${CMAKE_CURRENT_BINARY_DIR}/CaptureGeneral.cfg
   ${CMAKE_CURRENT_BINARY_DIR}/CaptureFrame.cfg
+  ${CMAKE_CURRENT_BINARY_DIR}/Capture2DFrame.cfg
 )
 add_dependencies(${PROJECT_NAME}_gencfg ${GENERATOR_TARGET_NAME})
 add_service_files(
@@ -75,6 +79,7 @@ add_service_files(
   srv
   FILES
   Capture.srv
+  Capture2D.srv
   CameraInfoModelName.srv
   CameraInfoSerialNumber.srv
   IsConnected.srv

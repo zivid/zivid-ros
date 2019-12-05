@@ -195,11 +195,11 @@ ROS_NAMESPACE=zivid_camera rosrun zivid_camera zivid_camera_node _frame_id:=zivi
 > Specify the frame_id used for all published images and point clouds.
 
 `num_capture_frames` (int, default: 10)
-> Specify the number of dynamic_reconfigure capture_frame nodes that are created during startup of
-> the node. This number defines the maximum number of frames that can be a part of a single capture.
-> All the capture_frames nodes that are created are by default enabled=false (see section
-> [Configuration](#configuration)). If you need to perform HDR with more than 10 enabled frames then increase
-> this number. Otherwise it can be left as default.
+> Specify the number of dynamic_reconfigure `capture/frame_<n>` nodes that are created. This number
+> defines the maximum number of frames that can be a part of a 3D HDR capture. All `capture/frame_<n>`
+> nodes are by default enabled=false (see section [Configuration](#configuration)). If you need to
+> perform 3D HDR capture with more than 10 enabled frames then increase this number. Otherwise it can
+> be left as default.
 
 `serial_number` (string, default: "")
 > Specify the serial number of the Zivid camera to use. Important: When passing this value via
@@ -209,10 +209,10 @@ ROS_NAMESPACE=zivid_camera rosrun zivid_camera zivid_camera_node _frame_id:=zivi
 ## Services
 
 `capture` ([zivid_camera/Capture](./zivid_camera/srv/Capture.srv))
-> Invoke this service to trigger a capture. The capture settings are configured using
-> [dynamic_reconfigure](https://wiki.ros.org/dynamic_reconfigure), see section [Configuration](#configuration).
-> When more than 1 frame is enabled an HDR capture is performed. The resulting point cloud and
-> depth/color images are published as ROS topics.
+> Invoke this service to trigger a 3D capture. See section [Configuration](#configuration) for how to
+> configure the capture settings. The resulting point cloud is published on topic `points`, color image
+> is published on topic `color/image_color`, and depth image is published on topic `depth/image_raw`.
+> Camera calibration is published on topics `color/camera_info` and `depth/camera_info`.
 
 `camera_info/model_name` ([zivid_camera/CameraInfoModelName](./zivid_camera/srv/CameraInfoModelName.srv))
 > Returns the camera's model name.
@@ -267,11 +267,12 @@ several individual captures (called frames) with different settings (for example
 and combining the captures into one high-quality point cloud. For more information about HDR capture, visit our
 [knowledge base](https://zivid.atlassian.net/wiki/spaces/ZividKB/pages/428143/HDR+Imaging+for+Challenging+Objects).
 
-Note that the min, max and default value of the settings can change dependent on
-what Zivid camera model you are using. Therefore you should not use the static `__getMin()__`, `__getMax()__` and
-`__getDefault()__` methods of the auto-generated C++ config classes (`zivid_camera::CaptureGeneralConfig`
-and `zivid_camera::CaptureFrameConfig`). Instead, you should query the server for the default values.
-See the sample code for how to do this.
+Note that the min, max and default value of the settings can change dependent on what Zivid camera
+model you are using. Therefore you should **not** use the static `__getMin()__`, `__getMax()__` and
+`__getDefault()__` methods of the auto-generated C++ config classes (`zivid_camera::CaptureGeneralConfig` and
+`zivid_camera::CaptureFrameConfig`). Instead, you should query the server for the default values using
+`dynamic_reconfigure::Client<T>::getDefaultConfiguration()`. See the [C++ samples](#samples) for how
+to do this.
 
 The available capture settings are organized into a hierarchy of configuration nodes:
 
@@ -295,8 +296,8 @@ total of 10 frames. The total number of frames can be configured using the launc
 (see section [Launch Parameters](#launch-parameters-advanced) above).
 
 `capture/frame_<n>/enabled` controls if frame `<n>` will be included when the `capture/` service is
-invoked. If only one frame is enabled the `capture/` service performs a single-capture. If more than
-one frame is enabled the `capture/` service will perform an HDR-capture. By default enabled is false.
+invoked. If only one frame is enabled the `capture/` service performs a 3D single-capture. If more than
+one frame is enabled the `capture/` service will perform a 3D HDR-capture. By default enabled is false.
 In order to capture a point cloud at least one frame needs to be enabled.
 
 | Name                               | Type   |  Zivid API Setting             |      Note        |
@@ -327,14 +328,13 @@ In order to capture a point cloud at least one frame needs to be enabled.
 
 ## Sample nodes
 
-In the `zivid_samples` package we have added example nodes in C++ and Python that demonstrate
-how to use the Zivid ROS driver. These nodes can be used as a starting point for your project.
+In the `zivid_samples` package we have added samples in C++ and Python that demonstrate how to use
+the Zivid ROS driver. These samples can be used as a starting point for your project.
 
 ### Sample Capture
 
-This sample performs single-captures repeatedly. This sample shows how to configure the capture
-settings using [dynamic_reconfigure](https://wiki.ros.org/dynamic_reconfigure), how to subscribe to
-the `points` topic, and how to invoke the `capture` service.
+This sample performs single 3D captures repeatedly. This sample shows how to [configure](#configuration)
+the capture settings, how to subscribe to the `points` topic, and how to invoke the `capture` service.
 
 **C++**  [(Source code)](./zivid_samples/src/sample_capture.cpp)
 

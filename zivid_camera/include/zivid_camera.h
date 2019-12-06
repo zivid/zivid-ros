@@ -58,18 +58,28 @@ private:
   sensor_msgs::CameraInfoConstPtr makeCameraInfo(const std_msgs::Header& header, std::size_t width, std::size_t height,
                                                  const Zivid::CameraIntrinsics& intrinsics);
 
-  template <class ConfigType_>
-  struct ConfigDRServer
+  template <typename ConfigType_>
+  class ConfigDRServer
   {
+  public:
     using ConfigType = ConfigType_;
-    ConfigDRServer(const std::string& _name, ros::NodeHandle& nh)
-      : name(_name), dr_server(dr_server_mutex, ros::NodeHandle(nh, name)), config(ConfigType::__getDefault__())
+    template <typename ZividSettings>
+    ConfigDRServer(const std::string& name, ros::NodeHandle& nh, const ZividSettings& defaultSettings);
+    void setConfig(const ConfigType& cfg);
+    const ConfigType& config() const
     {
+      return config_;
     }
-    std::string name;
-    boost::recursive_mutex dr_server_mutex;
-    dynamic_reconfigure::Server<ConfigType> dr_server;
-    ConfigType config;
+    const std::string& name() const
+    {
+      return name_;
+    }
+
+  private:
+    std::string name_;
+    boost::recursive_mutex dr_server_mutex_;
+    dynamic_reconfigure::Server<ConfigType> dr_server_;
+    ConfigType config_;
   };
 
   using CaptureGeneralConfigDRServer = ConfigDRServer<CaptureGeneralConfig>;

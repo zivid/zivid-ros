@@ -61,36 +61,6 @@ std::string toString(zivid_camera::CameraStatus camera_status)
   return "N/A";
 }
 
-template <typename ConfigDRServerType, typename ZividSettings>
-std::unique_ptr<ConfigDRServerType> setupConfigDRServer(const std::string& serverName, ros::NodeHandle& nh,
-                                                        const ZividSettings& defaultSettings)
-{
-  auto server = std::make_unique<ConfigDRServerType>(serverName, nh);
-
-  // Setup min/max/default and current config based on the provided defaultSettings
-  using ConfigType = typename ConfigDRServerType::ConfigType;
-  const auto min_config = getMinConfigFromZividSettings<ConfigType>(defaultSettings);
-  server->dr_server.setConfigMin(min_config);
-
-  const auto max_config = getMaxConfigFromZividSettings<ConfigType>(defaultSettings);
-  server->dr_server.setConfigMax(max_config);
-
-  const auto default_config = getDefaultConfigFromZividSettings<ConfigType>(defaultSettings);
-  server->dr_server.setConfigDefault(default_config);
-  server->dr_server.updateConfig(default_config);
-
-  // Setup the callback. This will invoke the callback, ensuring that the locally cached
-  // copy of config is updated.
-  auto cb = [& s = *server](const ConfigType& config, uint32_t /*level*/) {
-    ROS_INFO("Configuration '%s' changed", s.name.c_str());
-    s.config = config;
-  };
-  using CallbackType = typename decltype(server->dr_server)::CallbackType;
-  server->dr_server.setCallback(CallbackType(cb));
-
-  return server;
-}
-
 }  // namespace
 
 namespace zivid_camera
@@ -207,20 +177,20 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
 
   const auto defaultSettings = camera_.settings();
   capture_general_config_dr_server_ =
-      setupConfigDRServer<CaptureGeneralConfigDRServer>("capture/general", nh_, defaultSettings);
+      std::make_unique<CaptureGeneralConfigDRServer>("capture/general", nh_, defaultSettings);
 
   ROS_INFO("Setting up %d capture/frame_<n> dynamic_reconfigure servers", num_capture_frames);
   for (int i = 0; i < num_capture_frames; i++)
   {
     capture_frame_config_dr_servers_.push_back(
-        setupConfigDRServer<CaptureFrameConfigDRServer>("capture/frame_" + std::to_string(i), nh_, defaultSettings));
+        std::make_unique<CaptureFrameConfigDRServer>("capture/frame_" + std::to_string(i), nh_, defaultSettings));
   }
 
   // HDR is not supported in 2D mode, but for future-proofing the 2D configuration API is analogous
   // to 3D except there is only 1 frame.
   ROS_INFO("Setting up 1 capture_2d/frame_<n> dynamic_reconfigure server");
   capture_2d_frame_config_dr_servers_.push_back(
-      setupConfigDRServer<Capture2DFrameConfigDRServer>("capture_2d/frame_0", nh_, Zivid::Settings2D{}));
+      std::make_unique<Capture2DFrameConfigDRServer>("capture_2d/frame_0", nh_, Zivid::Settings2D{}));
 
   ROS_INFO("Advertising topics");
   points_publisher_ = nh_.advertise<sensor_msgs::PointCloud2>("points", 1, use_latched_publisher_for_points_);
@@ -334,15 +304,15 @@ bool ZividCamera::captureServiceHandler(Capture::Request&, Capture::Response&)
   std::vector<Zivid::Settings> settings;
 
   Zivid::Settings base_setting = camera_.settings();
-  applyCaptureGeneralConfigToZividSettings(capture_general_config_dr_server_->config, base_setting);
+  applyCaptureGeneralConfigToZividSettings(capture_general_config_dr_server_->config(), base_setting);
 
   for (const auto& dr_config_server : capture_frame_config_dr_servers_)
   {
-    if (dr_config_server->config.enabled)
+    if (dr_config_server->config().enabled)
     {
-      ROS_DEBUG("Config %s is enabled", dr_config_server->name.c_str());
+      ROS_DEBUG("Config %s is enabled", dr_config_server->name().c_str());
       Zivid::Settings s{ base_setting };
-      applyCaptureFrameConfigToZividSettings(dr_config_server->config, s);
+      applyCaptureFrameConfigToZividSettings(dr_config_server->config(), s);
       settings.push_back(s);
     }
   }
@@ -388,7 +358,7 @@ bool ZividCamera::capture2DServiceHandler(Capture::Request&, Capture::Response&)
     throw std::runtime_error("Internal error: capture_2d_frame_config_dr_servers_ empty");
   }
 
-  if (!capture_2d_frame_config_dr_servers_[0]->config.enabled)
+  if (!capture_2d_frame_config_dr_servers_[0]->config().enabled)
   {
     // 2D capture API in SDK currently only supports single-capture (1 frame). However, we still
     // verify that frame_0/enabled is set. This is for future-proofing and consistency with 3D API.
@@ -396,7 +366,7 @@ bool ZividCamera::capture2DServiceHandler(Capture::Request&, Capture::Response&)
   }
 
   Zivid::Settings2D settings2D;
-  applyCapture2DFrameConfigToZividSettings(capture_2d_frame_config_dr_servers_[0]->config, settings2D);
+  applyCapture2DFrameConfigToZividSettings(capture_2d_frame_config_dr_servers_[0]->config(), settings2D);
   auto frame2D = camera_.capture2D(settings2D);
   if (shouldPublishColorImg())
   {
@@ -620,5 +590,43 @@ sensor_msgs::CameraInfoConstPtr ZividCamera::makeCameraInfo(const std_msgs::Head
 
   return msg;
 }
+
+template <typename ConfigType>
+template <typename ZividSettings>
+ZividCamera::ConfigDRServer<ConfigType>::ConfigDRServer(const std::string& name, ros::NodeHandle& nh,
+                                                        const ZividSettings& defaultSettings)
+  : name_(name), dr_server_(dr_server_mutex_, ros::NodeHandle(nh, name_)), config_(ConfigType::__getDefault__())
+{
+  static_assert(std::is_same_v<ZividSettings, Zivid::Settings> || std::is_same_v<ZividSettings, Zivid::Settings2D>);
+
+  const auto min_config = getMinConfigFromZividSettings<ConfigType>(defaultSettings);
+  dr_server_.setConfigMin(min_config);
+
+  const auto max_config = getMaxConfigFromZividSettings<ConfigType>(defaultSettings);
+  dr_server_.setConfigMax(max_config);
+
+  const auto default_config = getDefaultConfigFromZividSettings<ConfigType>(defaultSettings);
+  dr_server_.setConfigDefault(default_config);
+
+  setConfig(default_config);
+
+  auto cb = [this](const ConfigType& config, uint32_t /*level*/) {
+    ROS_INFO("Configuration '%s' changed", name_.c_str());
+    config_ = config;
+  };
+  using CallbackType = typename decltype(dr_server_)::CallbackType;
+  dr_server_.setCallback(CallbackType(cb));
+}
+
+template <typename ConfigType>
+void ZividCamera::ConfigDRServer<ConfigType>::setConfig(const ConfigType& cfg)
+{
+  config_ = cfg;
+  dr_server_.updateConfig(config_);
+}
+
+template class ZividCamera::ConfigDRServer<zivid_camera::CaptureGeneralConfig>;
+template class ZividCamera::ConfigDRServer<zivid_camera::CaptureFrameConfig>;
+template class ZividCamera::ConfigDRServer<zivid_camera::Capture2DFrameConfig>;
 
 }  // namespace zivid_camera

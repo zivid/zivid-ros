@@ -599,13 +599,13 @@ ZividCamera::ConfigDRServer<ConfigType>::ConfigDRServer(const std::string& name,
 {
   static_assert(std::is_same_v<ZividSettings, Zivid::Settings> || std::is_same_v<ZividSettings, Zivid::Settings2D>);
 
-  const auto min_config = getMinConfigFromZividSettings<ConfigType>(defaultSettings);
-  dr_server_.setConfigMin(min_config);
+  const auto config_min = zividSettingsToMinConfig<ConfigType>(defaultSettings);
+  dr_server_.setConfigMin(config_min);
 
-  const auto max_config = getMaxConfigFromZividSettings<ConfigType>(defaultSettings);
-  dr_server_.setConfigMax(max_config);
+  const auto config_max = zividSettingsToMaxConfig<ConfigType>(defaultSettings);
+  dr_server_.setConfigMax(config_max);
 
-  const auto default_config = getDefaultConfigFromZividSettings<ConfigType>(defaultSettings);
+  const auto default_config = zividSettingsToConfig<ConfigType>(defaultSettings);
   dr_server_.setConfigDefault(default_config);
 
   setConfig(default_config);

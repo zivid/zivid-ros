@@ -253,18 +253,18 @@ private:
   std::stringstream ss_;
 };
 
-class GetConfigMinMaxDefFromZividSettingsGenerator
+class ZividSettingsToMinMaxCurrentValueConfigGenerator
 {
 public:
   enum class Type
   {
+    CurrentValue,
     Min,
     Max,
-    Default
   };
 
-  GetConfigMinMaxDefFromZividSettingsGenerator(const std::string& zivid_settings_class_name,
-                                               const std::string& config_class_name, Type type)
+  ZividSettingsToMinMaxCurrentValueConfigGenerator(const std::string& zivid_settings_class_name,
+                                                   const std::string& config_class_name, Type type)
     : zivid_settings_class_name_(zivid_settings_class_name), config_class_name_(config_class_name), type_(type)
   {
   }
@@ -273,21 +273,24 @@ public:
   void apply(const ZividSettingNode& s)
   {
     using T = NormalizedType<decltype(s)>;
-    if (type_ == Type::Default || HasRange<T>::value)
+    if (type_ == Type::CurrentValue || HasRange<T>::value)
     {
       using VT = typename T::ValueType;
       const auto cfg_id = "cfg." + convertSettingsPathToConfigPath(s.path);
       const auto zivid_class_name = convertSettingsPathToZividClassName(zivid_settings_class_name_, s.path);
 
       const auto valueStr = [&]() {
-        if (type_ == Type::Min || type_ == Type::Max)
+        std::string prefix = "s.get<" + zivid_class_name + ">()";
+        switch (type_)
         {
-          return "s.get<" + zivid_class_name + ">().range()." + type() + "()";
+          case Type::CurrentValue:
+            return prefix + ".value()";
+          case Type::Min:
+            return prefix + ".range().min()";
+          case Type::Max:
+            return prefix + ".range().max()";
         }
-        else
-        {
-          return "s.get<" + zivid_class_name + ">().value()";
-        }
+        throw std::runtime_error(std::string(__func__) + ": Unhandled enum: " + toString(type_));
       }();
 
       if constexpr (std::is_same_v<VT, std::chrono::microseconds>)
@@ -305,39 +308,51 @@ public:
     }
   }
 
-  std::string typeUcFirst()
+  std::string initializeConfigFunction() const
   {
     switch (type_)
     {
+      case Type::CurrentValue:
+        return "__getDefault__";
       case Type::Min:
-        return "Min";
+        return "__getMin__";
       case Type::Max:
-        return "Max";
-      case Type::Default:
-        return "Default";
+        return "__getMax__";
     }
-    return "";
-  }
-
-  std::string type()
-  {
-    auto _type = typeUcFirst();
-    _type[0] = static_cast<char>(std::tolower(_type[0]));
-    return _type;
+    throw std::runtime_error(std::string(__func__) + ": Unhandled enum: " + toString(type_));
   }
 
   std::string str()
   {
     const auto full_class_name = "zivid_camera::" + config_class_name_ + "Config";
+
+    const auto functionNameConfigType = [&]() {
+      switch (type_)
+      {
+        case Type::CurrentValue:
+          return "";
+        case Type::Min:
+          return "Min";
+        case Type::Max:
+          return "Max";
+      }
+      throw std::runtime_error(std::string(__func__) + ": Unhandled enum: " + toString(type_));
+    }();
+
     std::stringstream res;
-    res << "template<> " << full_class_name << " get" << typeUcFirst() << "ConfigFromZividSettings<";
-    res << full_class_name << ">(const Zivid::" << zivid_settings_class_name_ << "& s)\n";
+    res << "template<> " << full_class_name << " zividSettingsTo" << functionNameConfigType << "Config";
+    res << "<" << full_class_name << ">(const Zivid::" << zivid_settings_class_name_ << "& s)\n";
     res << "{\n";
-    res << "  auto cfg = " + full_class_name + "::__get" + typeUcFirst() + "__();\n";
+    res << "  auto cfg = " + full_class_name << "::" << initializeConfigFunction() << "();\n";
     res << ss_.str();
     res << "  return cfg;\n";
     res << "}\n";
     return res.str();
+  }
+
+  static std::string toString(Type t)
+  {
+    return std::to_string(static_cast<std::underlying_type_t<Type>>(t));
   }
 
 private:
@@ -352,12 +367,12 @@ class ConfigUtilsHeaderGenerator
 public:
   ConfigUtilsHeaderGenerator(const std::string& zivid_settings_class_name, const std::string& config_class_name)
     : apply_config_zivid_settings_gen(zivid_settings_class_name, config_class_name)
-    , get_config_min_from_zivid_settings_gen(zivid_settings_class_name, config_class_name,
-                                             GetConfigMinMaxDefFromZividSettingsGenerator::Type::Min)
-    , get_config_max_from_zivid_settings_gen(zivid_settings_class_name, config_class_name,
-                                             GetConfigMinMaxDefFromZividSettingsGenerator::Type::Max)
-    , get_config_def_from_zivid_settings_gen(zivid_settings_class_name, config_class_name,
-                                             GetConfigMinMaxDefFromZividSettingsGenerator::Type::Default)
+    , zivid_settings_to_config_gen(zivid_settings_class_name, config_class_name,
+                                   ZividSettingsToMinMaxCurrentValueConfigGenerator::Type::CurrentValue)
+    , zivid_settings_to_min_config_gen(zivid_settings_class_name, config_class_name,
+                                       ZividSettingsToMinMaxCurrentValueConfigGenerator::Type::Min)
+    , zivid_settings_to_max_config_gen(zivid_settings_class_name, config_class_name,
+                                       ZividSettingsToMinMaxCurrentValueConfigGenerator::Type::Max)
   {
   }
 
@@ -365,9 +380,9 @@ public:
   void apply(const ZividSetting& s)
   {
     apply_config_zivid_settings_gen.apply(s);
-    get_config_min_from_zivid_settings_gen.apply(s);
-    get_config_max_from_zivid_settings_gen.apply(s);
-    get_config_def_from_zivid_settings_gen.apply(s);
+    zivid_settings_to_config_gen.apply(s);
+    zivid_settings_to_min_config_gen.apply(s);
+    zivid_settings_to_max_config_gen.apply(s);
   }
 
   std::string str()
@@ -377,16 +392,16 @@ public:
     res << "// This is an auto-generated header. Do not edit.\n\n";
     res << "#include \"config_utils_common.h\"\n\n";
     res << apply_config_zivid_settings_gen.str() << "\n";
-    res << get_config_min_from_zivid_settings_gen.str() << "\n";
-    res << get_config_max_from_zivid_settings_gen.str() << "\n";
-    res << get_config_def_from_zivid_settings_gen.str() << "\n";
+    res << zivid_settings_to_config_gen.str() << "\n";
+    res << zivid_settings_to_min_config_gen.str() << "\n";
+    res << zivid_settings_to_max_config_gen.str() << "\n";
     return res.str();
   }
 
   ApplyConfigToZividSettingsGenerator apply_config_zivid_settings_gen;
-  GetConfigMinMaxDefFromZividSettingsGenerator get_config_min_from_zivid_settings_gen;
-  GetConfigMinMaxDefFromZividSettingsGenerator get_config_max_from_zivid_settings_gen;
-  GetConfigMinMaxDefFromZividSettingsGenerator get_config_def_from_zivid_settings_gen;
+  ZividSettingsToMinMaxCurrentValueConfigGenerator zivid_settings_to_config_gen;
+  ZividSettingsToMinMaxCurrentValueConfigGenerator zivid_settings_to_min_config_gen;
+  ZividSettingsToMinMaxCurrentValueConfigGenerator zivid_settings_to_max_config_gen;
 };
 
 class Generator

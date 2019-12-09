@@ -14,35 +14,57 @@ catkin_package(
   CATKIN_DEPENDS zivid_camera
 )
 
-################
-## C++ Sample ##
-################
+#################
+## C++ Samples ##
+#################
 
-set(SAMPLE_CPP_NAME "sample_capture_cpp")
-add_executable(${SAMPLE_CPP_NAME} src/sample_capture.cpp)
-add_dependencies(${SAMPLE_CPP_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_include_directories(${SAMPLE_CPP_NAME}
-  SYSTEM PRIVATE
-  ${catkin_INCLUDE_DIRS}
-)
-target_link_libraries(${SAMPLE_CPP_NAME}
-  ${catkin_LIBRARIES}
-)
+function(register_cpp_sample)
+  cmake_parse_arguments(
+    ARG
+    ""
+    "NAME;SRC"
+    ""
+    ${ARGN}
+  )
+  add_executable(${ARG_NAME} ${ARG_SRC})
+  add_dependencies(${ARG_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+  target_include_directories(${ARG_NAME}
+    SYSTEM PRIVATE
+    ${catkin_INCLUDE_DIRS}
+  )
+  target_link_libraries(${ARG_NAME}
+    ${catkin_LIBRARIES}
+  )
+  install(TARGETS ${ARG_NAME}
+    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  )
+endfunction()
 
-install(TARGETS ${SAMPLE_CPP_NAME}
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+register_cpp_sample(NAME sample_capture_cpp SRC src/sample_capture.cpp)
+register_cpp_sample(NAME sample_capture_2d_cpp SRC src/sample_capture_2d.cpp)
 
-###################
-## Python Sample ##
-###################
+####################
+## Python Samples ##
+####################
 
-install(PROGRAMS
-  scripts/sample_capture.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+function(register_python_sample)
+  cmake_parse_arguments(
+    ARG
+    ""
+    "SRC"
+    ""
+    ${ARGN}
+    )
+  install(PROGRAMS
+    ${ARG_SRC}
+    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  )
+endfunction()
+
+register_python_sample(SRC scripts/sample_capture.py)
+register_python_sample(SRC scripts/sample_capture_2d.py)
 
 ####################
 ## Launch scripts ##

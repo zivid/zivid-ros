@@ -9,7 +9,9 @@
 
 #include <zivid_camera/CaptureFrameConfig.h>
 #include <zivid_camera/CaptureGeneralConfig.h>
+#include <zivid_camera/Capture2DFrameConfig.h>
 #include <zivid_camera/Capture.h>
+#include <zivid_camera/Capture2D.h>
 #include <zivid_camera/CameraInfoModelName.h>
 #include <zivid_camera/CameraInfoSerialNumber.h>
 #include <zivid_camera/IsConnected.h>

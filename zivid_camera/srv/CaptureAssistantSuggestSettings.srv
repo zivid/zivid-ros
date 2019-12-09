@@ -1,0 +1,7 @@
+uint8 AMBIENT_LIGHT_FREQUENCY_NONE=0
+uint8 AMBIENT_LIGHT_FREQUENCY_50HZ=1
+uint8 AMBIENT_LIGHT_FREQUENCY_60HZ=2
+
+duration max_capture_time
+uint8 ambient_light_frequency
+---

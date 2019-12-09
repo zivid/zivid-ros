@@ -43,6 +43,8 @@ private:
                                             CameraInfoSerialNumber::Response& res);
   bool captureServiceHandler(Capture::Request& req, Capture::Response& res);
   bool capture2DServiceHandler(Capture::Request& req, Capture::Response& res);
+  bool captureAssistantSuggestSettingsServiceHandler(CaptureAssistantSuggestSettings::Request& req,
+                                                     CaptureAssistantSuggestSettings::Response& res);
   void serviceHandlerHandleCameraConnectionLoss();
   bool isConnectedServiceHandler(IsConnected::Request& req, IsConnected::Response& res);
   void publishFrame(Zivid::Frame&& frame);
@@ -102,6 +104,7 @@ private:
   ros::ServiceServer camera_info_model_name_service_;
   ros::ServiceServer capture_service_;
   ros::ServiceServer capture_2d_service_;
+  ros::ServiceServer capture_assistant_suggest_settings_service_;
   ros::ServiceServer is_connected_service_;
   std::vector<std::unique_ptr<CaptureFrameConfigDRServer>> capture_frame_config_dr_servers_;
   std::vector<std::unique_ptr<Capture2DFrameConfigDRServer>> capture_2d_frame_config_dr_servers_;

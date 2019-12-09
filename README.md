@@ -121,22 +121,27 @@ tool available in the "Zivid Tools" package to confirm that your system has been
 that the camera is discovered by your PC. You can also open Zivid Studio and connect to the camera.
 Close Zivid Studio before continuing with the rest of this guide.
 
-Launch sample_capture_cpp to test that everything is working:
+Launch `sample_capture_assistant.py` to test that everything is working:
 
 ```bash
 cd ~/catkin_ws && source devel/setup.bash
-roslaunch zivid_samples sample.launch type:=sample_capture_cpp
+roslaunch zivid_samples sample.launch type:=sample_capture_assistant.py
 ```
 
-This launch file starts the `zivid_camera` driver node, the `sample_capture_cpp` node, as well as
+This will start the `zivid_camera` driver node, the
+[sample_capture_assistant.py](./zivid_samples/scripts/sample_capture_assistant.py) node, as well as
 [rviz](https://wiki.ros.org/rviz) to visualize the point cloud and the 2D color and depth images
-and [rqt_reconfigure](https://wiki.ros.org/rqt_reconfigure) to adjust the camera settings.
+and [rqt_reconfigure](https://wiki.ros.org/rqt_reconfigure) to view or change capture settings.
 
-The `sample_capture_cpp` node will first configure the capture settings of the camera and then
-trigger captures repeatedly. If everything is working, the output should be visible in rviz. Try to
-adjust the exposure time or the iris in rqt_reconfigure and observe that the visualization in
-rviz changes. Note: sometimes it is necessary to click "Refresh" in rqt_reconfigure to load the
-configuration tree.
+The `sample_capture_assistant.py` node will first call the
+[capture_assistant/suggest_settings](#capture_assistantsuggest_settings) service to find suggested
+capture settings for your particular scene, then call the [capture](#capture) service to
+capture using those settings. If everything is working, the point cloud, color image and depth image
+should be visible in rviz.
+
+You can adjust the maximum capture time by changing variable `max_capture_time` in
+[sample_capture_assistant.py](./zivid_samples/scripts/sample_capture_assistant.py) and
+re-launching the sample.
 
 <p align="center">
     <img src="https://www.zivid.com/software/zivid-ros/ros_rviz_miscobjects.png?" width="750" height="445">
@@ -199,7 +204,8 @@ ROS_NAMESPACE=zivid_camera rosrun zivid_camera zivid_camera_node _frame_id:=zivi
 > defines the maximum number of frames that can be a part of a 3D HDR capture. All `capture/frame_<n>`
 > nodes are by default enabled=false (see section [Configuration](#configuration)). If you need to
 > perform 3D HDR capture with more than 10 enabled frames then increase this number. Otherwise it can
-> be left as default.
+> be left as default. We do not recommend lowering this setting, especially if you are using the
+> [capture_assistant/suggest_settings](#capture_assistantsuggest_settings) service.
 
 `serial_number` (string, default: "")
 > Specify the serial number of the Zivid camera to use. Important: When passing this value via
@@ -207,6 +213,30 @@ ROS_NAMESPACE=zivid_camera rosrun zivid_camera zivid_camera_node _frame_id:=zivi
 > This parameter is optional. By default the driver will connect to the first available camera.
 
 ## Services
+
+### capture_assistant/suggest_settings
+[zivid_camera/CaptureAssistantSuggestSettings.srv](./zivid_camera/srv/CaptureAssistantSuggestSettings.srv)
+
+Invoke this service to analyze your scene and find suggested settings for your particular scene,
+camera distance, ambient lighting conditions, etc. The suggested settings are configured on this
+node and accessible via dynamic_reconfigure, see section [Configuration](#configuration). When this
+service has returned you can invoke the [capture](#capture) service to trigger a 3D capture using
+these suggested settings.
+
+This service has two parameters:
+
+`max_capture_time` (duration):
+> Specify the maximum capture time for the settings suggested by the Capture Assistant. A longer
+> capture time may be required to get good data for more challenging scenes. Minimum value is
+> 0.2 sec and maximum value is 10.0 sec.
+
+`ambient_light_frequency` (uint8):
+> Possible values are: `AMBIENT_LIGHT_FREQUENCY_NONE`, `AMBIENT_LIGHT_FREQUENCY_50HZ`,
+> `AMBIENT_LIGHT_FREQUENCY_60HZ`. Can be used to ensure that the suggested settings are compatible
+> with the frequency of the ambient light in the scene. If ambient light is unproblematic, use
+> `AMBIENT_LIGHT_FREQUENCY_NONE` for optimal performance. Default is `AMBIENT_LIGHT_FREQUENCY_NONE`.
+
+See [Sample Capture Assistant](#sample-capture-assistant) for code example.
 
 ### capture
 [zivid_camera/Capture.srv](./zivid_camera/srv/Capture.srv)
@@ -295,11 +325,15 @@ and [Settings2D](http://www.zivid.com/hubfs/softwarefiles/releases/1.7.0+a115eaa
 classes, or use Zivid Studio.
 
 The settings can be viewed and configured using [dynamic_reconfigure](https://wiki.ros.org/dynamic_reconfigure).
-Use [rqt_reconfigure](https://wiki.ros.org/rqt_reconfigure) to view/change the settings using a GUI.
+Use [rqt_reconfigure](https://wiki.ros.org/rqt_reconfigure) to view/change the settings using a GUI:
 
 ```bash
 rosrun rqt_reconfigure rqt_reconfigure
 ```
+
+If you want to experiment with the capture settings, launch the [Sample Capture](#sample-capture) sample,
+which will capture in a loop forever, and use [rqt_reconfigure](https://wiki.ros.org/rqt_reconfigure)
+to adjust the settings.
 
 The available capture settings are organized into a hierarchy of configuration nodes. 3D settings are available
 under the `/capture` namespace, while 2D settings are available under `/capture_2d`.
@@ -318,6 +352,9 @@ under the `/capture` namespace, while 2D settings are available under `/capture_
 /capture_2d
     /frame_0
 ```
+
+**Note:** The Capture Assistant feature can be used to find optimized 3D capture settings for your
+scene. Refer to service [capture_assistant/suggest_settings](#capture_assistantsuggest_settings).
 
 **Note for C++ users:** The min, max and default values of the settings can change dependent on what
 Zivid camera model you are using. Therefore you should **not** use the static `__getMin()__`,
@@ -382,6 +419,26 @@ calling the [capture_2d](#capture_2d) service, otherwise the service will return
 
 In the `zivid_samples` package we have added samples in C++ and Python that demonstrate how to use
 the Zivid ROS driver. These samples can be used as a starting point for your project.
+
+### Sample Capture Assistant
+
+This sample shows how to use the Capture Assistant to capture with suggested settings for your
+particular scene. This sample first calls the
+[capture_assistant/suggest_settings](#capture_assistantsuggest_settings) service to get the suggested
+settings. It then calls the [capture](#capture) service to invoke the 3D capture using those settings.
+
+Source code: [C++](./zivid_samples/src/sample_capture_assistant.cpp), [Python](./zivid_samples/scripts/sample_capture_assistant.py)
+
+Using roslaunch (also launches `roscore`, `zivid_camera`, `rviz` and `rqt_reconfigure`):
+```bash
+roslaunch zivid_samples sample.launch type:=sample_capture_assistant_cpp
+roslaunch zivid_samples sample.launch type:=sample_capture_assistant.py
+```
+Using rosrun (when `roscore` and `zivid_camera` are running):
+```bash
+rosrun zivid_samples sample_capture_assistant_cpp
+rosrun zivid_samples sample_capture_assistant.py
+```
 
 ### Sample Capture
 

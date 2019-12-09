@@ -13,6 +13,7 @@
 #include <Zivid/Frame2D.h>
 #include <Zivid/Settings2D.h>
 #include <Zivid/Version.h>
+#include <Zivid/CaptureAssistant.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/predef.h>
@@ -207,6 +208,8 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   is_connected_service_ = nh_.advertiseService("is_connected", &ZividCamera::isConnectedServiceHandler, this);
   capture_service_ = nh_.advertiseService("capture", &ZividCamera::captureServiceHandler, this);
   capture_2d_service_ = nh_.advertiseService("capture_2d", &ZividCamera::capture2DServiceHandler, this);
+  capture_assistant_suggest_settings_service_ = nh_.advertiseService(
+      "capture_assistant/suggest_settings", &ZividCamera::captureAssistantSuggestSettingsServiceHandler, this);
 
   ROS_INFO("Zivid camera driver is now ready!");
 }
@@ -313,7 +316,7 @@ bool ZividCamera::captureServiceHandler(Capture::Request&, Capture::Response&)
       ROS_DEBUG("Config %s is enabled", dr_config_server->name().c_str());
       Zivid::Settings s{ base_setting };
       applyCaptureFrameConfigToZividSettings(dr_config_server->config(), s);
-      settings.push_back(s);
+      settings.push_back(std::move(s));
     }
   }
 
@@ -323,27 +326,11 @@ bool ZividCamera::captureServiceHandler(Capture::Request&, Capture::Response&)
   }
 
   ROS_INFO("Capturing with %zd frames", settings.size());
-  std::vector<Zivid::Frame> frames;
-  frames.reserve(settings.size());
-  for (const auto& s : settings)
+  for (std::size_t i = 0; i < settings.size(); i++)
   {
-    camera_.setSettings(s);
-    ROS_DEBUG("Calling capture() with settings: %s", camera_.settings().toString().c_str());
-    frames.emplace_back(camera_.capture());
+    ROS_DEBUG_STREAM("Setting " << i << ": " << settings[i]);
   }
-
-  auto frame = [&]() {
-    if (frames.size() > 1)
-    {
-      ROS_DEBUG("Calling Zivid::HDR::combineFrames with %zd frames", frames.size());
-      return Zivid::HDR::combineFrames(begin(frames), end(frames));
-    }
-    else
-    {
-      return frames[0];
-    }
-  }();
-  publishFrame(std::move(frame));
+  publishFrame(Zivid::HDR::capture(camera_, settings));
   return true;
 }
 
@@ -376,6 +363,72 @@ bool ZividCamera::capture2DServiceHandler(Capture::Request&, Capture::Response&)
     const auto camera_info = makeCameraInfo(header, image.width(), image.height(), camera_.intrinsics());
     color_image_publisher_.publish(makeColorImage(header, image), camera_info);
   }
+  return true;
+}
+
+bool ZividCamera::captureAssistantSuggestSettingsServiceHandler(CaptureAssistantSuggestSettings::Request& req,
+                                                                CaptureAssistantSuggestSettings::Response&)
+{
+  ROS_DEBUG_STREAM(__func__ << ": Request: " << req);
+
+  serviceHandlerHandleCameraConnectionLoss();
+
+  const auto max_capture_time =
+      std::chrono::round<std::chrono::milliseconds>(std::chrono::duration<double>{ req.max_capture_time.toSec() });
+  const auto ambient_light_frequency = [&req]() {
+    switch (req.ambient_light_frequency)
+    {
+      case CaptureAssistantSuggestSettings::Request::AMBIENT_LIGHT_FREQUENCY_NONE:
+        return Zivid::CaptureAssistant::AmbientLightFrequency::none;
+      case CaptureAssistantSuggestSettings::Request::AMBIENT_LIGHT_FREQUENCY_50HZ:
+        return Zivid::CaptureAssistant::AmbientLightFrequency::hz50;
+      case CaptureAssistantSuggestSettings::Request::AMBIENT_LIGHT_FREQUENCY_60HZ:
+        return Zivid::CaptureAssistant::AmbientLightFrequency::hz60;
+    }
+    throw std::runtime_error("Unhandled AMBIENT_LIGHT_FREQUENCY value: " + std::to_string(req.ambient_light_frequency));
+  }();
+
+  Zivid::CaptureAssistant::SuggestSettingsParameters suggest_settings_parameters(max_capture_time,
+                                                                                 ambient_light_frequency);
+  ROS_INFO_STREAM("Getting suggested settings using parameters: " << suggest_settings_parameters);
+  const auto suggested_settings{ Zivid::CaptureAssistant::suggestSettings(camera_, suggest_settings_parameters) };
+
+  if (suggested_settings.empty())
+  {
+    throw std::runtime_error("The suggestSettings function returned 0 settings!");
+  }
+  if (suggested_settings.size() > capture_frame_config_dr_servers_.size())
+  {
+    throw std::runtime_error("The number of suggested settings (" + std::to_string(suggested_settings.size()) + ") " +
+                             "is larger than the number of dynamic_reconfigure capture/frame_<n> servers (" +
+                             std::to_string(capture_frame_config_dr_servers_.size()) + "). Increase launch parameter " +
+                             "num_capture_frames. See README.md for more information.");
+  }
+
+  ROS_INFO_STREAM("CaptureAssistant::suggestSettings returned " << suggested_settings.size() << " settings");
+
+  capture_general_config_dr_server_->setConfig(zividSettingsToConfig<CaptureGeneralConfig>(suggested_settings[0]));
+
+  for (std::size_t i = 0; i < suggested_settings.size(); i++)
+  {
+    ROS_DEBUG_STREAM("Updating setting " << i << " to " << suggested_settings[i]);
+    auto config = zividSettingsToConfig<CaptureFrameConfig>(suggested_settings[i]);
+    config.enabled = true;
+    capture_frame_config_dr_servers_[i]->setConfig(config);
+  }
+
+  // Any other frames that are enabled must be disabled
+  for (std::size_t i = suggested_settings.size(); i < capture_frame_config_dr_servers_.size(); i++)
+  {
+    if (capture_frame_config_dr_servers_[i]->config().enabled)
+    {
+      ROS_INFO_STREAM("Frame config " << i << " was enabled, so disabling it");
+      auto config = capture_frame_config_dr_servers_[i]->config();
+      config.enabled = false;
+      capture_frame_config_dr_servers_[i]->setConfig(config);
+    }
+  }
+
   return true;
 }
 

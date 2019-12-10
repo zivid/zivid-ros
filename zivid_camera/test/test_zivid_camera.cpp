@@ -31,7 +31,9 @@ class ZividNodeTest : public testing::Test
 protected:
   ros::NodeHandle nh_;
 
-  const ros::Duration default_wait_duration{ 5 };
+  const ros::Duration node_ready_wait_duration{ 5 };
+  const ros::Duration short_wait_duration{ 0.25 };
+  const ros::Duration dr_get_max_wait_duration{ 1 };
   static constexpr auto capture_service_name = "/zivid_camera/capture";
   static constexpr auto capture_2d_service_name = "/zivid_camera/capture_2d";
   static constexpr auto color_camera_info_topic_name = "/zivid_camera/color/camera_info";
@@ -82,16 +84,16 @@ protected:
 
   void waitForReady()
   {
-    ASSERT_TRUE(ros::service::waitForService(capture_service_name, default_wait_duration));
+    ASSERT_TRUE(ros::service::waitForService(capture_service_name, node_ready_wait_duration));
   }
 
   void enableFirst3DFrame()
   {
     dynamic_reconfigure::Client<zivid_camera::CaptureFrameConfig> frame_0_client("/zivid_camera/capture/"
                                                                                  "frame_0/");
-    sleepAndSpin(ros::Duration(1));
+    sleepAndSpin(dr_get_max_wait_duration);
     zivid_camera::CaptureFrameConfig frame_0_cfg;
-    ASSERT_TRUE(frame_0_client.getDefaultConfiguration(frame_0_cfg, default_wait_duration));
+    ASSERT_TRUE(frame_0_client.getDefaultConfiguration(frame_0_cfg, dr_get_max_wait_duration));
     frame_0_cfg.enabled = true;
     ASSERT_TRUE(frame_0_client.setConfiguration(frame_0_cfg));
   }
@@ -100,9 +102,9 @@ protected:
   {
     dynamic_reconfigure::Client<zivid_camera::Capture2DFrameConfig> frame_0_client("/zivid_camera/capture_2d/"
                                                                                    "frame_0/");
-    sleepAndSpin(ros::Duration(1));
+    sleepAndSpin(dr_get_max_wait_duration);
     zivid_camera::Capture2DFrameConfig cfg;
-    ASSERT_TRUE(frame_0_client.getDefaultConfiguration(cfg, default_wait_duration));
+    ASSERT_TRUE(frame_0_client.getDefaultConfiguration(cfg, dr_get_max_wait_duration));
     cfg.enabled = true;
     ASSERT_TRUE(frame_0_client.setConfiguration(cfg));
   }
@@ -206,30 +208,30 @@ TEST_F(ZividNodeTest, testCapturePublishesTopics)
     ASSERT_EQ(points_sub.numMessages(), numTopics);
   };
 
-  sleepAndSpin(ros::Duration(1));
+  sleepAndSpin(short_wait_duration);
   assert_num_topics_received(0);
 
   zivid_camera::Capture capture;
   // Capture fails when no frames are enabled
   ASSERT_FALSE(ros::service::call(capture_service_name, capture));
-  sleepAndSpin(ros::Duration(1));
+  sleepAndSpin(short_wait_duration);
   assert_num_topics_received(0);
 
   enableFirst3DFrame();
 
   ASSERT_TRUE(ros::service::call(capture_service_name, capture));
-  sleepAndSpin(ros::Duration(1));
+  sleepAndSpin(short_wait_duration);
   assert_num_topics_received(1);
 
   ASSERT_TRUE(ros::service::call(capture_service_name, capture));
-  sleepAndSpin(ros::Duration(1));
+  sleepAndSpin(short_wait_duration);
   assert_num_topics_received(2);
 
   ASSERT_TRUE(ros::service::call(capture_service_name, capture));
-  sleepAndSpin(ros::Duration(1));
+  sleepAndSpin(short_wait_duration);
   assert_num_topics_received(3);
 
-  sleepAndSpin(ros::Duration(3));
+  sleepAndSpin(short_wait_duration);
   assert_num_topics_received(3);
 }
 
@@ -286,7 +288,7 @@ TEST_F(ZividNodeTest, testCaptureImage)
   enableFirst3DFrame();
   zivid_camera::Capture capture;
   ASSERT_TRUE(ros::service::call(capture_service_name, capture));
-  sleepAndSpin(ros::Duration(0.1));
+  sleepAndSpin(short_wait_duration);
   ASSERT_TRUE(image.has_value());
   ASSERT_EQ(image->width, 1920U);
   ASSERT_EQ(image->height, 1200U);
@@ -324,7 +326,7 @@ TEST_F(ZividNodeTest, testCaptureCameraInfo)
   enableFirst3DFrame();
   zivid_camera::Capture capture;
   ASSERT_TRUE(ros::service::call(capture_service_name, capture));
-  sleepAndSpin(ros::Duration(1));
+  sleepAndSpin(short_wait_duration);
 
   ASSERT_EQ(color_camera_info_sub.numMessages(), 1U);
   ASSERT_EQ(depth_camera_info_sub.numMessages(), 1U);
@@ -339,15 +341,15 @@ TEST_F(ZividNodeTest, test3DSettingsDynamicReconfigureNodesAreAvailable)
 {
   waitForReady();
 
-  const auto wait_duration = ros::Duration(2);
   const std::string prefix = "/zivid_camera/capture/";
 
-  ASSERT_TRUE(ros::service::waitForService(prefix + "general/set_parameters", wait_duration));
+  ASSERT_TRUE(ros::service::waitForService(prefix + "general/set_parameters", short_wait_duration));
   for (std::size_t i = 0; i < 10U; i++)
   {
-    ASSERT_TRUE(ros::service::waitForService(prefix + "frame_" + std::to_string(i) + "/set_parameters", wait_duration));
+    ASSERT_TRUE(
+        ros::service::waitForService(prefix + "frame_" + std::to_string(i) + "/set_parameters", short_wait_duration));
   }
-  ASSERT_FALSE(ros::service::waitForService(prefix + "frame_11/set_parameters", wait_duration));
+  ASSERT_FALSE(ros::service::waitForService(prefix + "frame_11/set_parameters", short_wait_duration));
 }
 
 TEST_F(ZividNodeTest, testCapture2D)
@@ -366,18 +368,18 @@ TEST_F(ZividNodeTest, testCapture2D)
     ASSERT_EQ(color_image_color_sub.numMessages(), numTopics);
   };
 
-  sleepAndSpin(ros::Duration(1));
+  sleepAndSpin(short_wait_duration);
   assert_num_topics_received(0);
 
   // Capture fails when no frames are enabled
   zivid_camera::Capture2D capture;
   ASSERT_FALSE(ros::service::call(capture_2d_service_name, capture));
-  sleepAndSpin(ros::Duration(1));
+  sleepAndSpin(short_wait_duration);
   assert_num_topics_received(0);
 
   enableFirst2DFrame();
   ASSERT_TRUE(ros::service::call(capture_2d_service_name, capture));
-  sleepAndSpin(ros::Duration(1));
+  sleepAndSpin(short_wait_duration);
   assert_num_topics_received(1);
 
   auto verifyImageAndCameraInfo = [this](const auto& img, const auto& info) {
@@ -410,11 +412,11 @@ TEST_F(ZividNodeTest, testCapture2D)
   ASSERT_TRUE(color_camera_info.has_value());
   verifyImageAndCameraInfo(*image, *color_camera_info);
 
-  sleepAndSpin(ros::Duration(1));
+  sleepAndSpin(short_wait_duration);
   assert_num_topics_received(1);
 
   ASSERT_TRUE(ros::service::call(capture_2d_service_name, capture));
-  sleepAndSpin(ros::Duration(0.1));
+  sleepAndSpin(short_wait_duration);
   assert_num_topics_received(2);
   verifyImageAndCameraInfo(*image, *color_camera_info);
 }
@@ -423,10 +425,9 @@ TEST_F(ZividNodeTest, test2DSettingsDynamicReconfigureNodesAreAvailable)
 {
   waitForReady();
 
-  const auto wait_duration = ros::Duration(2);
   const std::string prefix = "/zivid_camera/capture_2d/";
-  ASSERT_TRUE(ros::service::waitForService(prefix + "frame_0/set_parameters", wait_duration));
-  ASSERT_FALSE(ros::service::waitForService(prefix + "frame_1/set_parameters", wait_duration));
+  ASSERT_TRUE(ros::service::waitForService(prefix + "frame_0/set_parameters", short_wait_duration));
+  ASSERT_FALSE(ros::service::waitForService(prefix + "frame_1/set_parameters", short_wait_duration));
 }
 
 int main(int argc, char** argv)

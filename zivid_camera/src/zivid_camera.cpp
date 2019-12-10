@@ -390,8 +390,8 @@ bool ZividCamera::capture2DServiceHandler(Capture::Request&, Capture::Response&)
 
   if (!capture_2d_frame_config_dr_servers_[0]->config.enabled)
   {
-    // Even though we currently only support single frame in 2D mode, verify that enabled is set.
-    // This is for consistency with the 3D API.
+    // 2D capture API in SDK currently only supports single-capture (1 frame). However, we still
+    // verify that frame_0/enabled is set. This is for future-proofing and consistency with 3D API.
     throw std::runtime_error("Failed to capture: capture_2d/frame_0/enabled is false! Set enabled to true.");
   }
 

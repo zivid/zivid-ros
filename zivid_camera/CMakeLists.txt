@@ -30,7 +30,7 @@ find_package(catkin REQUIRED COMPONENTS
   nodelet
 )
 
-find_package(Zivid 1.6.0 COMPONENTS Core REQUIRED)
+find_package(Zivid 1.7.0 COMPONENTS Core REQUIRED)
 message(STATUS "Found Zivid version ${Zivid_VERSION}")
 
 find_package(OpenMP REQUIRED)
@@ -80,6 +80,7 @@ add_service_files(
   FILES
   Capture.srv
   Capture2D.srv
+  CaptureAssistantSuggestSettings.srv
   CameraInfoModelName.srv
   CameraInfoSerialNumber.srv
   IsConnected.srv

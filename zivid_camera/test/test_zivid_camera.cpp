@@ -31,7 +31,7 @@ class ZividNodeTest : public testing::Test
 protected:
   ros::NodeHandle nh_;
 
-  const ros::Duration node_ready_wait_duration{ 5 };
+  const ros::Duration node_ready_wait_duration{ 15 };
   const ros::Duration short_wait_duration{ 0.25 };
   const ros::Duration dr_get_max_wait_duration{ 1 };
   static constexpr auto capture_service_name = "/zivid_camera/capture";

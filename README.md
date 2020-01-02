@@ -2,9 +2,6 @@
 
 This is the official ROS driver for [Zivid 3D cameras](https://www.zivid.com/).
 
-**Note:** Current version is 0.9.0. API and behavior are still subject to changes. When 1.0.0 is
-released the API will be stable.
-
 [![Build Status][ci-badge]][ci-url]
 
 ---

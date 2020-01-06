@@ -6,7 +6,7 @@ schedules:
     - master
   always: true
 variables:
-  newest_zivid_version: '1.7.0+a115eaa4-4'
+  newest_zivid_version: '1.8.0+89ae8b3e-39'
 stages:
   - stage: Code_Analysis
     jobs:

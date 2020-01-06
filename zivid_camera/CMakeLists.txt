@@ -30,7 +30,7 @@ find_package(catkin REQUIRED COMPONENTS
   nodelet
 )
 
-find_package(Zivid 1.7.0 COMPONENTS Core REQUIRED)
+find_package(Zivid 1.8.0 COMPONENTS Core REQUIRED)
 message(STATUS "Found Zivid version ${Zivid_VERSION}")
 
 find_package(OpenMP REQUIRED)

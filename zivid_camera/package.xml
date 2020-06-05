@@ -5,7 +5,7 @@
   <description>Driver for using the Zivid 3D cameras in ROS.</description>
   <maintainer email="customersuccess@zivid.com">Zivid</maintainer>
   <license>BSD3</license>
-  <url type="website>">https://zivid.com</url>
+  <url type="website">https://zivid.com</url>
   <url type="repository">https://github.com/zivid/zivid-ros</url>
   <url type="bugtracker">https://github.com/zivid/zivid-ros/issues</url>
   <author email="customersuccess@zivid.com">Zivid</author>

@@ -563,7 +563,7 @@ This project is licensed under BSD 3-clause license, see the [LICENSE](LICENSE) 
 
 Please report any issues or feature requests related to the ROS driver in the issue tracker.
 Visit [Zivid Knowledge Base](http://help.zivid.com) for general help on using Zivid 3D
-cameras. If you cannot find a solution to your issue, please contact support@zivid.com.
+cameras. If you cannot find a solution to your issue, please contact customersuccess@zivid.com.
 
 ## Acknowledgements
 

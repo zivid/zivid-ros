@@ -4,7 +4,7 @@
   <version>1.0.0</version>
   <description>Contains C++ and Python samples demonstrating
   use of the zivid_camera package.</description>
-  <maintainer email="support@zivid.com">Zivid</maintainer>
+  <maintainer email="customersuccess@zivid.com">Zivid</maintainer>
   <license>BSD3</license>
   <url type="website>">https://zivid.com</url>
   <url type="repository">https://github.com/zivid/zivid-ros</url>

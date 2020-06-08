@@ -261,7 +261,7 @@ TEST_F(ZividNodeTest, testCapturePoints)
   enableFirst3DFrame();
   zivid_camera::Capture capture;
   ASSERT_TRUE(ros::service::call(capture_service_name, capture));
-  spinOnce();
+  sleepAndSpin(short_wait_duration);
 
   ASSERT_TRUE(last_pc2.has_value());
   ASSERT_EQ(last_pc2->width, 1920U);

@@ -2,5 +2,5 @@
     <node name="zivid_camera" pkg="zivid_camera" type="zivid_camera_node" ns="zivid_camera" output="screen">
         <param name="file_camera_path" type="str" value="/usr/share/Zivid/data/MiscObjects.zdf" />
     </node>
-    <test test-name="zivid_camera_test" pkg="zivid_camera" type="zivid_camera_test" />
+    <test test-name="zivid_camera_test" pkg="zivid_camera" type="zivid_camera_test" time-limit="300.0" />
 </launch>

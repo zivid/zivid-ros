@@ -558,8 +558,7 @@ TEST_F(ZividCATest, test_ca_service_is_available)
   ASSERT_TRUE(ros::service::waitForService(capture_assistant_suggest_settings_service_name, short_wait_duration));
 }
 
-// TODO(10): Enable this test when minimum Zivid SDK is bumped to 1.8
-TEST_F(ZividCATest, DISABLED_test_different_max_capture_time_and_ambient_light_frequency)
+TEST_F(ZividCATest, test_different_max_capture_time_and_ambient_light_frequency)
 {
   using Request = zivid_camera::CaptureAssistantSuggestSettings::Request;
   for (double max_capture_time : { 0.2, 1.2, 10.0 })
@@ -572,8 +571,7 @@ TEST_F(ZividCATest, DISABLED_test_different_max_capture_time_and_ambient_light_f
   }
 }
 
-// TODO(10): Enable this test when minimum Zivid SDK is bumped to 1.8
-TEST_F(ZividCATest, DISABLED_test_going_from_several_frames_to_1_frame)
+TEST_F(ZividCATest, test_going_from_several_frames_to_1_frame)
 {
   using Request = zivid_camera::CaptureAssistantSuggestSettings::Request;
   performSuggestSettingsAndCompareWithCppAPI(ros::Duration{ 10.0 }, Request::AMBIENT_LIGHT_FREQUENCY_NONE);
@@ -596,13 +594,11 @@ TEST_F(ZividCATest, test_capture_assistant_with_invalid_max_capture_time_fails)
   srv.request.max_capture_time = toRosDuration(validRange.max() + smallDelta);
   ASSERT_FALSE(ros::service::call(capture_assistant_suggest_settings_service_name, srv));
 
-  // TODO(10): Enable remainder of test when minimum Zivid SDK is bumped to 1.8
-  // srv.request.max_capture_time = ros::Duration{ 10.0 };
-  // ASSERT_TRUE(ros::service::call(capture_assistant_suggest_settings_service_name, srv));
+  srv.request.max_capture_time = toRosDuration(validRange.max());
+  ASSERT_TRUE(ros::service::call(capture_assistant_suggest_settings_service_name, srv));
 }
 
-// TODO(10): Enable this test when minimum Zivid SDK is bumped to 1.8
-TEST_F(ZividCATest, DISABLED_test_capture_assistant_default_ambient_light_frequency_works)
+TEST_F(ZividCATest, test_capture_assistant_default_ambient_light_frequency_works)
 {
   zivid_camera::CaptureAssistantSuggestSettings srv;
   srv.request.max_capture_time = ros::Duration{ 1.0 };
@@ -616,10 +612,9 @@ TEST_F(ZividCATest, test_capture_assistant_invalid_ambient_light_frequency_fails
   srv.request.ambient_light_frequency = 255;
   ASSERT_FALSE(ros::service::call(capture_assistant_suggest_settings_service_name, srv));
 
-  // TODO(10): Enable remainder of test when minimum Zivid SDK is bumped to 1.8
-  // srv.request.ambient_light_frequency =
-  //   zivid_camera::CaptureAssistantSuggestSettings::Request::AMBIENT_LIGHT_FREQUENCY_NONE;
-  // ASSERT_TRUE(ros::service::call(capture_assistant_suggest_settings_service_name, srv));
+  srv.request.ambient_light_frequency =
+      zivid_camera::CaptureAssistantSuggestSettings::Request::AMBIENT_LIGHT_FREQUENCY_NONE;
+  ASSERT_TRUE(ros::service::call(capture_assistant_suggest_settings_service_name, srv));
 }
 
 int main(int argc, char** argv)

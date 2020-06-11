@@ -47,7 +47,7 @@ protected:
 
   const ros::Duration node_ready_wait_duration{ 15 };
   const ros::Duration short_wait_duration{ 0.25 };
-  const ros::Duration dr_get_max_wait_duration{ 1 };
+  const ros::Duration dr_get_max_wait_duration{ 5 };
   static constexpr auto capture_service_name = "/zivid_camera/capture";
   static constexpr auto capture_2d_service_name = "/zivid_camera/capture_2d";
   static constexpr auto capture_assistant_suggest_settings_service_name = "/zivid_camera/capture_assistant/"
@@ -88,17 +88,6 @@ protected:
     std::unique_ptr<std::size_t> num_messages_;
   };
 
-  void spinOnce()
-  {
-    ros::spinOnce();
-  }
-
-  void sleepAndSpin(ros::Duration duration)
-  {
-    duration.sleep();
-    spinOnce();
-  }
-
   void waitForReady()
   {
     ASSERT_TRUE(ros::service::waitForService(capture_service_name, node_ready_wait_duration));
@@ -108,7 +97,6 @@ protected:
   {
     dynamic_reconfigure::Client<zivid_camera::CaptureFrameConfig> frame_0_client("/zivid_camera/capture/"
                                                                                  "frame_0/");
-    sleepAndSpin(dr_get_max_wait_duration);
     zivid_camera::CaptureFrameConfig frame_0_cfg;
     ASSERT_TRUE(frame_0_client.getDefaultConfiguration(frame_0_cfg, dr_get_max_wait_duration));
     frame_0_cfg.enabled = true;
@@ -119,7 +107,6 @@ protected:
   {
     dynamic_reconfigure::Client<zivid_camera::Capture2DFrameConfig> frame_0_client("/zivid_camera/capture_2d/"
                                                                                    "frame_0/");
-    sleepAndSpin(dr_get_max_wait_duration);
     zivid_camera::Capture2DFrameConfig cfg;
     ASSERT_TRUE(frame_0_client.getDefaultConfiguration(cfg, dr_get_max_wait_duration));
     cfg.enabled = true;
@@ -225,30 +212,30 @@ TEST_F(ZividNodeTest, testCapturePublishesTopics)
     ASSERT_EQ(points_sub.numMessages(), numTopics);
   };
 
-  sleepAndSpin(short_wait_duration);
+  short_wait_duration.sleep();
   assert_num_topics_received(0);
 
   zivid_camera::Capture capture;
   // Capture fails when no frames are enabled
   ASSERT_FALSE(ros::service::call(capture_service_name, capture));
-  sleepAndSpin(short_wait_duration);
+  short_wait_duration.sleep();
   assert_num_topics_received(0);
 
   enableFirst3DFrame();
 
   ASSERT_TRUE(ros::service::call(capture_service_name, capture));
-  sleepAndSpin(short_wait_duration);
+  short_wait_duration.sleep();
   assert_num_topics_received(1);
 
   ASSERT_TRUE(ros::service::call(capture_service_name, capture));
-  sleepAndSpin(short_wait_duration);
+  short_wait_duration.sleep();
   assert_num_topics_received(2);
 
   ASSERT_TRUE(ros::service::call(capture_service_name, capture));
-  sleepAndSpin(short_wait_duration);
+  short_wait_duration.sleep();
   assert_num_topics_received(3);
 
-  sleepAndSpin(short_wait_duration);
+  short_wait_duration.sleep();
   assert_num_topics_received(3);
 }
 
@@ -261,7 +248,7 @@ TEST_F(ZividNodeTest, testCapturePoints)
   enableFirst3DFrame();
   zivid_camera::Capture capture;
   ASSERT_TRUE(ros::service::call(capture_service_name, capture));
-  sleepAndSpin(short_wait_duration);
+  short_wait_duration.sleep();
 
   ASSERT_TRUE(last_pc2.has_value());
   ASSERT_EQ(last_pc2->width, 1920U);
@@ -305,7 +292,7 @@ TEST_F(ZividNodeTest, testCaptureImage)
   enableFirst3DFrame();
   zivid_camera::Capture capture;
   ASSERT_TRUE(ros::service::call(capture_service_name, capture));
-  sleepAndSpin(short_wait_duration);
+  short_wait_duration.sleep();
   ASSERT_TRUE(image.has_value());
   ASSERT_EQ(image->width, 1920U);
   ASSERT_EQ(image->height, 1200U);
@@ -343,7 +330,7 @@ TEST_F(ZividNodeTest, testCaptureCameraInfo)
   enableFirst3DFrame();
   zivid_camera::Capture capture;
   ASSERT_TRUE(ros::service::call(capture_service_name, capture));
-  sleepAndSpin(short_wait_duration);
+  short_wait_duration.sleep();
 
   ASSERT_EQ(color_camera_info_sub.numMessages(), 1U);
   ASSERT_EQ(depth_camera_info_sub.numMessages(), 1U);
@@ -385,18 +372,18 @@ TEST_F(ZividNodeTest, testCapture2D)
     ASSERT_EQ(color_image_color_sub.numMessages(), numTopics);
   };
 
-  sleepAndSpin(short_wait_duration);
+  short_wait_duration.sleep();
   assert_num_topics_received(0);
 
   // Capture fails when no frames are enabled
   zivid_camera::Capture2D capture;
   ASSERT_FALSE(ros::service::call(capture_2d_service_name, capture));
-  sleepAndSpin(short_wait_duration);
+  short_wait_duration.sleep();
   assert_num_topics_received(0);
 
   enableFirst2DFrame();
   ASSERT_TRUE(ros::service::call(capture_2d_service_name, capture));
-  sleepAndSpin(short_wait_duration);
+  short_wait_duration.sleep();
   assert_num_topics_received(1);
 
   auto verifyImageAndCameraInfo = [this](const auto& img, const auto& info) {
@@ -429,11 +416,11 @@ TEST_F(ZividNodeTest, testCapture2D)
   ASSERT_TRUE(color_camera_info.has_value());
   verifyImageAndCameraInfo(*image, *color_camera_info);
 
-  sleepAndSpin(short_wait_duration);
+  short_wait_duration.sleep();
   assert_num_topics_received(1);
 
   ASSERT_TRUE(ros::service::call(capture_2d_service_name, capture));
-  sleepAndSpin(short_wait_duration);
+  short_wait_duration.sleep();
   assert_num_topics_received(2);
   verifyImageAndCameraInfo(*image, *color_camera_info);
 }
@@ -466,14 +453,14 @@ protected:
   zivid_camera::CaptureGeneralConfig captureGeneralConfig()
   {
     zivid_camera::CaptureGeneralConfig cfg;
-    m_captureGeneralClient.getCurrentConfiguration(cfg, dr_get_max_wait_duration);
+    EXPECT_TRUE(m_captureGeneralClient.getCurrentConfiguration(cfg, dr_get_max_wait_duration));
     return cfg;
   }
 
   zivid_camera::CaptureFrameConfig captureFrameConfig(std::size_t i) const
   {
     zivid_camera::CaptureFrameConfig cfg;
-    m_captureFrameClients[i]->getCurrentConfiguration(cfg, dr_get_max_wait_duration);
+    EXPECT_TRUE(m_captureFrameClients[i]->getCurrentConfiguration(cfg, dr_get_max_wait_duration));
     return cfg;
   }
 
@@ -540,7 +527,7 @@ protected:
     srv.request.max_capture_time = max_capture_time;
     srv.request.ambient_light_frequency = ambient_light_frequency;
     ASSERT_TRUE(ros::service::call(capture_assistant_suggest_settings_service_name, srv));
-    sleepAndSpin(short_wait_duration);
+    short_wait_duration.sleep();
 
     Zivid::CaptureAssistant::SuggestSettingsParameters suggest_settings_parameters(
         std::chrono::round<std::chrono::milliseconds>(SecondsD{ max_capture_time.toSec() }),
@@ -571,8 +558,7 @@ TEST_F(ZividCATest, test_ca_service_is_available)
   ASSERT_TRUE(ros::service::waitForService(capture_assistant_suggest_settings_service_name, short_wait_duration));
 }
 
-// TODO(10): Enable this test when minimum Zivid SDK is bumped to 1.8
-TEST_F(ZividCATest, DISABLED_test_different_max_capture_time_and_ambient_light_frequency)
+TEST_F(ZividCATest, test_different_max_capture_time_and_ambient_light_frequency)
 {
   using Request = zivid_camera::CaptureAssistantSuggestSettings::Request;
   for (double max_capture_time : { 0.2, 1.2, 10.0 })
@@ -585,8 +571,7 @@ TEST_F(ZividCATest, DISABLED_test_different_max_capture_time_and_ambient_light_f
   }
 }
 
-// TODO(10): Enable this test when minimum Zivid SDK is bumped to 1.8
-TEST_F(ZividCATest, DISABLED_test_going_from_several_frames_to_1_frame)
+TEST_F(ZividCATest, test_going_from_several_frames_to_1_frame)
 {
   using Request = zivid_camera::CaptureAssistantSuggestSettings::Request;
   performSuggestSettingsAndCompareWithCppAPI(ros::Duration{ 10.0 }, Request::AMBIENT_LIGHT_FREQUENCY_NONE);
@@ -609,13 +594,11 @@ TEST_F(ZividCATest, test_capture_assistant_with_invalid_max_capture_time_fails)
   srv.request.max_capture_time = toRosDuration(validRange.max() + smallDelta);
   ASSERT_FALSE(ros::service::call(capture_assistant_suggest_settings_service_name, srv));
 
-  // TODO(10): Enable remainder of test when minimum Zivid SDK is bumped to 1.8
-  // srv.request.max_capture_time = ros::Duration{ 10.0 };
-  // ASSERT_TRUE(ros::service::call(capture_assistant_suggest_settings_service_name, srv));
+  srv.request.max_capture_time = toRosDuration(validRange.max());
+  ASSERT_TRUE(ros::service::call(capture_assistant_suggest_settings_service_name, srv));
 }
 
-// TODO(10): Enable this test when minimum Zivid SDK is bumped to 1.8
-TEST_F(ZividCATest, DISABLED_test_capture_assistant_default_ambient_light_frequency_works)
+TEST_F(ZividCATest, test_capture_assistant_default_ambient_light_frequency_works)
 {
   zivid_camera::CaptureAssistantSuggestSettings srv;
   srv.request.max_capture_time = ros::Duration{ 1.0 };
@@ -629,16 +612,18 @@ TEST_F(ZividCATest, test_capture_assistant_invalid_ambient_light_frequency_fails
   srv.request.ambient_light_frequency = 255;
   ASSERT_FALSE(ros::service::call(capture_assistant_suggest_settings_service_name, srv));
 
-  // TODO(10): Enable remainder of test when minimum Zivid SDK is bumped to 1.8
-  // srv.request.ambient_light_frequency =
-  //   zivid_camera::CaptureAssistantSuggestSettings::Request::AMBIENT_LIGHT_FREQUENCY_NONE;
-  // ASSERT_TRUE(ros::service::call(capture_assistant_suggest_settings_service_name, srv));
+  srv.request.ambient_light_frequency =
+      zivid_camera::CaptureAssistantSuggestSettings::Request::AMBIENT_LIGHT_FREQUENCY_NONE;
+  ASSERT_TRUE(ros::service::call(capture_assistant_suggest_settings_service_name, srv));
 }
 
 int main(int argc, char** argv)
 {
   testing::InitGoogleTest(&argc, argv);
   ros::init(argc, argv, "test_zivid_camera");
+  ros::AsyncSpinner spinner(1);
+  spinner.start();
+
   ros::NodeHandle nh;
   return RUN_ALL_TESTS();
 }

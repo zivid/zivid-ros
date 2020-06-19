@@ -553,12 +553,12 @@ private:
   std::vector<std::unique_ptr<dynamic_reconfigure::Client<zivid_camera::CaptureFrameConfig>>> m_captureFrameClients;
 };
 
-TEST_F(ZividCATest, test_ca_service_is_available)
+TEST_F(ZividCATest, testCaptureAssistantServiceAvailable)
 {
   ASSERT_TRUE(ros::service::waitForService(capture_assistant_suggest_settings_service_name, short_wait_duration));
 }
 
-TEST_F(ZividCATest, test_different_max_capture_time_and_ambient_light_frequency)
+TEST_F(ZividCATest, testDifferentMaxCaptureTimeAndAmbientLightFrequency)
 {
   using Request = zivid_camera::CaptureAssistantSuggestSettings::Request;
   for (double max_capture_time : { 0.2, 1.2, 10.0 })
@@ -571,7 +571,7 @@ TEST_F(ZividCATest, test_different_max_capture_time_and_ambient_light_frequency)
   }
 }
 
-TEST_F(ZividCATest, test_going_from_several_frames_to_1_frame)
+TEST_F(ZividCATest, testGoingFromMultipleFramesTo1Frame)
 {
   using Request = zivid_camera::CaptureAssistantSuggestSettings::Request;
   performSuggestSettingsAndCompareWithCppAPI(ros::Duration{ 10.0 }, Request::AMBIENT_LIGHT_FREQUENCY_NONE);
@@ -581,7 +581,7 @@ TEST_F(ZividCATest, test_going_from_several_frames_to_1_frame)
   ASSERT_EQ(numEnabled3DFrames(), 1U);
 }
 
-TEST_F(ZividCATest, test_capture_assistant_with_invalid_max_capture_time_fails)
+TEST_F(ZividCATest, testCaptureAssistantWithInvalidMaxCaptureTimeFails)
 {
   zivid_camera::CaptureAssistantSuggestSettings srv;
   srv.request.max_capture_time = ros::Duration{ 0.0 };
@@ -598,14 +598,14 @@ TEST_F(ZividCATest, test_capture_assistant_with_invalid_max_capture_time_fails)
   ASSERT_TRUE(ros::service::call(capture_assistant_suggest_settings_service_name, srv));
 }
 
-TEST_F(ZividCATest, test_capture_assistant_default_ambient_light_frequency_works)
+TEST_F(ZividCATest, testCaptureAssistantDefaultAmbientLightFrequencyWorks)
 {
   zivid_camera::CaptureAssistantSuggestSettings srv;
   srv.request.max_capture_time = ros::Duration{ 1.0 };
   ASSERT_TRUE(ros::service::call(capture_assistant_suggest_settings_service_name, srv));
 }
 
-TEST_F(ZividCATest, test_capture_assistant_invalid_ambient_light_frequency_fails)
+TEST_F(ZividCATest, testCaptureAssistantInvalidAmbientLightFrequencyFails)
 {
   zivid_camera::CaptureAssistantSuggestSettings srv;
   srv.request.max_capture_time = ros::Duration{ 1.0 };

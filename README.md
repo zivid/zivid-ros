@@ -39,13 +39,15 @@ sudo apt-get install -y python-catkin-tools git
 
 ### Zivid SDK
 
-To use the ROS driver you need to download and install the "Zivid Core" package.
-Follow [this guide](https://zivid.atlassian.net/wiki/spaces/ZividKB/pages/59080712/Zivid+Software+Installation)
-to install Zivid for your version of Ubuntu. "Zivid Studio" and "Zivid Tools" packages are
-not required by the ROS driver, but can be useful for testing that your system has been setup correctly
-and that the camera is detected.
+To use the ROS driver you need to download and install the "Zivid Core" package. SDK version 1.8.0 and
+1.8.1 are supported. See [releases](https://github.com/zivid/zivid-ros/releases) for older ROS driver
+releases that supports older SDK versions.
 
-An OpenCL 1.2 compatible GPU and OpenCL driver is required by the Zivid SDK. Follow
+Follow [this guide](https://zivid.atlassian.net/wiki/spaces/ZividKB/pages/59080712/Zivid+Software+Installation)
+to install "Zivid Core" for your version of Ubuntu. The "Zivid Studio" and "Zivid Tools" packages can be useful
+to test your system setup and camera, but are not required by the driver.
+
+An OpenCL 1.2 compatible GPU with driver installed is required by the SDK. Follow
 [this guide](https://zivid.atlassian.net/wiki/spaces/ZividKB/pages/426519/Install+OpenCL+drivers+on+Ubuntu) to
 install OpenCL drivers for your system.
 

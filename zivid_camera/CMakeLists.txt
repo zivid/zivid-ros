@@ -30,6 +30,8 @@ find_package(catkin REQUIRED COMPONENTS
   nodelet
 )
 
+find_package(Boost REQUIRED COMPONENTS filesystem)
+
 find_package(Zivid 1.8.0 COMPONENTS Core REQUIRED)
 message(STATUS "Found Zivid version ${Zivid_VERSION}")
 
@@ -45,7 +47,7 @@ target_include_directories(
   SYSTEM PRIVATE
   ${catkin_INCLUDE_DIRS}
 )
-target_link_libraries(${SETTINGS_GENERATOR_TARGET_NAME} PRIVATE Zivid::Core)
+target_link_libraries(${SETTINGS_GENERATOR_TARGET_NAME} PRIVATE Zivid::Core Boost::filesystem)
 
 
 set(GENERATOR_TARGET_NAME ${PROJECT_NAME}_generator)

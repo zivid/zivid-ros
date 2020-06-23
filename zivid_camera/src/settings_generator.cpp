@@ -5,6 +5,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/filesystem.hpp>
 
 #include <algorithm>
 #include <cctype>
@@ -49,6 +50,23 @@ struct DependentFalse : std::false_type
 
 void writeToFile(const std::string& file_name, const std::string& text)
 {
+  if (boost::filesystem::exists(file_name))
+  {
+    std::ifstream file(file_name);
+    if (!file.is_open())
+    {
+      throw std::runtime_error("Unable to open file '" + file_name + "' to check its contents!");
+    }
+    auto file_contents_ss = std::ostringstream{};
+    file_contents_ss << file.rdbuf();
+    if (file_contents_ss.str() == text)
+    {
+      // If the file already exists, and content is identical to "text" then do not modify the file.
+      // This ensures that we avoid unnecessary rebuilds.
+      return;
+    }
+  }
+
   std::ofstream cfg_file(file_name);
   if (!cfg_file || !cfg_file.is_open())
   {

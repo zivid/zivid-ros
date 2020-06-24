@@ -518,11 +518,11 @@ sensor_msgs::PointCloud2ConstPtr ZividCamera::makePointCloud2(const std_msgs::He
   msg->is_dense = false;
 
   msg->fields.reserve(5);
-  msg->fields.push_back(createPointField("x", 0, 7, 1));
-  msg->fields.push_back(createPointField("y", 4, 7, 1));
-  msg->fields.push_back(createPointField("z", 8, 7, 1));
-  msg->fields.push_back(createPointField("c", 12, 7, 1));
-  msg->fields.push_back(createPointField("rgb", 16, 7, 1));
+  msg->fields.push_back(createPointField("x", 0, sensor_msgs::PointField::FLOAT32, 1));
+  msg->fields.push_back(createPointField("y", 4, sensor_msgs::PointField::FLOAT32, 1));
+  msg->fields.push_back(createPointField("z", 8, sensor_msgs::PointField::FLOAT32, 1));
+  msg->fields.push_back(createPointField("c", 12, sensor_msgs::PointField::FLOAT32, 1));
+  msg->fields.push_back(createPointField("rgb", 16, sensor_msgs::PointField::FLOAT32, 1));
 
   msg->data = std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(point_cloud.dataPtr()),
                                    reinterpret_cast<const uint8_t*>(point_cloud.dataPtr() + point_cloud.size()));

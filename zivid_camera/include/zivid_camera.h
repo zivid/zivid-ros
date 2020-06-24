@@ -52,11 +52,13 @@ private:
   bool shouldPublishColorImg() const;
   bool shouldPublishDepthImg() const;
   std_msgs::Header makeHeader();
-  sensor_msgs::PointCloud2ConstPtr makePointCloud2(const std_msgs::Header& header,
-                                                   const Zivid::PointCloud& point_cloud);
-  sensor_msgs::ImageConstPtr makeColorImage(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud);
-  sensor_msgs::ImageConstPtr makeColorImage(const std_msgs::Header& header, const Zivid::Image<Zivid::RGBA8>& image);
-  sensor_msgs::ImageConstPtr makeDepthImage(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud);
+  void publishPoints(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud);
+  void publishColorImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
+                         const Zivid::PointCloud& point_cloud);
+  void publishColorImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
+                         const Zivid::Image<Zivid::RGBA8>& image);
+  void publishDepthImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
+                         const Zivid::PointCloud& point_cloud);
   sensor_msgs::CameraInfoConstPtr makeCameraInfo(const std_msgs::Header& header, std::size_t width, std::size_t height,
                                                  const Zivid::CameraIntrinsics& intrinsics);
 

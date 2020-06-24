@@ -23,17 +23,16 @@ class Sample:
         )
 
         rospy.loginfo("Configuring 2D settings")
-        frame0_config_client = dynamic_reconfigure.client.Client(
-            "/zivid_camera/capture_2d/frame_0"
+        acquisition_0_client = dynamic_reconfigure.client.Client(
+            "/zivid_camera/settings_2d/acquisition_0"
         )
-        frame0_config = {
+        acquisition_0_config = {
             "enabled": True,
-            "iris": 35,
+            "aperture": 2.83,
             "exposure_time": 10000,
-            "gain": 1.0,
             "brightness": 1.0,
         }
-        frame0_config_client.update_configuration(frame0_config)
+        acquisition_0_client.update_configuration(acquisition_0_config)
 
     def capture(self):
         rospy.loginfo("Calling capture service")

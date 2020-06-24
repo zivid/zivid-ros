@@ -27,8 +27,8 @@ This is the official ROS driver for [Zivid 3D cameras](https://www.zivid.com/).
 ### ROS
 
 This driver supports Ubuntu 16.04 with ROS Kinetic and Ubuntu 18.04 with ROS Melodic. Follow the
-official ROS Wiki instructions to install [ROS Kinetic Kame](http://wiki.ros.org/kinetic/Installation) (for Ubuntu 16.04)
-or [ROS Melodic Morenia](http://wiki.ros.org/melodic/Installation) (for Ubuntu 18.04).
+official ROS Wiki instructions to install [ROS Kinetic Kame](http://wiki.ros.org/kinetic/Installation)
+(for Ubuntu 16.04) or [ROS Melodic Morenia](http://wiki.ros.org/melodic/Installation) (for Ubuntu 18.04).
 
 Also install catkin and git:
 
@@ -39,9 +39,9 @@ sudo apt-get install -y python-catkin-tools git
 
 ### Zivid SDK
 
-To use the ROS driver you need to download and install the "Zivid Core" package. SDK version 1.8.0 and
-1.8.1 are supported. See [releases](https://github.com/zivid/zivid-ros/releases) for older ROS driver
-releases that supports older SDK versions.
+To use the ROS driver you need to download and install the "Zivid Core" package. SDK version 2.0 is supported.
+See [releases](https://github.com/zivid/zivid-ros/releases) for older ROS driver releases that supports
+older SDK versions.
 
 Follow [this guide](https://zivid.atlassian.net/wiki/spaces/ZividKB/pages/59080712/Zivid+Software+Installation)
 to install "Zivid Core" for your version of Ubuntu. The "Zivid Studio" and "Zivid Tools" packages can be useful
@@ -143,7 +143,7 @@ You can adjust the maximum capture time by changing variable `max_capture_time` 
 re-launching the sample.
 
 <p align="center">
-    <img src="https://www.zivid.com/software/zivid-ros/ros_rviz_miscobjects.png?" width="750" height="445">
+    <img src="https://www.zivid.com/software/zivid-ros/ros_rviz_miscobjects_sdk2.png?" width="750" height="436">
 </p>
 
 A more detailed description of the `zivid_camera` driver follows below.
@@ -187,22 +187,22 @@ For example, to launch the driver with `frame_id` specified, append `_frame_id:=
 rosrun command:
 
 ```bash
-ROS_NAMESPACE=zivid_camera rosrun zivid_camera zivid_camera_node _frame_id:=zivid
+ROS_NAMESPACE=zivid_camera rosrun zivid_camera zivid_camera_node _frame_id:=camera1
 ```
 
 `file_camera_path` (string, default: "")
 > Specify the path to a file camera to use instead of a real Zivid camera. This can be used to
 > develop without access to hardware. The file camera returns the same point cloud for every capture.
-> [Click here to download a file camera.](https://www.zivid.com/software/ZividSampleData.zip)
+> [Click here to download a file camera.](https://www.zivid.com/software/FileCameraZividOne.zip)
 
 `frame_id` (string, default: "zivid_optical_frame")
 > Specify the frame_id used for all published images and point clouds.
 
-`num_capture_frames` (int, default: 10)
-> Specify the number of dynamic_reconfigure `capture/frame_<n>` nodes that are created. This number
-> defines the maximum number of frames that can be a part of a 3D HDR capture. All `capture/frame_<n>`
+`max_capture_acquisitions` (int, default: 10)
+> Specify the number of dynamic_reconfigure `settings/acquisition_<n>` nodes that are created. This number
+> defines the maximum number of acquisitions that can be a part of a 3D capture. All `settings/acquisition_<n>`
 > nodes are by default enabled=false (see section [Configuration](#configuration)). If you need to
-> perform 3D HDR capture with more than 10 enabled frames then increase this number. Otherwise it can
+> perform 3D HDR capture with more than 10 enabled acquisitions then increase this number. Otherwise it can
 > be left as default. We do not recommend lowering this setting, especially if you are using the
 > [capture_assistant/suggest_settings](#capture_assistantsuggest_settings) service.
 
@@ -241,10 +241,10 @@ See [Sample Capture Assistant](#sample-capture-assistant) for code example.
 [zivid_camera/Capture.srv](./zivid_camera/srv/Capture.srv)
 
 Invoke this service to trigger a 3D capture. See section [Configuration](#configuration) for how to
-configure the 3D capture settings. The resulting point cloud is published on topic [points](#points),
-color image is published on topic [color/image_color](#colorimage_color), and depth image is published
-on topic [depth/image_raw](depthimage_raw). Camera calibration is published on topics
-[color/camera_info](#colorcamera_info) and [depth/camera_info](#depthcamera_info).
+configure the 3D capture settings. The resulting point cloud is published on topics [points/xyz](#points/xyz) and
+[points/xyzrgba](#points/xyzrgba), color image is published on topic [color/image_color](#colorimage_color),
+and depth image is published on topic [depth/image](depthimage). Camera calibration is published on
+topics [color/camera_info](#colorcamera_info) and [depth/camera_info](#depthcamera_info).
 
 See [Sample Capture](#sample-capture) for code example.
 
@@ -272,12 +272,17 @@ Returns the camera's serial number.
 [zivid_camera/IsConnected.srv](./zivid_camera/srv/IsConnected.srv)
 
 Returns if the camera is currently in `Connected` state (from the perspective of the ROS driver).
-The connection status is updated by the driver every 10 seconds and before each [capture](#capture) service
-call. If the camera is not in `Connected` state the driver will attempt to re-connect to the camera
-when it detects that the camera is available. This can happen if the camera is power-cycled or the
-USB cable is unplugged and then replugged.
+The connection status is updated by the driver every 10 seconds and before each [capture](#capture)
+service call. If the camera is not in `Connected` state the driver will attempt to re-connect to
+the camera when it detects that the camera is available. This can happen if the camera is
+power-cycled or the USB cable is unplugged and then replugged.
 
 ## Topics
+
+The Zivid ROS driver provides several topics providing 3D, color, SNR and camera calibration
+data as a result of calling [capture](#capture) and/or [capture_2d](#capture_2d).
+The different output topics provides flexibility for different use cases. Note that for
+performance reasons no messages are generated or sent on topics with zero active subscribers.
 
 ### color/camera_info
 [sensor_msgs/CameraInfo](http://docs.ros.org/api/sensor_msgs/html/msg/CameraInfo.html)
@@ -287,40 +292,58 @@ Camera calibration and metadata.
 ### color/image_color
 [sensor_msgs/Image](http://docs.ros.org/api/sensor_msgs/html/msg/Image.html)
 
-Color/RGB image. For 3D captures ([capture](#capture) service) the image is encoded as "rgb8". For
-2D captures ([capture_2d](#capture_2d) service) the image is encoded as "rgba8", where the alpha
-channel is always 255.
+Color/RGBA image. RGBA image is published as a result of invoking the [capture](#capture) or
+[capture_2d](#capture_2d) service. Images are encoded as "rgba8", where the alpha channel
+is always 255.
 
 ### depth/camera_info
 [sensor_msgs/CameraInfo](http://docs.ros.org/api/sensor_msgs/html/msg/CameraInfo.html)
 
 Camera calibration and metadata.
 
-### depth/image_raw
+### depth/image
 [sensor_msgs/Image](http://docs.ros.org/api/sensor_msgs/html/msg/Image.html)
 
 Depth image. Each pixel contains the z-value (along the camera Z axis) in meters.
 The image is encoded as 32-bit float. Pixels where z-value is missing are NaN.
 
-### points
+### points/xyzrgba
 [sensor_msgs/PointCloud2](http://docs.ros.org/api/sensor_msgs/html/msg/PointCloud2.html)
 
-Point cloud data. Each time [capture](#capture) is invoked the resulting point cloud is published
-on this topic. The included point fields are x, y, z (in meters), c (contrast value),
-and r, g, b (colors). The output is in the camera's optical frame, where x is right, y is
-down and z is forward.
+Point cloud data. Sent as a result of the [capture](#capture) service. The output is
+in the camera's optical frame, where x is right, y is down and z is forward.
+The included point fields are x, y, z (in meters) and rgba (color).
+
+### points/xyz
+[sensor_msgs/PointCloud2](http://docs.ros.org/api/sensor_msgs/html/msg/PointCloud2.html)
+
+Point cloud data. This topic is similar to topic [points/xyzrgba](#points/xyzrgba), except
+that only the XYZ 3D coordinates are included. This topic is recommended if you don't need
+the RGBA values.
+
+### snr/camera_info
+[sensor_msgs/CameraInfo](http://docs.ros.org/api/sensor_msgs/html/msg/CameraInfo.html)
+
+Camera calibration and metadata.
+
+### snr/image
+[sensor_msgs/Image](http://docs.ros.org/api/sensor_msgs/html/msg/Image.html)
+
+Each pixel contains the SNR (signal-to-noise ratio) value. The image is encoded as 32-bit
+float. Published as a part of the [capture](#capture) service.
 
 ## Configuration
 
-The `zivid_camera` node supports both single-capture (2D and 3D) and HDR-capture (3D). 3D HDR-capture works by taking
-several individual captures (called frames) with different settings (for example different exposure time)
-and combining the captures into one high-quality point cloud. For more information about HDR capture, visit our
+The `zivid_camera` node supports both single-acquisition (2D and 3D) and multi-acquisition
+HDR captures (3D only). 3D HDR-capture works by taking several acquisitions with different
+settings (for example different exposure time) and combining them into one high-quality point
+cloud. For more information about HDR capture, visit our
 [knowledge base](https://zivid.atlassian.net/wiki/spaces/ZividKB/pages/428143/HDR+Imaging+for+Challenging+Objects).
 
 The capture settings available in the `zivid_camera` node matches the settings in the Zivid API.
 To become more familiar with the different settings and what they do, see the API reference for the
-[Settings](http://www.zivid.com/hubfs/softwarefiles/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings.html)
-and [Settings2D](http://www.zivid.com/hubfs/softwarefiles/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings2D.html)
+[Settings](http://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings.html)
+and [Settings2D](http://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings2D.html)
 classes, or use Zivid Studio.
 
 The settings can be viewed and configured using [dynamic_reconfigure](https://wiki.ros.org/dynamic_reconfigure).
@@ -335,84 +358,111 @@ which will capture in a loop forever, and use [rqt_reconfigure](https://wiki.ros
 to adjust the settings.
 
 The available capture settings are organized into a hierarchy of configuration nodes. 3D settings are available
-under the `/capture` namespace, while 2D settings are available under `/capture_2d`.
+under the `/settings` namespace, while 2D settings are available under `/settings_2d`.
 
 ```
-/capture
-    /frame_0
+/settings
+    ...
+    /acquisition_0
         ...
-    /frame_1
+    /acquisition_1
         ...
     ...
-    /frame_9
+    /acquisition_9
         ...
-    /general
+/settings_2d
+    ...
+    /acquisition_0
         ...
-/capture_2d
-    /frame_0
 ```
+
+**Important notice for C++ users:** The default value and min/max values of the settings are dependent on
+what Zivid camera model you are using. Therefore you need to query the server for the correct values after
+you have connected to the camera. To initialize a settings Config object you should **not** use the static
+`__getDefault()__` methods of the auto-generated C++ config classes (`zivid_camera::SettingsConfig`,
+`zivid_camera::SettingsAcquisitionConfig`, `zivid_camera::Settings2DConfig`, and
+`zivid_camera::Settings2DAcquisitionConfig`). Instead, you should query the server for the default
+values using `dynamic_reconfigure::Client<T>::getDefaultConfiguration()`. See the [C++ samples](#samples)
+for how to do this. For Python users this is already handled by dynamic_reconfigure.client.Client.
 
 **Note:** The Capture Assistant feature can be used to find optimized 3D capture settings for your
 scene. Refer to service [capture_assistant/suggest_settings](#capture_assistantsuggest_settings).
 
-**Note for C++ users:** The min, max and default values of the settings can change dependent on what
-Zivid camera model you are using. Therefore you should **not** use the static `__getMin()__`,
-`__getMax()__` and `__getDefault()__` methods of the auto-generated C++ config classes
-(`zivid_camera::CaptureGeneralConfig`, `zivid_camera::CaptureFrameConfig` and
-`zivid_camera::Capture2DFrameConfig`). Instead, you should query the server for the default values
-using `dynamic_reconfigure::Client<T>::getDefaultConfiguration()`. See the [C++ samples](#samples)
-for how to do this.
+### 3D Settings
 
-### Frame settings for 3D
+#### Acquisition settings
 
-`capture/frame_<n>/` contains settings for an individual frame. By default `<n>` can be 0 to 9 for a
-total of 10 frames. The total number of frames can be configured using the launch parameter `num_capture_frames`
-(see section [Launch Parameters](#launch-parameters-advanced) above).
+`settings/acquisition_<n>/` contains settings for an individual acquisition. By default `<n>` can be 0 to 9 for a
+total of 10 acquisitions. The total number of acquisitions can be configured using the launch parameter
+`max_capture_acquisitions` (see section [Launch Parameters](#launch-parameters-advanced) above).
 
-`capture/frame_<n>/enabled` controls if frame `<n>` will be included when the [capture](#capture) service is
-invoked. If only one frame is enabled the [capture](#capture) service performs a 3D single-capture. If more than
-one frame is enabled the [capture](#capture) service will perform a 3D HDR-capture. By default enabled is false.
-In order to capture a point cloud at least one frame needs to be enabled.
+`settings/acquisition_<n>/enabled` controls if acquisition `<n>` will be included when the [capture](#capture) service is
+invoked. If only one acquisition is enabled the [capture](#capture) service performs a 3D single-capture. If more than
+one acquisition is enabled the [capture](#capture) service will perform a 3D HDR-capture. By default `enabled` is false.
+In order to capture a point cloud at least one acquisition needs to be enabled.
 
-| Name                               | Type   |  Zivid API Setting             |      Note        |
-|------------------------------------|--------|--------------------------------|------------------|
-| `capture/frame_<n>/bidirectional`  | bool   | [Zivid::Settings::Bidirectional](https://www.zivid.com/software/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings_1_1Bidirectional.html)
-| `capture/frame_<n>/brightness`     | double | [Zivid::Settings::Brightness](https://www.zivid.com/software/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings_1_1Brightness.html)
-| `capture/frame_<n>/enabled`        | bool   |  |
-| `capture/frame_<n>/exposure_time`  | int    | [Zivid::Settings::ExposureTime](https://www.zivid.com/software/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings_1_1ExposureTime.html) | Specified in microseconds (µs)
-| `capture/frame_<n>/gain`           | double | [Zivid::Settings::Gain](https://www.zivid.com/software/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings_1_1Gain.html)
-| `capture/frame_<n>/iris`           | int    | [Zivid::Settings::Iris](https://www.zivid.com/software/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings_1_1Iris.html)
+| Name                                     | Type   |  Zivid API Setting             |  Note  |
+|------------------------------------------|--------|--------------------------------|--------|
+| `settings/acquisition_<n>/enabled`       | bool   |
+| `settings/acquisition_<n>/aperture`      | double | [Settings::Acquisition::Aperture](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings_1_1Acquisition_1_1Aperture.html)
+| `settings/acquisition_<n>/brightness`    | double | [Settings::Acquisition::Brightness](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings_1_1Acquisition_1_1Brightness.html)
+| `settings/acquisition_<n>/exposure_time` | int    | [Settings::Acquisition::ExposureTime](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings_1_1Acquisition_1_1ExposureTime.html) | Microseconds
+| `settings/acquisition_<n>/gain`          | double | [Settings::Acquisition::Gain](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings_1_1Acquisition_1_1Gain.html)
 
-### General settings for 3D
+#### Processing settings
 
-`capture/general` contains settings that apply to all frames in a 3D capture.
+`settings/` contains settings related to processing, like color balance and filter settings.
 
-| Name                                          | Type   |  Zivid API Setting                     |
-|-----------------------------------------------|--------|----------------------------------------|
-| `capture/general/blue_balance`                | double | [Zivid::Settings::BlueBalance](https://www.zivid.com/software/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings_1_1BlueBalance.html)
-| `capture/general/filters_contrast_enabled`    | bool   | [Zivid::Settings::Filters::Contrast::Enabled](https://www.zivid.com/software/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings_1_1Filters_1_1Contrast_1_1Enabled.html)
-| `capture/general/filters_contrast_threshold`  | double | [Zivid::Settings::Filters::Contrast::Threshold](https://www.zivid.com/software/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings_1_1Filters_1_1Contrast_1_1Threshold.html)
-| `capture/general/filters_gaussian_enabled`    | bool   | [Zivid::Settings::Filters::Gaussian::Enabled](https://www.zivid.com/software/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings_1_1Filters_1_1Gaussian_1_1Enabled.html)
-| `capture/general/filters_gaussian_sigma`      | double | [Zivid::Settings::Filters::Gaussian::Sigma](https://www.zivid.com/software/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings_1_1Filters_1_1Gaussian_1_1Sigma.html)
-| `capture/general/filters_outlier_enabled`     | bool   | [Zivid::Settings::Filters::Outlier::Enabled](https://www.zivid.com/software/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings_1_1Filters_1_1Outlier_1_1Enabled.html)
-| `capture/general/filters_outlier_threshold`   | double | [Zivid::Settings::Filters::Outlier::Threshold](https://www.zivid.com/software/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings_1_1Filters_1_1Outlier_1_1Threshold.html)
-| `capture/general/filters_reflection_enabled`  | bool   | [Zivid::Settings::Filters::Reflection::Enabled](https://www.zivid.com/software/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings_1_1Filters_1_1Reflection_1_1Enabled.html)
-| `capture/general/filters_saturated_enabled`   | bool   | [Zivid::Settings::Filters::Saturated::Enabled](https://www.zivid.com/software/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings_1_1Filters_1_1Saturated_1_1Enabled.html)
-| `capture/general/red_balance`                 | double | [Zivid::Settings::RedBalance](https://www.zivid.com/software/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings_1_1RedBalance.html)
+| Name                                                     | Type   |  Zivid API Setting                     |
+|----------------------------------------------------------|--------|----------------------------------------|
+| `settings/processing_color_balance_blue`                 | double | [Settings::Processing::Color::Balance::Blue](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings_1_1Processing_1_1Color_1_1Balance_1_1Blue.html)
+| `settings/processing_color_balance_green`                | double | [Settings::Processing::Color::Balance::Green](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings_1_1Processing_1_1Color_1_1Balance_1_1Green.html)
+| `settings/processing_color_balance_red`                  | double | [Settings::Processing::Color::Balance::Red](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings_1_1Processing_1_1Color_1_1Balance_1_1Red.html)
+| `settings/processing_filters_noise_removal_enabled`      | bool   | [Settings::Processing::Filters::Noise::Removal::Enabled](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings_1_1Processing_1_1Filters_1_1Noise_1_1Removal_1_1Enabled.html)
+| `settings/processing_filters_noise_removal_threshold`    | double | [Settings::Processing::Filters::Noise::Removal::Threshold](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings_1_1Processing_1_1Filters_1_1Noise_1_1Removal_1_1Threshold.html)
+| `settings/processing_filters_outlier_removal_enabled`    | bool   | [Settings::Processing::Filters::Outlier::Removal::Enabled](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings_1_1Processing_1_1Filters_1_1Outlier_1_1Removal_1_1Enabled.html)
+| `settings/processing_filters_outlier_removal_threshold`  | double | [Settings::Processing::Filters::Outlier::Removal::Threshold](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings_1_1Processing_1_1Filters_1_1Outlier_1_1Removal_1_1Threshold.html)
+| `settings/processing_filters_reflection_removal_enabled` | bool   | [Settings::Processing::Filters::Reflection::Removal::Enabled](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings_1_1Processing_1_1Filters_1_1Reflection_1_1Removal_1_1Enabled.html)
+| `settings/processing_filters_smoothing_gaussian_enabled` | bool   | [Settings::Processing::Filters::Smoothing::Gaussian::Enabled](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings_1_1Processing_1_1Filters_1_1Smoothing_1_1Gaussian_1_1Enabled.html)
+| `settings/processing_filters_smoothing_gaussian_sigma`   | double | [Settings::Processing::Filters::Smoothing::Gaussian::Sigma](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings_1_1Processing_1_1Filters_1_1Smoothing_1_1Gaussian_1_1Sigma.html)
 
-### Frame settings for 2D
+#### Experimental settings
 
-2D settings are available under `capture_2d/frame_0/`. To trigger a 2D capture, invoke the [capture_2d](#capture_2d)
-service. Note that `capture_2d/frame_0/enabled` is default false, and must be set to true before
+Note that these settings may be changed, renamed or removed in future SDK releases.
+
+| Name                                                                               | Type   |  Zivid API Setting             |
+|------------------------------------------------------------------------------------|--------|--------------------------------|
+| `settings/processing_filters_experimental_contrast_distortion_correction_enabled`  | bool   | [Settings::Processing::Filters::Experimental::ContrastDistortion::Correction::Enabled](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings_1_1Processing_1_1Filters_1_1Experimental_1_1ContrastDistortion_1_1Correction_1_1Enabled.html)
+| `settings/processing_filters_experimental_contrast_distortion_correction_strength` | double | [Settings::Processing::Filters::Experimental::ContrastDistortion::Correction::Strength](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings_1_1Processing_1_1Filters_1_1Experimental_1_1ContrastDistortion_1_1Correction_1_1Strength.html)
+| `settings/processing_filters_experimental_contrast_distortion_removal_enabled`     | bool   | [Settings::Processing::Filters::Experimental::ContrastDistortion::Removal::Enabled](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings_1_1Processing_1_1Filters_1_1Experimental_1_1ContrastDistortion_1_1Removal_1_1Enabled.html)
+| `settings/processing_filters_experimental_contrast_distortion_removal_threshold`   | double | [Settings::Processing::Filters::Experimental::ContrastDistortion::Removal::Threshold](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings_1_1Processing_1_1Filters_1_1Experimental_1_1ContrastDistortion_1_1Removal_1_1Threshold.html)
+
+
+### 2D settings
+
+#### Acquisition settings
+
+To trigger a 2D capture, invoke the [capture_2d](#capture_2d) service. Note that
+`settings_2d/acquisition_0/enabled` is default false, and must be set to true before
 calling the [capture_2d](#capture_2d) service, otherwise the service will return an error.
 
-| Name                               | Type   |  Zivid API Setting             |      Note        |
-|------------------------------------|--------|--------------------------------|------------------|
-| `capture_2d/frame_0/brightness`    | double | [Zivid::Settings2D::Brightness](https://www.zivid.com/software/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings2D_1_1Brightness.html)
-| `capture_2d/frame_0/enabled`       | bool   | |
-| `capture_2d/frame_0/exposure_time` | int    | [Zivid::Settings2D::ExposureTime](https://www.zivid.com/software/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings2D_1_1ExposureTime.html) | Specified in microseconds (µs)
-| `capture_2d/frame_0/gain`          | double | [Zivid::Settings2D::Gain](https://www.zivid.com/software/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings2D_1_1Gain.html)
-| `capture_2d/frame_0/iris`          | int    | [Zivid::Settings2D::Iris](https://www.zivid.com/software/releases/1.8.1+6967bc1b-1/doc/cpp/classZivid_1_1Settings2D_1_1Iris.html)
+| Name                                      | Type   |  Zivid API Setting             |  Note  |
+|-------------------------------------------|--------|--------------------------------|--------|
+| `settings_2d/acquisition_0/enabled`       | bool   |
+| `settings_2d/acquisition_0/aperture`      | double | [Settings2D::Acquisition::Aperture](https://www.zivid.com/software/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings2D_1_1Acquisition_1_1Aperture.html)
+| `settings_2d/acquisition_0/brightness`    | double | [Settings2D::Acquisition::Brightness](https://www.zivid.com/software/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings2D_1_1Acquisition_1_1Brightness.html)
+| `settings_2d/acquisition_0/exposure_time` | int    | [Settings2D::Acquisition::ExposureTime](https://www.zivid.com/software/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings2D_1_1Acquisition_1_1ExposureTime.html) | Microseconds
+| `settings_2d/acquisition_0/gain`          | double | [Settings2D::Acquisition::Gain](https://www.zivid.com/software/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings2D_1_1Acquisition_1_1Gain.html)
+
+#### Processing settings
+
+`settings_2d/` contains settings related to processing of the captured image.
+
+| Name                                         | Type   |  Zivid API Setting                     |
+|----------------------------------------------|--------|----------------------------------------|
+| `settings_2d/processing_color_balance_blue`  | double | [Settings2D::Processing::Color::Balance::Blue](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings2D_1_1Processing_1_1Color_1_1Balance_1_1Blue.html)
+| `settings_2d/processing_color_balance_green` | double | [Settings2D::Processing::Color::Balance::Green](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings2D_1_1Processing_1_1Color_1_1Balance_1_1Green.html)
+| `settings_2d/processing_color_balance_red`   | double | [Settings2D::Processing::Color::Balance::Red](https://www.zivid.com/hubfs/softwarefiles/releases/2.0.0+7c4918cf-14/doc/cpp/classZivid_1_1Settings2D_1_1Processing_1_1Color_1_1Balance_1_1Red.html)
 
 ## Samples
 
@@ -441,8 +491,9 @@ rosrun zivid_samples sample_capture_assistant.py
 
 ### Sample Capture
 
-This sample performs single 3D captures repeatedly. This sample shows how to [configure](#configuration)
-the capture settings, how to subscribe to the [points](#points) topic, and how to invoke the [capture](#capture) service.
+This sample performs single-acquisition 3D captures repeatedly. This sample shows how to [configure](#configuration)
+the capture settings, how to subscribe to the [points/xyzrgba](#points/xyzrgba) topic, and how to invoke the
+[capture](#capture) service.
 
 Source code: [C++](./zivid_samples/src/sample_capture.cpp), [Python](./zivid_samples/scripts/sample_capture.py)
 
@@ -507,12 +558,11 @@ may try to connect to the same camera at the same time.
 This project comes with a set of unit and module tests to verify the provided functionality. To run
 the tests locally, first download and install the file camera used for testing:
 ```bash
-wget -q https://www.zivid.com/software/ZividSampleData.zip
-unzip ./ZividSampleData.zip
-rm ./ZividSampleData.zip
+wget -q https://www.zivid.com/software/FileCameraZividOne.zip
+unzip ./FileCameraZividOne.zip
+rm ./FileCameraZividOne.zip
 sudo mkdir -p /usr/share/Zivid/data/
-sudo cp ./MiscObjects.zdf /usr/share/Zivid/data/
-rm ./MiscObjects.zdf
+sudo mv ./FileCameraZividOne.zfc /usr/share/Zivid/data/
 ```
 
 Then run the tests:

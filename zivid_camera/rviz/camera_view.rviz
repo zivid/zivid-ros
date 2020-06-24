@@ -63,7 +63,7 @@ Visualization Manager:
       Value: false
     - Class: rviz/Image
       Enabled: true
-      Image Topic: depth/image_raw
+      Image Topic: depth/image
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -110,7 +110,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.0005000000237487257
       Style: Spheres
-      Topic: points/
+      Topic: points/xyzrgba
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true

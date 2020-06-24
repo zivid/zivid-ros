@@ -1,19 +1,16 @@
 #include "zivid_camera.h"
-#include "CaptureGeneralConfigUtils.h"
-#include "CaptureFrameConfigUtils.h"
-#include "Capture2DFrameConfigUtils.h"
 
 #include <sensor_msgs/point_cloud2_iterator.h>
 #include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/distortion_models.h>
 #include <dynamic_reconfigure/config_tools.h>
 
-#include <Zivid/HDR.h>
 #include <Zivid/Firmware.h>
 #include <Zivid/Frame2D.h>
 #include <Zivid/Settings2D.h>
 #include <Zivid/Version.h>
 #include <Zivid/CaptureAssistant.h>
+#include <Zivid/Experimental/Calibration.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/predef.h>
@@ -48,6 +45,28 @@ void fillCommonMsgFields(T& msg, const std_msgs::Header& header, std::size_t wid
   msg.is_bigendian = big_endian();
 }
 
+sensor_msgs::ImagePtr makeImage(const std_msgs::Header& header, const std::string& encoding, std::size_t width,
+                                std::size_t height)
+{
+  auto image = boost::make_shared<sensor_msgs::Image>();
+  fillCommonMsgFields(*image, header, width, height);
+  image->encoding = encoding;
+  const auto bytes_per_pixel = static_cast<std::size_t>(sensor_msgs::image_encodings::numChannels(encoding) *
+                                                        sensor_msgs::image_encodings::bitDepth(encoding) / 8);
+  image->step = static_cast<uint32_t>(bytes_per_pixel * width);
+  return image;
+}
+
+template <typename ZividDataType>
+sensor_msgs::ImagePtr makePointCloudImage(const Zivid::PointCloud& point_cloud, const std_msgs::Header& header,
+                                          const std::string& encoding)
+{
+  auto image = makeImage(header, encoding, point_cloud.width(), point_cloud.height());
+  image->data.resize(image->step * image->height);
+  point_cloud.copyData<ZividDataType>(reinterpret_cast<ZividDataType*>(image->data.data()));
+  return image;
+}
+
 std::string toString(zivid_camera::CameraStatus camera_status)
 {
   switch (camera_status)
@@ -70,9 +89,11 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   : nh_(nh)
   , priv_(priv)
   , camera_status_(CameraStatus::Idle)
-  , use_latched_publisher_for_points_(false)
+  , use_latched_publisher_for_points_xyz_(false)
+  , use_latched_publisher_for_points_xyzrgba_(false)
   , use_latched_publisher_for_color_image_(false)
   , use_latched_publisher_for_depth_image_(false)
+  , use_latched_publisher_for_snr_image_(false)
   , image_transport_(nh_)
   , header_seq_(0)
 {
@@ -87,9 +108,9 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
                              "Please specify namespace, e.g. using the ROS_NAMESPACE environment variable.");
   }
 
-  ROS_INFO_STREAM("Built towards Zivid API version " << ZIVID_VERSION);
-  ROS_INFO_STREAM("Running with Zivid API version " << Zivid::Version::libraryVersion());
-  if (Zivid::Version::libraryVersion() != ZIVID_VERSION)
+  ROS_INFO_STREAM("Built towards Zivid Core version " << ZIVID_CORE_VERSION);
+  ROS_INFO_STREAM("Running with Zivid Core version " << Zivid::Version::coreLibraryVersion());
+  if (Zivid::Version::coreLibraryVersion() != ZIVID_CORE_VERSION)
   {
     throw std::runtime_error("Zivid library mismatch! The running Zivid Core version does not match the "
                              "version this ROS driver was built towards. Hint: Try to clean and re-build your project "
@@ -99,8 +120,8 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   std::string serial_number;
   priv_.param<decltype(serial_number)>("serial_number", serial_number, "");
 
-  int num_capture_frames;
-  priv_.param<decltype(num_capture_frames)>("num_capture_frames", num_capture_frames, 10);
+  int max_capture_acquisitions;
+  priv_.param<decltype(max_capture_acquisitions)>("max_capture_acquisitions", max_capture_acquisitions, 10);
 
   priv_.param<decltype(frame_id_)>("frame_id", frame_id_, "zivid_optical_frame");
 
@@ -108,9 +129,11 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   priv_.param<decltype(file_camera_path)>("file_camera_path", file_camera_path, "");
   const bool file_camera_mode = !file_camera_path.empty();
 
-  priv_.param<bool>("use_latched_publisher_for_points", use_latched_publisher_for_points_, false);
+  priv_.param<bool>("use_latched_publisher_for_points_xyz", use_latched_publisher_for_points_xyz_, false);
+  priv_.param<bool>("use_latched_publisher_for_points_xyzrgba", use_latched_publisher_for_points_xyzrgba_, false);
   priv_.param<bool>("use_latched_publisher_for_color_image", use_latched_publisher_for_color_image_, false);
   priv_.param<bool>("use_latched_publisher_for_depth_image", use_latched_publisher_for_depth_image_, false);
+  priv_.param<bool>("use_latched_publisher_for_snr_image", use_latched_publisher_for_snr_image_, false);
 
   if (file_camera_mode)
   {
@@ -147,7 +170,7 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
         ROS_INFO("Searching for camera with serial number '%s' ...", serial_number.c_str());
         for (auto& c : cameras)
         {
-          if (c.serialNumber() == Zivid::SerialNumber(serial_number))
+          if (c.info().serialNumber() == Zivid::CameraInfo::SerialNumber(serial_number))
             return c;
         }
         throw std::runtime_error("No camera found with serial number '" + serial_number + "'");
@@ -167,38 +190,31 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   ROS_INFO_STREAM(camera_);
   if (!file_camera_mode)
   {
-    ROS_INFO_STREAM("Connecting to camera '" << camera_.serialNumber() << "'");
+    ROS_INFO_STREAM("Connecting to camera '" << camera_.info().serialNumber() << "'");
     camera_.connect();
   }
-  ROS_INFO_STREAM("Connected to camera '" << camera_.serialNumber() << "'");
+  ROS_INFO_STREAM("Connected to camera '" << camera_.info().serialNumber() << "'");
   setCameraStatus(CameraStatus::Connected);
 
   camera_connection_keepalive_timer_ =
       nh_.createTimer(ros::Duration(10), &ZividCamera::onCameraConnectionKeepAliveTimeout, this);
 
-  const auto defaultSettings = camera_.settings();
-  capture_general_config_dr_server_ =
-      std::make_unique<CaptureGeneralConfigDRServer>("capture/general", nh_, defaultSettings);
-
-  ROS_INFO("Setting up %d capture/frame_<n> dynamic_reconfigure servers", num_capture_frames);
-  for (int i = 0; i < num_capture_frames; i++)
-  {
-    capture_frame_config_dr_servers_.push_back(
-        std::make_unique<CaptureFrameConfigDRServer>("capture/frame_" + std::to_string(i), nh_, defaultSettings));
-  }
+  capture_settings_controller_ =
+      std::make_unique<Capture3DSettingsController>(nh_, camera_, "settings", max_capture_acquisitions);
 
   // HDR is not supported in 2D mode, but for future-proofing the 2D configuration API is analogous
-  // to 3D except there is only 1 frame.
-  ROS_INFO("Setting up 1 capture_2d/frame_<n> dynamic_reconfigure server");
-  capture_2d_frame_config_dr_servers_.push_back(
-      std::make_unique<Capture2DFrameConfigDRServer>("capture_2d/frame_0", nh_, Zivid::Settings2D{}));
+  // to 3D except there is only 1 acquisition.
+  capture_2d_settings_controller_ = std::make_unique<Capture2DSettingsController>(nh_, camera_, "settings_2d", 1);
 
   ROS_INFO("Advertising topics");
-  points_publisher_ = nh_.advertise<sensor_msgs::PointCloud2>("points", 1, use_latched_publisher_for_points_);
+  points_xyz_publisher_ =
+      nh_.advertise<sensor_msgs::PointCloud2>("points/xyz", 1, use_latched_publisher_for_points_xyz_);
+  points_xyzrgba_publisher_ =
+      nh_.advertise<sensor_msgs::PointCloud2>("points/xyzrgba", 1, use_latched_publisher_for_points_xyzrgba_);
   color_image_publisher_ =
       image_transport_.advertiseCamera("color/image_color", 1, use_latched_publisher_for_color_image_);
-  depth_image_publisher_ =
-      image_transport_.advertiseCamera("depth/image_raw", 1, use_latched_publisher_for_depth_image_);
+  depth_image_publisher_ = image_transport_.advertiseCamera("depth/image", 1, use_latched_publisher_for_depth_image_);
+  snr_image_publisher_ = image_transport_.advertiseCamera("snr/image", 1, use_latched_publisher_for_snr_image_);
 
   ROS_INFO("Advertising services");
   camera_info_model_name_service_ =
@@ -216,7 +232,7 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
 
 void ZividCamera::onCameraConnectionKeepAliveTimeout(const ros::TimerEvent&)
 {
-  ROS_DEBUG_STREAM(__func__ << ", threadid=" << std::this_thread::get_id());
+  ROS_DEBUG_STREAM(__func__);
   try
   {
     reconnectToCameraIfNecessary();
@@ -229,7 +245,7 @@ void ZividCamera::onCameraConnectionKeepAliveTimeout(const ros::TimerEvent&)
 
 void ZividCamera::reconnectToCameraIfNecessary()
 {
-  ROS_DEBUG_STREAM(__func__ << ", threadid=" << std::this_thread::get_id());
+  ROS_DEBUG_STREAM(__func__);
 
   const auto state = camera_.state();
   if (state.isConnected().value())
@@ -245,7 +261,7 @@ void ZividCamera::reconnectToCameraIfNecessary()
     auto cameras = zivid_.cameras();
     for (auto& c : cameras)
     {
-      if (camera_.serialNumber() == c.serialNumber())
+      if (camera_.info().serialNumber() == c.info().serialNumber())
       {
         camera_ = c;
       }
@@ -253,7 +269,7 @@ void ZividCamera::reconnectToCameraIfNecessary()
 
     if (state.isAvailable().value())
     {
-      ROS_INFO_STREAM("The camera '" << camera_.serialNumber()
+      ROS_INFO_STREAM("The camera '" << camera_.info().serialNumber()
                                      << "' is not connected but is available. Re-connecting ...");
       camera_.connect();
       ROS_INFO("Successfully reconnected to camera!");
@@ -261,7 +277,7 @@ void ZividCamera::reconnectToCameraIfNecessary()
     }
     else
     {
-      ROS_INFO_STREAM("The camera '" << camera_.serialNumber() << "' is not connected nor available.");
+      ROS_INFO_STREAM("The camera '" << camera_.info().serialNumber() << "' is not connected nor available.");
     }
   }
 }
@@ -287,79 +303,57 @@ void ZividCamera::setCameraStatus(CameraStatus camera_status)
 bool ZividCamera::cameraInfoModelNameServiceHandler(zivid_camera::CameraInfoModelName::Request&,
                                                     zivid_camera::CameraInfoModelName::Response& res)
 {
-  res.model_name = camera_.modelName();
+  res.model_name = camera_.info().modelName().toString();
   return true;
 }
 
 bool ZividCamera::cameraInfoSerialNumberServiceHandler(zivid_camera::CameraInfoSerialNumber::Request&,
                                                        zivid_camera::CameraInfoSerialNumber::Response& res)
 {
-  res.serial_number = camera_.serialNumber().toString();
+  res.serial_number = camera_.info().serialNumber().toString();
   return true;
 }
 
 bool ZividCamera::captureServiceHandler(Capture::Request&, Capture::Response&)
 {
-  ROS_DEBUG_STREAM(__func__ << ", threadid=" << std::this_thread::get_id());
+  ROS_DEBUG_STREAM(__func__);
 
   serviceHandlerHandleCameraConnectionLoss();
 
-  std::vector<Zivid::Settings> settings;
+  const auto settings = capture_settings_controller_->zividSettings();
 
-  Zivid::Settings base_setting = camera_.settings();
-  applyCaptureGeneralConfigToZividSettings(capture_general_config_dr_server_->config(), base_setting);
-
-  for (const auto& dr_config_server : capture_frame_config_dr_servers_)
+  if (settings.acquisitions().isEmpty())
   {
-    if (dr_config_server->config().enabled)
-    {
-      ROS_DEBUG("Config %s is enabled", dr_config_server->name().c_str());
-      Zivid::Settings s{ base_setting };
-      applyCaptureFrameConfigToZividSettings(dr_config_server->config(), s);
-      settings.push_back(std::move(s));
-    }
+    throw std::runtime_error("capture called with 0 enabled acquisitions!");
   }
 
-  if (settings.size() == 0)
-  {
-    throw std::runtime_error("Capture called with 0 enabled frames!");
-  }
-
-  ROS_INFO("Capturing with %zd frames", settings.size());
-  for (std::size_t i = 0; i < settings.size(); i++)
-  {
-    ROS_DEBUG_STREAM("Setting " << i << ": " << settings[i]);
-  }
-  publishFrame(Zivid::HDR::capture(camera_, settings));
+  ROS_INFO("Capturing with %zd acquisition(s)", settings.acquisitions().size());
+  ROS_DEBUG_STREAM(settings);
+  publishFrame(camera_.capture(settings));
   return true;
 }
 
-bool ZividCamera::capture2DServiceHandler(Capture::Request&, Capture::Response&)
+bool ZividCamera::capture2DServiceHandler(Capture2D::Request&, Capture2D::Response&)
 {
   ROS_DEBUG_STREAM(__func__);
 
   serviceHandlerHandleCameraConnectionLoss();
 
-  if (capture_2d_frame_config_dr_servers_.empty())
+  const auto settings2D = capture_2d_settings_controller_->zividSettings();
+
+  if (settings2D.acquisitions().isEmpty())
   {
-    throw std::runtime_error("Internal error: capture_2d_frame_config_dr_servers_ empty");
+    throw std::runtime_error("capture_2d called with 0 enabled acquisitions!");
   }
 
-  if (!capture_2d_frame_config_dr_servers_[0]->config().enabled)
-  {
-    // 2D capture API in SDK currently only supports single-capture (1 frame). However, we still
-    // verify that frame_0/enabled is set. This is for future-proofing and consistency with 3D API.
-    throw std::runtime_error("Failed to capture: capture_2d/frame_0/enabled is false! Set enabled to true.");
-  }
-
-  Zivid::Settings2D settings2D;
-  applyCapture2DFrameConfigToZividSettings(capture_2d_frame_config_dr_servers_[0]->config(), settings2D);
-  auto frame2D = camera_.capture2D(settings2D);
+  ROS_DEBUG_STREAM(settings2D);
+  auto frame2D = camera_.capture(settings2D);
   if (shouldPublishColorImg())
   {
     const auto header = makeHeader();
-    auto image = frame2D.image<Zivid::RGBA8>();
-    const auto camera_info = makeCameraInfo(header, image.width(), image.height(), camera_.intrinsics());
+    auto image = frame2D.imageRGBA();
+    const auto intrinsics = Zivid::Experimental::Calibration::intrinsics(camera_);
+    const auto camera_info = makeCameraInfo(header, image.width(), image.height(), intrinsics);
     publishColorImage(header, camera_info, image);
   }
   return true;
@@ -372,64 +366,40 @@ bool ZividCamera::captureAssistantSuggestSettingsServiceHandler(CaptureAssistant
 
   serviceHandlerHandleCameraConnectionLoss();
 
+  if (capture_settings_controller_->numAcquisitionConfigServers() < 10)
+  {
+    throw std::runtime_error("To use the CaptureAssistant the launch parameter 'max_capture_acquisitions' "
+                             "must be at least 10, since the Capture Assistant may suggest up to 10 acquisitions. "
+                             "See README.md for more information.");
+  }
+
+  using SuggestSettingsParameters = Zivid::CaptureAssistant::SuggestSettingsParameters;
+
   const auto max_capture_time =
       std::chrono::round<std::chrono::milliseconds>(std::chrono::duration<double>{ req.max_capture_time.toSec() });
   const auto ambient_light_frequency = [&req]() {
     switch (req.ambient_light_frequency)
     {
       case CaptureAssistantSuggestSettings::Request::AMBIENT_LIGHT_FREQUENCY_NONE:
-        return Zivid::CaptureAssistant::AmbientLightFrequency::none;
+        return SuggestSettingsParameters::AmbientLightFrequency::none;
       case CaptureAssistantSuggestSettings::Request::AMBIENT_LIGHT_FREQUENCY_50HZ:
-        return Zivid::CaptureAssistant::AmbientLightFrequency::hz50;
+        return SuggestSettingsParameters::AmbientLightFrequency::hz50;
       case CaptureAssistantSuggestSettings::Request::AMBIENT_LIGHT_FREQUENCY_60HZ:
-        return Zivid::CaptureAssistant::AmbientLightFrequency::hz60;
+        return SuggestSettingsParameters::AmbientLightFrequency::hz60;
     }
     throw std::runtime_error("Unhandled AMBIENT_LIGHT_FREQUENCY value: " + std::to_string(req.ambient_light_frequency));
   }();
 
-  Zivid::CaptureAssistant::SuggestSettingsParameters suggest_settings_parameters(max_capture_time,
-                                                                                 ambient_light_frequency);
+  SuggestSettingsParameters suggest_settings_parameters{ SuggestSettingsParameters::MaxCaptureTime{ max_capture_time },
+                                                         ambient_light_frequency };
   ROS_INFO_STREAM("Getting suggested settings using parameters: " << suggest_settings_parameters);
-  const auto suggested_settings{ Zivid::CaptureAssistant::suggestSettings(camera_, suggest_settings_parameters) };
-
-  if (suggested_settings.empty())
-  {
-    throw std::runtime_error("The suggestSettings function returned 0 settings!");
-  }
-  if (suggested_settings.size() > capture_frame_config_dr_servers_.size())
-  {
-    throw std::runtime_error("The number of suggested settings (" + std::to_string(suggested_settings.size()) + ") " +
-                             "is larger than the number of dynamic_reconfigure capture/frame_<n> servers (" +
-                             std::to_string(capture_frame_config_dr_servers_.size()) + "). Increase launch parameter " +
-                             "num_capture_frames. See README.md for more information.");
-  }
-
-  ROS_INFO_STREAM("CaptureAssistant::suggestSettings returned " << suggested_settings.size() << " settings");
-
-  capture_general_config_dr_server_->setConfig(zividSettingsToConfig<CaptureGeneralConfig>(suggested_settings[0]));
-
-  for (std::size_t i = 0; i < suggested_settings.size(); i++)
-  {
-    ROS_DEBUG_STREAM("Updating setting " << i << " to " << suggested_settings[i]);
-    auto config = zividSettingsToConfig<CaptureFrameConfig>(suggested_settings[i]);
-    config.enabled = true;
-    capture_frame_config_dr_servers_[i]->setConfig(config);
-  }
-
-  // Any other frames that are enabled must be disabled
-  for (std::size_t i = suggested_settings.size(); i < capture_frame_config_dr_servers_.size(); i++)
-  {
-    if (capture_frame_config_dr_servers_[i]->config().enabled)
-    {
-      ROS_INFO_STREAM("Frame config " << i << " was enabled, so disabling it");
-      auto config = capture_frame_config_dr_servers_[i]->config();
-      config.enabled = false;
-      capture_frame_config_dr_servers_[i]->setConfig(config);
-    }
-  }
+  const auto suggested_settings = Zivid::CaptureAssistant::suggestSettings(camera_, suggest_settings_parameters);
+  ROS_INFO_STREAM("CaptureAssistant::suggestSettings returned " << suggested_settings.acquisitions().size()
+                                                                << " acquisitions");
+  capture_settings_controller_->setZividSettings(suggested_settings);
 
   return true;
-}
+}  // namespace zivid_camera
 
 void ZividCamera::serviceHandlerHandleCameraConnectionLoss()
 {
@@ -449,40 +419,59 @@ bool ZividCamera::isConnectedServiceHandler(IsConnected::Request&, IsConnected::
 
 void ZividCamera::publishFrame(Zivid::Frame&& frame)
 {
-  const bool publish_points = shouldPublishPoints();
+  const bool publish_points_xyz = shouldPublishPointsXYZ();
+  const bool publish_points_xyzrgba = shouldPublishPointsXYZRGBA();
   const bool publish_color_img = shouldPublishColorImg();
   const bool publish_depth_img = shouldPublishDepthImg();
+  const bool publish_snr_img = shouldPublishSnrImg();
 
-  if (publish_points || publish_color_img || publish_depth_img)
+  if (publish_points_xyz || publish_points_xyzrgba || publish_color_img || publish_depth_img || publish_snr_img)
   {
     const auto header = makeHeader();
-    const auto point_cloud = frame.getPointCloud();
+    auto point_cloud = frame.pointCloud();
 
-    if (publish_points)
+    // Transform point cloud from millimeters (Zivid SDK) to meter (ROS).
+    const float scale = 0.001f;
+    const auto transformationMatrix = Zivid::Matrix4x4{ scale, 0, 0, 0, 0, scale, 0, 0, 0, 0, scale, 0, 0, 0, 0, 1 };
+    point_cloud.transform(transformationMatrix);
+
+    if (publish_points_xyz)
     {
-      publishPoints(header, point_cloud);
+      publishPointCloudXYZ(header, point_cloud);
     }
-
-    if (publish_color_img || publish_depth_img)
+    if (publish_points_xyzrgba)
     {
-      const auto camera_info = makeCameraInfo(header, point_cloud.width(), point_cloud.height(), camera_.intrinsics());
+      publishPointCloudXYZRGBA(header, point_cloud);
+    }
+    if (publish_color_img || publish_depth_img || publish_snr_img)
+    {
+      const auto intrinsics = Zivid::Experimental::Calibration::intrinsics(camera_);
+      const auto camera_info = makeCameraInfo(header, point_cloud.width(), point_cloud.height(), intrinsics);
 
       if (publish_color_img)
       {
         publishColorImage(header, camera_info, point_cloud);
       }
-
       if (publish_depth_img)
       {
         publishDepthImage(header, camera_info, point_cloud);
+      }
+      if (publish_snr_img)
+      {
+        publishSnrImage(header, camera_info, point_cloud);
       }
     }
   }
 }
 
-bool ZividCamera::shouldPublishPoints() const
+bool ZividCamera::shouldPublishPointsXYZRGBA() const
 {
-  return points_publisher_.getNumSubscribers() > 0 || use_latched_publisher_for_points_;
+  return points_xyzrgba_publisher_.getNumSubscribers() > 0 || use_latched_publisher_for_points_xyzrgba_;
+}
+
+bool ZividCamera::shouldPublishPointsXYZ() const
+{
+  return points_xyz_publisher_.getNumSubscribers() > 0 || use_latched_publisher_for_points_xyz_;
 }
 
 bool ZividCamera::shouldPublishColorImg() const
@@ -495,6 +484,11 @@ bool ZividCamera::shouldPublishDepthImg() const
   return depth_image_publisher_.getNumSubscribers() > 0 || use_latched_publisher_for_depth_image_;
 }
 
+bool ZividCamera::shouldPublishSnrImg() const
+{
+  return snr_image_publisher_.getNumSubscribers() > 0 || use_latched_publisher_for_snr_image_;
+}
+
 std_msgs::Header ZividCamera::makeHeader()
 {
   std_msgs::Header header;
@@ -504,77 +498,69 @@ std_msgs::Header ZividCamera::makeHeader()
   return header;
 }
 
-void ZividCamera::publishPoints(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud)
+void ZividCamera::publishPointCloudXYZ(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud)
 {
-  ROS_DEBUG("Publishing points");
+  ROS_DEBUG("Publishing points/xyz");
 
+  // We are using the Zivid::XYZW type here for compatibility with the pcl::PointXYZ type, which contains an
+  // padding float for performance reasons. We could use the "pcl_conversion" utility functions to construct
+  // the PointCloud2 message. However, those are observed to add significant overhead due to extra unnecssary
+  // copies of the data.
+  using ZividDataType = Zivid::PointXYZW;
   auto msg = boost::make_shared<sensor_msgs::PointCloud2>();
   fillCommonMsgFields(*msg, header, point_cloud.width(), point_cloud.height());
-  msg->point_step = sizeof(Zivid::Point);
-  msg->row_step = msg->point_step * msg->width;
-  msg->is_dense = false;
-
-  msg->fields.reserve(5);
+  msg->fields.reserve(3);
   msg->fields.push_back(createPointField("x", 0, sensor_msgs::PointField::FLOAT32, 1));
   msg->fields.push_back(createPointField("y", 4, sensor_msgs::PointField::FLOAT32, 1));
   msg->fields.push_back(createPointField("z", 8, sensor_msgs::PointField::FLOAT32, 1));
-  msg->fields.push_back(createPointField("c", 12, sensor_msgs::PointField::FLOAT32, 1));
-  msg->fields.push_back(createPointField("rgb", 16, sensor_msgs::PointField::FLOAT32, 1));
+  msg->is_dense = false;
+  msg->point_step = sizeof(ZividDataType);
+  msg->row_step = msg->point_step * msg->width;
+  msg->data.resize(msg->row_step * msg->height);
+  point_cloud.copyData<ZividDataType>(reinterpret_cast<ZividDataType*>(msg->data.data()));
+  points_xyz_publisher_.publish(msg);
+}
 
-  msg->data = std::vector<uint8_t>(reinterpret_cast<const uint8_t*>(point_cloud.dataPtr()),
-                                   reinterpret_cast<const uint8_t*>(point_cloud.dataPtr() + point_cloud.size()));
+void ZividCamera::publishPointCloudXYZRGBA(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud)
+{
+  ROS_DEBUG("Publishing points/xyzrgba");
 
-#pragma omp parallel for
-  for (std::size_t i = 0; i < point_cloud.size(); i++)
-  {
-    uint8_t* point_ptr = &(msg->data[i * sizeof(Zivid::Point)]);
-    float* x_ptr = reinterpret_cast<float*>(&(point_ptr[0]));
-    float* y_ptr = reinterpret_cast<float*>(&(point_ptr[4]));
-    float* z_ptr = reinterpret_cast<float*>(&(point_ptr[8]));
+  auto msg = boost::make_shared<sensor_msgs::PointCloud2>();
+  fillCommonMsgFields(*msg, header, point_cloud.width(), point_cloud.height());
+  msg->fields.reserve(4);
+  msg->fields.push_back(createPointField("x", 0, sensor_msgs::PointField::FLOAT32, 1));
+  msg->fields.push_back(createPointField("y", 4, sensor_msgs::PointField::FLOAT32, 1));
+  msg->fields.push_back(createPointField("z", 8, sensor_msgs::PointField::FLOAT32, 1));
+  msg->fields.push_back(createPointField("rgba", 12, sensor_msgs::PointField::FLOAT32, 1));
+  msg->is_dense = false;
 
-    // Convert from mm to m
-    *x_ptr *= 0.001f;
-    *y_ptr *= 0.001f;
-    *z_ptr *= 0.001f;
-  }
-  points_publisher_.publish(msg);
+  // Note that the "rgba" field is actually byte order "bgra" on little-endian systems. For this
+  // reason we use the Zivid BGRA type.
+  using ZividDataType = Zivid::PointXYZColorBGRA;
+  msg->point_step = sizeof(ZividDataType);
+  msg->row_step = msg->point_step * msg->width;
+  msg->data.resize(msg->row_step * msg->height);
+  point_cloud.copyData<ZividDataType>(reinterpret_cast<ZividDataType*>(msg->data.data()));
+  points_xyzrgba_publisher_.publish(msg);
 }
 
 void ZividCamera::publishColorImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
                                     const Zivid::PointCloud& point_cloud)
 {
   ROS_DEBUG("Publishing color image");
-
-  auto msg = boost::make_shared<sensor_msgs::Image>();
-  fillCommonMsgFields(*msg, header, point_cloud.width(), point_cloud.height());
-  msg->encoding = sensor_msgs::image_encodings::RGB8;
-  constexpr uint32_t bytes_per_pixel = 3U;
-  msg->step = static_cast<uint32_t>(bytes_per_pixel * point_cloud.width());
-  msg->data.resize(msg->step * msg->height);
-
-#pragma omp parallel for
-  for (std::size_t i = 0; i < point_cloud.size(); i++)
-  {
-    const auto point = point_cloud(i);
-    msg->data[3 * i] = point.red();
-    msg->data[3 * i + 1] = point.green();
-    msg->data[3 * i + 2] = point.blue();
-  }
-  color_image_publisher_.publish(msg, camera_info);
+  auto image = makePointCloudImage<Zivid::ColorRGBA>(point_cloud, header, sensor_msgs::image_encodings::RGBA8);
+  color_image_publisher_.publish(image, camera_info);
 }
 
 void ZividCamera::publishColorImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
-                                    const Zivid::Image<Zivid::RGBA8>& image)
+                                    const Zivid::Image<Zivid::ColorRGBA>& image)
 {
   ROS_DEBUG("Publishing color image");
 
-  auto msg = boost::make_shared<sensor_msgs::Image>();
-  fillCommonMsgFields(*msg, header, image.width(), image.height());
-  msg->encoding = sensor_msgs::image_encodings::RGBA8;
-  constexpr uint32_t bytes_per_pixel = 4U;
-  msg->step = static_cast<uint32_t>(bytes_per_pixel * image.width());
-  const auto uint8_data_ptr = reinterpret_cast<const uint8_t*>(image.dataPtr());
-  msg->data = std::vector<uint8_t>(uint8_data_ptr, uint8_data_ptr + image.size() * sizeof(Zivid::RGBA8));
+  auto msg = makeImage(header, sensor_msgs::image_encodings::RGBA8, image.width(), image.height());
+  const auto uint8_ptr_begin = reinterpret_cast<const uint8_t*>(image.data());
+  const auto uint8_ptr_end = reinterpret_cast<const uint8_t*>(image.data() + image.size());
+  msg->data = std::vector<uint8_t>(uint8_ptr_begin, uint8_ptr_end);
   color_image_publisher_.publish(msg, camera_info);
 }
 
@@ -582,21 +568,16 @@ void ZividCamera::publishDepthImage(const std_msgs::Header& header, const sensor
                                     const Zivid::PointCloud& point_cloud)
 {
   ROS_DEBUG("Publishing depth image");
+  auto image = makePointCloudImage<Zivid::PointZ>(point_cloud, header, sensor_msgs::image_encodings::TYPE_32FC1);
+  depth_image_publisher_.publish(image, camera_info);
+}
 
-  auto msg = boost::make_shared<sensor_msgs::Image>();
-  fillCommonMsgFields(*msg, header, point_cloud.width(), point_cloud.height());
-  msg->encoding = sensor_msgs::image_encodings::TYPE_32FC1;
-  msg->step = static_cast<uint32_t>(4 * point_cloud.width());
-  msg->data.resize(msg->step * msg->height);
-
-#pragma omp parallel for
-  for (std::size_t i = 0; i < point_cloud.size(); i++)
-  {
-    float* image_data = reinterpret_cast<float*>(&msg->data[4 * i]);
-    // Convert from mm to m
-    *image_data = point_cloud(i).z * 0.001f;
-  }
-  depth_image_publisher_.publish(msg, camera_info);
+void ZividCamera::publishSnrImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
+                                  const Zivid::PointCloud& point_cloud)
+{
+  ROS_DEBUG("Publishing SNR image");
+  auto image = makePointCloudImage<Zivid::SNR>(point_cloud, header, sensor_msgs::image_encodings::TYPE_32FC1);
+  snr_image_publisher_.publish(image, camera_info);
 }
 
 sensor_msgs::CameraInfoConstPtr ZividCamera::makeCameraInfo(const std_msgs::Header& header, std::size_t width,
@@ -646,43 +627,5 @@ sensor_msgs::CameraInfoConstPtr ZividCamera::makeCameraInfo(const std_msgs::Head
 
   return msg;
 }
-
-template <typename ConfigType>
-template <typename ZividSettings>
-ZividCamera::ConfigDRServer<ConfigType>::ConfigDRServer(const std::string& name, ros::NodeHandle& nh,
-                                                        const ZividSettings& defaultSettings)
-  : name_(name), dr_server_(dr_server_mutex_, ros::NodeHandle(nh, name_)), config_(ConfigType::__getDefault__())
-{
-  static_assert(std::is_same_v<ZividSettings, Zivid::Settings> || std::is_same_v<ZividSettings, Zivid::Settings2D>);
-
-  const auto config_min = zividSettingsToMinConfig<ConfigType>(defaultSettings);
-  dr_server_.setConfigMin(config_min);
-
-  const auto config_max = zividSettingsToMaxConfig<ConfigType>(defaultSettings);
-  dr_server_.setConfigMax(config_max);
-
-  const auto default_config = zividSettingsToConfig<ConfigType>(defaultSettings);
-  dr_server_.setConfigDefault(default_config);
-
-  setConfig(default_config);
-
-  auto cb = [this](const ConfigType& config, uint32_t /*level*/) {
-    ROS_INFO("Configuration '%s' changed", name_.c_str());
-    config_ = config;
-  };
-  using CallbackType = typename decltype(dr_server_)::CallbackType;
-  dr_server_.setCallback(CallbackType(cb));
-}
-
-template <typename ConfigType>
-void ZividCamera::ConfigDRServer<ConfigType>::setConfig(const ConfigType& cfg)
-{
-  config_ = cfg;
-  dr_server_.updateConfig(config_);
-}
-
-template class ZividCamera::ConfigDRServer<zivid_camera::CaptureGeneralConfig>;
-template class ZividCamera::ConfigDRServer<zivid_camera::CaptureFrameConfig>;
-template class ZividCamera::ConfigDRServer<zivid_camera::Capture2DFrameConfig>;
 
 }  // namespace zivid_camera

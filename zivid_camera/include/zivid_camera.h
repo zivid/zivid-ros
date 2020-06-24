@@ -1,6 +1,7 @@
 #pragma once
 
 #include "auto_generated_include_wrapper.h"
+#include "capture_settings_controller.h"
 
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/Image.h>
@@ -42,74 +43,59 @@ private:
   bool cameraInfoSerialNumberServiceHandler(CameraInfoSerialNumber::Request& req,
                                             CameraInfoSerialNumber::Response& res);
   bool captureServiceHandler(Capture::Request& req, Capture::Response& res);
-  bool capture2DServiceHandler(Capture::Request& req, Capture::Response& res);
+  bool capture2DServiceHandler(Capture2D::Request& req, Capture2D::Response& res);
   bool captureAssistantSuggestSettingsServiceHandler(CaptureAssistantSuggestSettings::Request& req,
                                                      CaptureAssistantSuggestSettings::Response& res);
   void serviceHandlerHandleCameraConnectionLoss();
   bool isConnectedServiceHandler(IsConnected::Request& req, IsConnected::Response& res);
   void publishFrame(Zivid::Frame&& frame);
-  bool shouldPublishPoints() const;
+  bool shouldPublishPointsXYZ() const;
+  bool shouldPublishPointsXYZRGBA() const;
   bool shouldPublishColorImg() const;
   bool shouldPublishDepthImg() const;
+  bool shouldPublishSnrImg() const;
   std_msgs::Header makeHeader();
-  void publishPoints(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud);
+  void publishPointCloudXYZ(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud);
+  void publishPointCloudXYZRGBA(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud);
   void publishColorImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
                          const Zivid::PointCloud& point_cloud);
   void publishColorImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
-                         const Zivid::Image<Zivid::RGBA8>& image);
+                         const Zivid::Image<Zivid::ColorRGBA>& image);
   void publishDepthImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
                          const Zivid::PointCloud& point_cloud);
+  void publishSnrImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
+                       const Zivid::PointCloud& point_cloud);
   sensor_msgs::CameraInfoConstPtr makeCameraInfo(const std_msgs::Header& header, std::size_t width, std::size_t height,
                                                  const Zivid::CameraIntrinsics& intrinsics);
 
-  template <typename ConfigType_>
-  class ConfigDRServer
-  {
-  public:
-    using ConfigType = ConfigType_;
-    template <typename ZividSettings>
-    ConfigDRServer(const std::string& name, ros::NodeHandle& nh, const ZividSettings& defaultSettings);
-    void setConfig(const ConfigType& cfg);
-    const ConfigType& config() const
-    {
-      return config_;
-    }
-    const std::string& name() const
-    {
-      return name_;
-    }
-
-  private:
-    std::string name_;
-    boost::recursive_mutex dr_server_mutex_;
-    dynamic_reconfigure::Server<ConfigType> dr_server_;
-    ConfigType config_;
-  };
-
-  using CaptureGeneralConfigDRServer = ConfigDRServer<CaptureGeneralConfig>;
-  using CaptureFrameConfigDRServer = ConfigDRServer<CaptureFrameConfig>;
-  using Capture2DFrameConfigDRServer = ConfigDRServer<Capture2DFrameConfig>;
+  using Capture3DSettingsController =
+      CaptureSettingsController<Zivid::Settings, SettingsConfig, SettingsAcquisitionConfig>;
+  using Capture2DSettingsController =
+      CaptureSettingsController<Zivid::Settings2D, Settings2DConfig, Settings2DAcquisitionConfig>;
 
   ros::NodeHandle nh_;
   ros::NodeHandle priv_;
   ros::Timer camera_connection_keepalive_timer_;
   CameraStatus camera_status_;
-  std::unique_ptr<CaptureGeneralConfigDRServer> capture_general_config_dr_server_;
-  bool use_latched_publisher_for_points_;
+  bool use_latched_publisher_for_points_xyz_;
+  bool use_latched_publisher_for_points_xyzrgba_;
   bool use_latched_publisher_for_color_image_;
   bool use_latched_publisher_for_depth_image_;
-  ros::Publisher points_publisher_;
+  bool use_latched_publisher_for_snr_image_;
+  ros::Publisher points_xyz_publisher_;
+  ros::Publisher points_xyzrgba_publisher_;
   image_transport::ImageTransport image_transport_;
   image_transport::CameraPublisher color_image_publisher_;
   image_transport::CameraPublisher depth_image_publisher_;
+  image_transport::CameraPublisher snr_image_publisher_;
   ros::ServiceServer camera_info_serial_number_service_;
   ros::ServiceServer camera_info_model_name_service_;
   ros::ServiceServer capture_service_;
   ros::ServiceServer capture_2d_service_;
   ros::ServiceServer capture_assistant_suggest_settings_service_;
   ros::ServiceServer is_connected_service_;
-  std::vector<std::unique_ptr<CaptureFrameConfigDRServer>> capture_frame_config_dr_servers_;
-  std::vector<std::unique_ptr<Capture2DFrameConfigDRServer>> capture_2d_frame_config_dr_servers_;
+  std::unique_ptr<Capture3DSettingsController> capture_settings_controller_;
+  std::unique_ptr<Capture2DSettingsController> capture_2d_settings_controller_;
   Zivid::Application zivid_;
   Zivid::Camera camera_;
   std::string frame_id_;

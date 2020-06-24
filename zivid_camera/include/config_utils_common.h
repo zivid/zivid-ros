@@ -6,7 +6,9 @@
 
 template <typename ConfigType, typename ZividSettings>
 ConfigType zividSettingsToConfig(const ZividSettings& s) = delete;
+
 template <typename ConfigType, typename ZividSettings>
-ConfigType zividSettingsToMinConfig(const ZividSettings& s) = delete;
+ConfigType zividSettingsMinConfig(const Zivid::Camera& camera) = delete;
+
 template <typename ConfigType, typename ZividSettings>
-ConfigType zividSettingsToMaxConfig(const ZividSettings& s) = delete;
+ConfigType zividSettingsMaxConfig(const Zivid::Camera& camera) = delete;

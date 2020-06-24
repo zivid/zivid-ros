@@ -88,11 +88,7 @@ fi
 echo "Install Zivid and Telicam debian packages"
 
 ZIVID_RELEASE_DIR="https://www.zivid.com/hubfs/softwarefiles/releases/$CI_TEST_ZIVID_VERSION"
-ZIVID_TELICAM_SDK_DEB="zivid-telicam-driver_3.0.1.1-1_amd64.deb"
-
-if [[ "$CI_TEST_ZIVID_VERSION" =~ ^1\.8\.0.* ]]; then
-    ZIVID_TELICAM_SDK_DEB="zivid-telicam-driver_2.0.0.1-1_amd64.deb"
-fi
+ZIVID_TELICAM_SDK_DEB="zivid-telicam-driver_3.0.1.1-3_amd64.deb"
 
 if [[ "$UBUNTU_VERSION" == "16.04" ]]; then
 

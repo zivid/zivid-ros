@@ -476,18 +476,6 @@ rosrun zivid_samples sample_capture_2d_cpp
 rosrun zivid_samples sample_capture_2d.py
 ```
 
-## Sample .launch files
-
-### zivid_camera_with_settings.launch
-
-[zivid_camera_with_settings.launch](./zivid_samples/launch/zivid_camera_with_settings.launch) starts
-the `zivid_camera` node with 3D capture settings set to 3-frame HDR. Modify the settings in this .launch
-file to match your scene.
-
-```bash
-roslaunch zivid_samples zivid_camera_with_settings.launch
-```
-
 ## Frequently Asked Questions
 
 ### How to visualize the output from the camera in rviz

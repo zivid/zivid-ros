@@ -2,6 +2,15 @@
 
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 1.1.0
+
+* Updated the Intel OpenCL CPU runtime driver used in CI tests. This makes the CI tests
+  stable again.
+* Fixed a unit test that failed due to a missing sleep.
+* Enabled unit tests for the Capture Assistant.
+* Other minor improvements to README.md.
+* Bumped minimum Zivid SDK version to 1.8.0.
+
 ## 1.0.0
 
 * Added support for Capture Assistant. Added new service "capture_assistant/suggest_settings"

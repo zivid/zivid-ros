@@ -61,7 +61,7 @@ int main(int argc, char** argv)
   ros::AsyncSpinner spinner(1);
   spinner.start();
 
-  auto points_sub = n.subscribe("/zivid_camera/points", 1, on_points);
+  auto points_sub = n.subscribe("/zivid_camera/points/xyzrgba", 1, on_points);
   auto image_color_sub = n.subscribe("/zivid_camera/color/image_color", 1, on_image_color);
 
   capture_assistant_suggest_settings();

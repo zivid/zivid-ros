@@ -16,23 +16,25 @@ class Sample:
 
         rospy.wait_for_service("/zivid_camera/capture", 30.0)
 
-        rospy.Subscriber("/zivid_camera/points", PointCloud2, self.on_points)
+        rospy.Subscriber("/zivid_camera/points/xyzrgba", PointCloud2, self.on_points)
 
         self.capture_service = rospy.ServiceProxy("/zivid_camera/capture", Capture)
 
         rospy.loginfo("Enabling the reflection filter")
-        general_config_client = dynamic_reconfigure.client.Client(
-            "/zivid_camera/capture/general/"
-        )
-        general_config = {"filters_reflection_enabled": True}
-        general_config_client.update_configuration(general_config)
+        settings_client = dynamic_reconfigure.client.Client("/zivid_camera/settings/")
+        settings_config = {"processing_filters_reflection_removal_enabled": True}
+        settings_client.update_configuration(settings_config)
 
-        rospy.loginfo("Enabling and configure the first frame")
-        frame0_config_client = dynamic_reconfigure.client.Client(
-            "/zivid_camera/capture/frame_0"
+        rospy.loginfo("Enabling and configure the first acquisition")
+        acquisition_0_client = dynamic_reconfigure.client.Client(
+            "/zivid_camera/settings/acquisition_0"
         )
-        frame0_config = {"enabled": True, "iris": 21, "exposure_time": 20000}
-        frame0_config_client.update_configuration(frame0_config)
+        acquisition_0_config = {
+            "enabled": True,
+            "aperture": 5.66,
+            "exposure_time": 20000,
+        }
+        acquisition_0_client.update_configuration(acquisition_0_config)
 
     def capture(self):
         rospy.loginfo("Calling capture service")

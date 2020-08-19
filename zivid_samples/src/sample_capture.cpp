@@ -1,5 +1,5 @@
-#include <zivid_camera/CaptureFrameConfig.h>
-#include <zivid_camera/CaptureGeneralConfig.h>
+#include <zivid_camera/SettingsAcquisitionConfig.h>
+#include <zivid_camera/SettingsConfig.h>
 #include <zivid_camera/Capture.h>
 #include <dynamic_reconfigure/Reconfigure.h>
 #include <dynamic_reconfigure/client.h>
@@ -46,26 +46,35 @@ int main(int argc, char** argv)
   ros::AsyncSpinner spinner(1);
   spinner.start();
 
-  auto points_sub = n.subscribe("/zivid_camera/points", 1, on_points);
+  auto points_sub = n.subscribe("/zivid_camera/points/xyzrgba", 1, on_points);
 
-  ROS_INFO("Enabling the reflection filter");
-  dynamic_reconfigure::Client<zivid_camera::CaptureGeneralConfig> capture_general_client("/zivid_camera/"
-                                                                                         "capture/general/");
-  zivid_camera::CaptureGeneralConfig config;
-  CHECK(capture_general_client.getDefaultConfiguration(config, default_wait_duration));
-  config.filters_reflection_enabled = true;
-  CHECK(capture_general_client.setConfiguration(config));
+  dynamic_reconfigure::Client<zivid_camera::SettingsConfig> settings_client("/zivid_camera/"
+                                                                            "settings/");
 
-  ROS_INFO("Enabling and configuring the first frame");
-  dynamic_reconfigure::Client<zivid_camera::CaptureFrameConfig> frame_0_client("/zivid_camera/capture/frame_0/");
+  // To initialize the settings_config object we need to load the default configuration from the server.
+  // The default values of settings depends on which Zivid camera model is connected.
+  zivid_camera::SettingsConfig settings_config;
+  CHECK(settings_client.getDefaultConfiguration(settings_config, default_wait_duration));
 
-  zivid_camera::CaptureFrameConfig frame_0_cfg;
-  CHECK(frame_0_client.getDefaultConfiguration(frame_0_cfg, default_wait_duration));
+  ROS_INFO("Enabling the reflection removal filter");
+  settings_config.processing_filters_reflection_removal_enabled = true;
+  CHECK(settings_client.setConfiguration(settings_config));
 
-  frame_0_cfg.enabled = true;
-  frame_0_cfg.iris = 21;
-  frame_0_cfg.exposure_time = 20000;
-  CHECK(frame_0_client.setConfiguration(frame_0_cfg));
+  dynamic_reconfigure::Client<zivid_camera::SettingsAcquisitionConfig> acquisition_0_client("/zivid_camera/settings/"
+                                                                                            "acquisition_0/");
+
+  // To initialize the acquisition_0_config object we need to load the default configuration from the server.
+  // The default values of settings depends on which Zivid camera model is connected.
+  zivid_camera::SettingsAcquisitionConfig acquisition_0_config;
+  CHECK(acquisition_0_client.getDefaultConfiguration(acquisition_0_config, default_wait_duration));
+
+  ROS_INFO("Enabling and configuring the first acquisition");
+  acquisition_0_config.enabled = true;
+  acquisition_0_config.aperture = 5.66;
+  acquisition_0_config.exposure_time = 20000;
+  CHECK(acquisition_0_client.setConfiguration(acquisition_0_config));
+
+  ROS_INFO("Calling capture");
 
   capture();
 

@@ -22,7 +22,7 @@ class Sample:
         )
         self.capture_service = rospy.ServiceProxy("/zivid_camera/capture", Capture)
 
-        rospy.Subscriber("/zivid_camera/points", PointCloud2, self.on_points)
+        rospy.Subscriber("/zivid_camera/points/xyzrgba", PointCloud2, self.on_points)
         rospy.Subscriber("/zivid_camera/color/image_color", Image, self.on_image_color)
 
     def capture_assistant_suggest_settings(self):

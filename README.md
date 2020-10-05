@@ -39,9 +39,9 @@ sudo apt-get install -y python-catkin-tools git
 
 ### Zivid SDK
 
-To use the ROS driver you need to download and install the "Zivid Core" package. SDK version 2.0 is supported.
-See [releases](https://github.com/zivid/zivid-ros/releases) for older ROS driver releases that supports
-older SDK versions.
+To use the ROS driver you need to download and install the "Zivid Core" package. Zivid SDK version 2.0
+and 2.1 is supported. See [releases](https://github.com/zivid/zivid-ros/releases) for older ROS driver
+releases that supports older SDK versions.
 
 Follow [this guide](https://zivid.atlassian.net/wiki/spaces/ZividKB/pages/59080712/Zivid+Software+Installation)
 to install "Zivid Core" for your version of Ubuntu. The "Zivid Studio" and "Zivid Tools" packages can be useful

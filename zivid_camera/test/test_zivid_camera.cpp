@@ -42,7 +42,17 @@ ros::Duration toRosDuration(const std::chrono::duration<Rep, Period>& d)
 }
 }  // namespace
 
-class ZividNodeTest : public testing::Test
+class ZividNodeTestBase : public testing::Test
+{
+protected:
+  ZividNodeTestBase()
+  {
+    const auto test_name = testing::UnitTest::GetInstance()->current_test_info()->name();
+    std::cerr << "Starting test " << test_name << "\n";
+  }
+};
+
+class ZividNodeTest : public ZividNodeTestBase
 {
 protected:
   ros::NodeHandle nh_;

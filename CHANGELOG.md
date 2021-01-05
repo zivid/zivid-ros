@@ -2,6 +2,10 @@
 
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 2.2.0
+
+* Add support for version 2.2.0 of the Zivid SDK.
+
 ## 2.0.0
 
 * Support for version 2.0.0 of the Zivid SDK. For a full list of changes in the SDK, see the

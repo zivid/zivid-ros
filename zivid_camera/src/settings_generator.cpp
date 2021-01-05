@@ -10,7 +10,9 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/algorithm/string/join.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/format.hpp>
 
 #include <algorithm>
 #include <cctype>
@@ -18,6 +20,7 @@
 #include <fstream>
 #include <regex>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 namespace
@@ -43,6 +46,11 @@ struct IsInTuple;
 
 template <typename T, typename... Ts>
 struct IsInTuple<T, std::tuple<Ts...>> : IsInList<T, Ts...>
+{
+};
+
+template <typename SettingsNode>
+struct IsEnumSetting : std::is_enum<typename SettingsNode::ValueType>
 {
 };
 
@@ -76,6 +84,16 @@ void writeToFile(const std::string& file_name, const std::string& text)
   {
     throw std::runtime_error("Failed to write to file '" + file_name + "'!");
   }
+}
+
+std::string toUpperCaseFirst(std::string value)
+{
+  if (value.empty())
+  {
+    throw std::invalid_argument("value is empty");
+  }
+  value[0] = std::toupper(value[0]);
+  return value;
 }
 
 template <typename SettingsRootGroup, typename SettingsNode>
@@ -136,6 +154,30 @@ std::string fullyQualifiedZividTypeName()
   return ss.str();
 }
 
+template <typename SettingsNode>
+std::string settingEnumValueToRosEnumName(typename SettingsNode::ValueType value)
+{
+  // During build dynamic_reconfigure will auto-generate variables for C++ and Python
+  // for all enum values, scoped directly under the top level .cfg name. So, for example,
+  // an enum value named X listed in Settings.cfg would auto-generate an const int variable
+  // zivid_camera::Settings_X. Since we may have several different enum settings with the
+  // same enum value X, we need to scope the enum name with the full path to the setting.
+  // This ensures there are no collisions now or in the future.
+  const auto value_str = toUpperCaseFirst(SettingsNode{ value }.toString());
+  const auto path = boost::replace_all_copy<std::string>(SettingsNode::path, "/", "");
+  return path + value_str;
+}
+
+template <typename SettingsNode>
+std::string generateEnumConstant(typename SettingsNode::ValueType value)
+{
+  static_assert(IsEnumSetting<SettingsNode>::value);
+  const auto name = settingEnumValueToRosEnumName<SettingsNode>(value);
+  const auto int_value = static_cast<std::size_t>(value);
+  const auto description = toUpperCaseFirst(SettingsNode{ value }.toString());
+  return (boost::format(R"(gen.const("%1%", int_t, %2%, "%3%"))") % name % int_value % description).str();
+}
+
 template <typename SettingsRootGroup>
 class DynamicReconfigureCfgGenerator
 {
@@ -159,6 +201,10 @@ public:
     {
       return SettingsNode::validRange().min();
     }
+    if constexpr (IsEnumSetting<SettingsNode>::value)
+    {
+      return *SettingsNode::validValues().begin();
+    }
     return ValueType{ 0 };
   }
 
@@ -178,6 +224,10 @@ public:
     else if constexpr (std::is_same_v<ValueType, std::chrono::microseconds>)
     {
       return static_cast<int>(value.count());
+    }
+    else if constexpr (std::is_enum_v<ValueType>)
+    {
+      return static_cast<int>(value);
     }
     else
     {
@@ -229,6 +279,11 @@ public:
     return rosTypeToString(convertValueToRosValue(v));
   }
 
+  std::string rosGeneratedEnumVariableName(const std::string& setting_name)
+  {
+    return setting_name + "_enum";
+  }
+
   template <typename SettingsNode>
   void apply(const SettingsNode& node)
   {
@@ -240,6 +295,16 @@ public:
     const auto type_name = rosTypeName<decltype(convertValueToRosValue(default_value))>();
     const auto default_value_str = valueTypeToRosTypeString(default_value);
 
+    if constexpr (IsEnumSetting<SettingsNode>::value)
+    {
+      const auto valid_values = node.validValues();
+      std::vector<std::string> enum_constants;
+      std::transform(valid_values.cbegin(), valid_values.cend(), std::back_inserter(enum_constants),
+                     [&](const auto value) { return generateEnumConstant<SettingsNode>(value); });
+      ss_ << rosGeneratedEnumVariableName(setting_name) << " = gen.enum([\n    "
+          << boost::algorithm::join(enum_constants, ",\n    ") << "\n],\n \"" << description << "\")\n";
+    }
+
     ss_ << "gen.add(\"" << setting_name << "\", " << type_name << ", " << level << ", "
         << "\"" << description << "\", " << default_value_str;
 
@@ -247,6 +312,12 @@ public:
     {
       ss_ << ", " << valueTypeToRosTypeString(node.validRange().min()) << ", "
           << valueTypeToRosTypeString(node.validRange().max());
+    }
+    else if constexpr (IsEnumSetting<SettingsNode>::value)
+    {
+      const auto min_index = 0;
+      const auto max_index = node.validValues().size() - 1;
+      ss_ << ", " << min_index << ", " << max_index << ", edit_method=" << rosGeneratedEnumVariableName(setting_name);
     }
     ss_ << ")\n";
   }
@@ -292,7 +363,7 @@ public:
   }
 
   template <typename SettingsNode>
-  void apply(const SettingsNode&)
+  void apply(const SettingsNode& node)
   {
     using ValueType = typename SettingsNode::ValueType;
 
@@ -307,6 +378,23 @@ public:
     else if constexpr (std::is_same_v<ValueType, std::chrono::microseconds>)
     {
       ss_ << "std::chrono::microseconds(" + cfg_id + ")";
+    }
+    else if constexpr (IsEnumSetting<SettingsNode>::value)
+    {
+      ss_ << "\n"
+          << "  [value = " + cfg_id + "](){\n"
+          << "    switch(value) {\n";
+      const auto valid_values = node.validValues();
+      for (const auto& enum_value : valid_values)
+      {
+        ss_ << "    case zivid_camera::" << config_class_name_ << "_"
+            << settingEnumValueToRosEnumName<SettingsNode>(enum_value) << ":\n"
+            << "      return " + setting_node_class_name + "::" + SettingsNode{ enum_value }.toString() + ";\n";
+      }
+      ss_ << "    };\n"
+          << "    throw std::runtime_error(\"Could not convert int value \" + std::to_string(value) + \""
+          << " to setting of type " + setting_node_class_name + ".\");\n"
+          << "  }()\n";
     }
     else
     {
@@ -354,6 +442,10 @@ public:
       ss_ << "static_cast<int>(" + value_str + ".count());\n";
     }
     else if constexpr (std::is_same_v<ValueType, std::size_t>)
+    {
+      ss_ << "static_cast<int>(" + value_str + ");\n";
+    }
+    else if constexpr (IsEnumSetting<SettingsNode>::value)
     {
       ss_ << "static_cast<int>(" + value_str + ");\n";
     }

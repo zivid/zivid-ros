@@ -467,6 +467,36 @@ TEST_F(CaptureOutputTest, testCaptureSNRImage)
   }
 }
 
+#if ZIVID_CORE_VERSION_MAJOR > 2 || (ZIVID_CORE_VERSION_MAJOR == 2 && ZIVID_CORE_VERSION_MINOR >= 2)
+// The stripe engine setting was added in SDK 2.2
+TEST_F(TestWithFileCamera, testSettingsEngine)
+{
+  waitForReady();
+  enableFirst3DAcquisition();
+  auto points_sub = subscribe<sensor_msgs::PointCloud2>(points_xyz_topic_name);
+
+  dynamic_reconfigure::Client<zivid_camera::SettingsConfig> settings_client("/zivid_camera/settings/");
+  zivid_camera::SettingsConfig settings_cfg;
+  ASSERT_TRUE(settings_client.getDefaultConfiguration(settings_cfg, dr_get_max_wait_duration));
+  ASSERT_EQ(settings_cfg.experimental_engine, zivid_camera::Settings_ExperimentalEnginePhase);
+  settings_cfg.experimental_engine = zivid_camera::Settings_ExperimentalEngineStripe;
+  settings_cfg.processing_filters_reflection_removal_enabled = true;
+  settings_cfg.processing_filters_experimental_contrast_distortion_correction_enabled = true;
+  ASSERT_TRUE(settings_client.setConfiguration(settings_cfg));
+
+  zivid_camera::Capture capture;
+  // Capture fails here because file camera does not support Stripe engine
+  ASSERT_FALSE(ros::service::call(capture_service_name, capture));
+  ASSERT_EQ(points_sub.numMessages(), 0U);
+
+  settings_cfg.experimental_engine = zivid_camera::Settings_ExperimentalEnginePhase;
+  ASSERT_TRUE(settings_client.setConfiguration(settings_cfg));
+  ASSERT_TRUE(ros::service::call(capture_service_name, capture));
+  short_wait_duration.sleep();
+  ASSERT_EQ(points_sub.numMessages(), 1U);
+}
+#endif
+
 TEST_F(ZividNodeTest, testCaptureCameraInfo)
 {
   waitForReady();

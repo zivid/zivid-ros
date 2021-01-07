@@ -6,7 +6,7 @@ schedules:
     - master
   always: true
 variables:
-  newest_zivid_version: '2.1.0+d2007e12-1'
+  newest_zivid_version: '2.2.0+f0867d62-1'
 stages:
   - stage: Code_Analysis
     jobs:
@@ -33,6 +33,6 @@ stages:
     jobs:
     - template: continuous-integration/azure-pipelines/templates/build_and_test.yml
       parameters:
-        zivid_versions: ['2.0.0+7c4918cf-14']
+        zivid_versions: ['2.0.0+7c4918cf-14', '2.1.0+d2007e12-1']
         ros_distros: ['ros:melodic-ros-base-bionic', 'ros:kinetic-ros-base-xenial']
         compilers: ['g++-7']

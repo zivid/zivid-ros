@@ -3,6 +3,7 @@
 This is the official ROS driver for [Zivid 3D cameras](https://www.zivid.com/).
 
 [![Build Status][ci-badge]][ci-url]
+![Zivid Image][header-image]
 
 ---
 
@@ -17,10 +18,6 @@ This is the official ROS driver for [Zivid 3D cameras](https://www.zivid.com/).
 [**FAQ**](#frequently-asked-questions)
 
 ---
-
-<p align="center">
-    <img src="https://www.zivid.com/software/zivid-ros/ros_zivid_camera.png" width="600" height="273">
-</p>
 
 ## Installation
 
@@ -619,3 +616,4 @@ grant agreement No 732287. For more information, visit [rosin-project.eu](http:/
 
 [ci-badge]: https://img.shields.io/azure-devops/build/zivid-devops/83f1ca39-6eb0-4fd3-939c-c9cec95a5b26/1/master
 [ci-url]: https://dev.azure.com/zivid-devops/zivid-ros/_build?definitionId=1&_a=summary&repositoryFilter=1&branchFilter=2
+[header-image]: https://www.zivid.com/hubfs/softwarefiles/images/zivid-generic-github-header.png

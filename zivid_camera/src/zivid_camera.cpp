@@ -250,15 +250,19 @@ void ZividCamera::reconnectToCameraIfNecessary()
   const auto state = camera_.state();
   if (state.isConnected().value())
   {
+    ROS_DEBUG_STREAM(" - Set camerastus to connected");
     setCameraStatus(CameraStatus::Connected);
   }
   else
   {
+    ROS_DEBUG_STREAM(" - Set camerastus to disconnected");
     setCameraStatus(CameraStatus::Disconnected);
 
     // The camera handle needs to be refreshed to ensure we get the correct
     // "available" status. This is a bug in the API.
+    ROS_DEBUG_STREAM(" - call zivid_.cameras()");
     auto cameras = zivid_.cameras();
+    ROS_DEBUG_STREAM(" - after zivid_.cameras() done");
     for (auto& c : cameras)
     {
       if (camera_.info().serialNumber() == c.info().serialNumber())
@@ -280,6 +284,7 @@ void ZividCamera::reconnectToCameraIfNecessary()
       ROS_INFO_STREAM("The camera '" << camera_.info().serialNumber() << "' is not connected nor available.");
     }
   }
+  ROS_DEBUG_STREAM(__func__ + std::string(" is done"));
 }
 
 void ZividCamera::setCameraStatus(CameraStatus camera_status)

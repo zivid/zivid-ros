@@ -18,6 +18,7 @@ apt-yes install \
     wget \
     python3-pip \
     python-catkin-tools \
+    ros-kinetic-image-transport \
     unzip \
     || exit $?
 

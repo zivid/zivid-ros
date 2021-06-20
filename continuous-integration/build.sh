@@ -6,16 +6,46 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" || exit $?
 ROOT_DIR=$(realpath "$SCRIPT_DIR/..") || exit $?
 
 echo "Creating catkin workspace"
-mkdir -p ~/catkin_ws/src || exit $?
+mkdir -p ~/catkin_ws || exit $?
 cd ~/catkin_ws || exit $?
-catkin build || exit $?
+catkin init || exit $?
+
+echo "SCRIPT_DIR is $SCRIPT_DIR"
+echo "ROOT_DIR is $ROOT_DIR"
 
 echo "Adding link to the source folder"
 ln -s "$ROOT_DIR" ~/catkin_ws/src || exit $?
 
+echo "ls -l ROOT_DIR"
+echo "*************************"
+ls -l "$ROOT_DIR"
+echo "*************************"
+
+echo "*************************"
+echo "Doing ls -l ~/catkin_ws/"
+ls -l ~/catkin_ws/
+echo "*************************"
+
+
+echo "*************************"
+echo "Doing ls -l ~/catkin_ws/src"
+ls -l ~/catkin_ws/src
+echo "*************************"
+
+echo "*************************"
+echo "Doing ls -l ~/catkin_ws/src/"
+ls -l ~/catkin_ws/src/
+echo "*************************"
+
+echo "*************************"
+echo "Doing ls -l ~/catkin_ws/src/*"
+ls -l ~/catkin_ws/src/*
+echo "*************************"
+
+
 for package in zivid_camera zivid_samples
 do
-    echo "Verify that $package is found by catkin list"
+    echo "Verifying that $package is found by catkin list"
     catkin list --unformatted | grep -q $package || exit $?
 done
 

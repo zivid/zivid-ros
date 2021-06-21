@@ -19,8 +19,11 @@ do
     catkin list --unformatted | grep -q $package || exit $?
 done
 
+echo "Updating rosdep"
+rosdep update --rosdistro=$ROS_DISTRO || exit $?
+
 echo "Installing dependencies"
-rosdep update && rosdep install --from-paths src --ignore-src -r -y || exit $?
+rosdep install --from-paths src --ignore-src -r -y || exit $?
 
 echo "Building with compiler=$CI_TEST_COMPILER"
 

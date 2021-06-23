@@ -1,4 +1,4 @@
-Test 32
+Test 32s
 
 # Zivid ROS driver
 

@@ -23,15 +23,22 @@ This is the official ROS driver for [Zivid 3D cameras](https://www.zivid.com/).
 
 ### ROS
 
-This driver supports Ubuntu 16.04 with ROS Kinetic and Ubuntu 18.04 with ROS Melodic. Follow the
-official ROS Wiki instructions to install [ROS Kinetic Kame](http://wiki.ros.org/kinetic/Installation)
-(for Ubuntu 16.04) or [ROS Melodic Morenia](http://wiki.ros.org/melodic/Installation) (for Ubuntu 18.04).
+This driver supports Ubuntu 16.04 with ROS Kinetic, Ubuntu 18.04 with ROS Melodic and Ubuntu 20.04
+with ROS Noetic. Follow the official [ROS installation instructions](http://wiki.ros.org/ROS/Installation) for
+your OS.
 
 Also install catkin and git:
 
+Ubuntu 16.04/18.04:
 ```bash
 sudo apt-get update
 sudo apt-get install -y python-catkin-tools git
+```
+
+Ubuntu 20.04:
+```bash
+sudo apt-get update
+sudo apt-get install -y python3-catkin-tools python3-osrf-pycommon git
 ```
 
 ### Zivid SDK
@@ -59,7 +66,7 @@ sudo apt-get update
 sudo apt-get install -y g++-8
 ```
 
-Ubuntu 18.04:
+Ubuntu 18.04/20.04:
 ```bash
 sudo apt-get install -y g++
 ```
@@ -76,6 +83,11 @@ source /opt/ros/kinetic/setup.bash
 Ubuntu 18.04:
 ```bash
 source /opt/ros/melodic/setup.bash
+```
+
+Ubuntu 20.04:
+```bash
+source /opt/ros/noetic/setup.bash
 ```
 
 Create the workspace and src directory:
@@ -104,7 +116,7 @@ Ubuntu 16.04:
 catkin build -DCMAKE_CXX_COMPILER=/usr/bin/g++-8
 ```
 
-Ubuntu 18.04:
+Ubuntu 18.04/20.04:
 ```bash
 catkin build
 ```

@@ -17,9 +17,14 @@ apt-yes install \
     clinfo \
     wget \
     python3-pip \
-    python-catkin-tools \
     unzip \
     || exit $?
+
+if [[ "$UBUNTU_VERSION" == "20.04" ]]; then
+    apt-yes install python3-catkin-tools python3-osrf-pycommon || exit $?
+else
+    apt-yes install python-catkin-tools || exit $?
+fi
 
 function install_opencl_cpu_runtime {
 
@@ -70,16 +75,31 @@ function install_www_deb {
     rm -r $TMP_DIR || exit $?
 }
 
-echo "Installing $CI_TEST_COMPILER"
-if [[ "$CI_TEST_COMPILER" == "g++-7" ]] ||
-   [[ "$CI_TEST_COMPILER" == "g++-8" ]] ||
-   [[ "$CI_TEST_COMPILER" == "g++-9" ]]; then
+echo "Installing compiler $CI_TEST_COMPILER"
+
+if [[ "$CI_TEST_COMPILER" == "g++"    ||
+      "$CI_TEST_COMPILER" == "g++-7"  ||
+      "$CI_TEST_COMPILER" == "g++-8"  ||
+      "$CI_TEST_COMPILER" == "g++-9"  ||
+      "$CI_TEST_COMPILER" == "g++-10" ||
+      "$CI_TEST_COMPILER" == "g++-11"
+      ]]; then
+
     apt-yes install software-properties-common || exit $?
     add-apt-repository -y ppa:ubuntu-toolchain-r/test || exit $?
     apt-yes update || exit $?
     apt-yes install $CI_TEST_COMPILER || exit $?
-elif [[ "$CI_TEST_COMPILER" == "clang++-7" ]]; then
-    apt-yes install clang-7 || exit $?
+
+elif [[ "$CI_TEST_COMPILER" == "clang++"    ||
+        "$CI_TEST_COMPILER" == "clang++-7"  ||
+        "$CI_TEST_COMPILER" == "clang++-8"  ||
+        "$CI_TEST_COMPILER" == "clang++-9"  ||
+        "$CI_TEST_COMPILER" == "clang++-10" ||
+        "$CI_TEST_COMPILER" == "clang++-11" ||
+        "$CI_TEST_COMPILER" == "clang++-12" ]]; then
+
+    apt-yes install ${CI_TEST_COMPILER//\+/} || exit $?
+
 else
     echo "Unhandled CI_TEST_COMPILER $CI_TEST_COMPILER"
     exit 1
@@ -100,9 +120,16 @@ elif [[ "$UBUNTU_VERSION" == "18.04" ]]; then
     install_www_deb "$ZIVID_RELEASE_DIR/u18/${ZIVID_TELICAM_SDK_DEB}" || exit $?
     install_www_deb "$ZIVID_RELEASE_DIR/u18/zivid_${CI_TEST_ZIVID_VERSION}_amd64.deb" || exit $?
 
+elif [[ "$UBUNTU_VERSION" == "20.04" ]]; then
+
+    install_www_deb "$ZIVID_RELEASE_DIR/u20/${ZIVID_TELICAM_SDK_DEB}" || exit $?
+    install_www_deb "$ZIVID_RELEASE_DIR/u20/zivid_${CI_TEST_ZIVID_VERSION}_amd64.deb" || exit $?
+
 else
+
     echo "Unhandled OS $UBUNTU_VERSION"
     exit 1
+
 fi
 
 echo Success! ["$(basename $0)"]

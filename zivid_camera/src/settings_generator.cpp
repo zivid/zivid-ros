@@ -391,7 +391,7 @@ public:
             << settingEnumValueToRosEnumName<SettingsNode>(enum_value) << ":\n"
             << "      return " + setting_node_class_name + "::" + SettingsNode{ enum_value }.toString() + ";\n";
       }
-      ss_ << "    };\n"
+      ss_ << "    }\n"
           << "    throw std::runtime_error(\"Could not convert int value \" + std::to_string(value) + \""
           << " to setting of type " + setting_node_class_name + ".\");\n"
           << "  }()\n";

@@ -40,13 +40,12 @@ To use the ROS driver you need to download and install the "Zivid Core" package.
 is supported. See [releases](https://github.com/zivid/zivid-ros/releases) for older ROS driver releases that
 supports older SDK versions.
 
-Follow [this guide](https://zivid.atlassian.net/wiki/spaces/ZividKB/pages/59080712/Zivid+Software+Installation)
+Follow [this guide][zivid-software-installation-url]
 to install "Zivid Core" for your version of Ubuntu. The "Zivid Studio" and "Zivid Tools" packages can be useful
 to test your system setup and camera, but are not required by the driver.
 
 An OpenCL 1.2 compatible GPU with driver installed is required by the SDK. Follow
-[this guide](https://zivid.atlassian.net/wiki/spaces/ZividKB/pages/426519/Install+OpenCL+drivers+on+Ubuntu) to
-install OpenCL drivers for your system.
+[this guide][install-opencl-drivers-ubuntu-url] to install OpenCL drivers for your system.
 
 ### C++ compiler
 
@@ -335,7 +334,7 @@ The `zivid_camera` node supports both single-acquisition (2D and 3D) and multi-a
 HDR captures (3D only). 3D HDR-capture works by taking several acquisitions with different
 settings (for example different exposure time) and combining them into one high-quality point
 cloud. For more information about HDR capture, visit our
-[knowledge base](https://zivid.atlassian.net/wiki/spaces/ZividKB/pages/428143/HDR+Imaging+for+Challenging+Objects).
+[knowledge base][hdr-getting-good-point-clouds-url].
 
 The capture settings available in the `zivid_camera` node matches the settings in the Zivid API.
 To become more familiar with the different settings and what they do, see the API reference for the
@@ -603,7 +602,7 @@ This project is licensed under BSD 3-clause license, see the [LICENSE](LICENSE) 
 ## Support
 
 Please report any issues or feature requests related to the ROS driver in the issue tracker.
-Visit [Zivid Knowledge Base](http://help.zivid.com) for general help on using Zivid 3D
+Visit [Zivid Knowledge Base][zivid-knowledge-base-url] for general help on using Zivid 3D
 cameras. If you cannot find a solution to your issue, please contact customersuccess@zivid.com.
 
 ## Acknowledgements
@@ -618,3 +617,8 @@ grant agreement No 732287. For more information, visit [rosin-project.eu](http:/
 [ci-badge]: https://img.shields.io/azure-devops/build/zivid-devops/83f1ca39-6eb0-4fd3-939c-c9cec95a5b26/1/master
 [ci-url]: https://dev.azure.com/zivid-devops/zivid-ros/_build?definitionId=1&_a=summary&repositoryFilter=1&branchFilter=2
 [header-image]: https://www.zivid.com/hubfs/softwarefiles/images/zivid-generic-github-header.png
+
+[zivid-knowledge-base-url]: https://support.zivid.com
+[zivid-software-installation-url]: https://support.zivid.com/latest/rst/academy/getting-started/zivid-software-installation.html
+[install-opencl-drivers-ubuntu-url]: https://support.zivid.com/latest/rst/academy/getting-started/zivid-software-installation/gpu/install-opencl-drivers-ubuntu.html
+[hdr-getting-good-point-clouds-url]: https://support.zivid.com/latest/rst/academy/camera/capturing-high-quality-point-clouds/getting-the-right-exposure-for-good-point-clouds.html

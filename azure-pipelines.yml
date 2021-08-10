@@ -15,13 +15,20 @@ stages:
         vmImage: ubuntu-16.04
       steps:
       - script: 'CI_TEST_OS=ros:melodic-ros-base-bionic ./continuous-integration/run_code_analysis_in_docker.sh'
+  - stage: Build_And_Test_Newest_Zivid_Noetic
+    jobs:
+    - template: continuous-integration/azure-pipelines/templates/build_and_test.yml
+      parameters:
+        zivid_versions: ["${{ variables['newest_zivid_version'] }}"]
+        ros_distros: ['ros:noetic-ros-base-focal']
+        compilers: ['g++', 'clang++', 'g++-10', 'g++-11', 'clang++-11', 'clang++-12']
   - stage: Build_And_Test_Newest_Zivid_Melodic
     jobs:
     - template: continuous-integration/azure-pipelines/templates/build_and_test.yml
       parameters:
         zivid_versions: ["${{ variables['newest_zivid_version'] }}"]
         ros_distros: ['ros:melodic-ros-base-bionic']
-        compilers: ['g++-7', 'g++-8', 'g++-9', 'clang++-7']
+        compilers: ['g++', 'clang++', 'g++-8', 'g++-9', 'clang++-7', 'clang++-8']
   - stage: Build_And_Test_Newest_Zivid_Kinetic
     jobs:
     - template: continuous-integration/azure-pipelines/templates/build_and_test.yml

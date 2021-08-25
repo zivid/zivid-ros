@@ -584,7 +584,7 @@ catkin run_tests && catkin_test_results ~/catkin_ws
 ```
 
 The tests can also be run via [docker](https://www.docker.com/). See the
-[Azure Pipelines configuration file](./azure-pipelines.yml) for details.
+[GitHub Actions configuration file](./.github/workflows/ROS-commit.yml) for details.
 
 ### How to enable debug logging
 
@@ -625,9 +625,8 @@ This FTP (Focused Technical Project) has received funding from the European Unio
 Horizon 2020 research and innovation programme under the project ROSIN with the
 grant agreement No 732287. For more information, visit [rosin-project.eu](http://rosin-project.eu/).
 
-
-[ci-badge]: https://img.shields.io/azure-devops/build/zivid-devops/83f1ca39-6eb0-4fd3-939c-c9cec95a5b26/1/master
-[ci-url]: https://dev.azure.com/zivid-devops/zivid-ros/_build?definitionId=1&_a=summary&repositoryFilter=1&branchFilter=2
+[ci-badge]: https://img.shields.io/github/workflow/status/zivid/zivid-ros/ROS%20Commit/master
+[ci-url]: https://github.com/zivid/zivid-ros/actions?query=workflow%3A%22ROS+Commit%22+branch%3Amaster+
 [header-image]: https://www.zivid.com/hubfs/softwarefiles/images/zivid-generic-github-header.png
 
 [zivid-knowledge-base-url]: https://support.zivid.com

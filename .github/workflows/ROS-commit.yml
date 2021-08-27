@@ -31,7 +31,7 @@ jobs:
         os: ['ros:noetic-ros-base-focal', 'ros:melodic-ros-base-bionic']
         compiler: ['g++', 'clang++']
         include:
-          - os: '${{ env.NOETIC }}'
+          - os: 'ros:noetic-ros-base-focal'
             compiler: 'g++-10'
           - os: 'ros:noetic-ros-base-focal'
             compiler: 'g++-11'
@@ -68,7 +68,14 @@ jobs:
       fail-fast: true
       matrix:
         zivid-version: ['2.0.0+7c4918cf-14', '2.1.0+d2007e12-1', '2.2.0+f0867d62-1', '2.3.0+a08763f1-1', '2.4.0+a330c1a6-1']
-        ros-distro: ['ros:kinetic-ros-base-xenial', 'ros:melodic-ros-base-bionic']
+        ros-distro: ['ros:noetic-ros-base-focal', 'ros:kinetic-ros-base-xenial', 'ros:melodic-ros-base-bionic']
+        exclude:
+          - ros-distro: 'ros:noetic-ros-base-focal'              # These Zivid Versions are not supported because
+            zivid-version: '2.0.0+7c4918cf-14'                   # we did not support Ubuntu 20 until Zivid 2.3
+          - ros-distro: 'ros:noetic-ros-base-focal'
+            zivid-version: '2.1.0+d2007e12-1'
+          - ros-distro: 'ros:noetic-ros-base-focal'
+            zivid-version: '2.2.0+f0867d62-1'
     steps:
       - name: Check out code
         uses: actions/checkout@v2

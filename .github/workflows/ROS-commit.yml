@@ -1,0 +1,89 @@
+name: ROS Commit
+# Note: If the workflow name is changed, the CI badge URL in the README must also be updated
+
+on:
+  push:       # Push trigger runs on any pushed branch.
+  schedule:   # Scheduled trigger runs on the latest commit on the default branch.
+    - cron:  '0 22 * * *'
+
+env:
+  NEWEST_ZIVID_VERSION: '2.4.1+55718627-1'
+
+jobs:
+  code-analysis:
+    name: Analyze code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+        with:
+          lfs: false
+      - name: Run code_analysis.sh
+        run: |
+          CI_TEST_OS=ros:melodic-ros-base-bionic \
+          ./continuous-integration/run_code_analysis_in_docker.sh
+  build-and-test-newest-zivid:
+    name: Build driver and run tests for newest Zivid SDK
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        os: ['ros:noetic-ros-base-focal', 'ros:melodic-ros-base-bionic']
+        compiler: ['g++', 'clang++']
+        include:
+          - os: 'ros:noetic-ros-base-focal'
+            compiler: 'g++-10'
+          - os: 'ros:noetic-ros-base-focal'
+            compiler: 'g++-11'
+          - os: 'ros:noetic-ros-base-focal'
+            compiler: 'clang++-11'
+          - os: 'ros:noetic-ros-base-focal'
+            compiler: 'clang++-12'
+          - os: 'ros:melodic-ros-base-bionic'
+            compiler: 'g++-8'
+          - os: 'ros:melodic-ros-base-bionic'
+            compiler: 'g++-9'
+          - os: 'ros:melodic-ros-base-bionic'
+            compiler: 'clang++-7'
+          - os: 'ros:melodic-ros-base-bionic'
+            compiler: 'clang++-8'
+          - os: 'ros:kinetic-ros-base-xenial' # Default g++/clang++ on Xenial are old and don't support
+            compiler: 'g++-7'                 # all of C++17, so we test with g++-7
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+        with:
+          lfs: false
+      - name: Build and Test
+        run: |
+          CI_TEST_ZIVID_VERSION=${{ env.NEWEST_ZIVID_VERSION }} \
+          CI_TEST_OS=${{ matrix.os }} \
+          CI_TEST_COMPILER=${{ matrix.compiler }} \
+          ./continuous-integration/run_build_and_test_in_docker.sh
+
+  build-driver-and-run-tests-for-older-sdk:
+    name: Build driver and run tests for older Zivid SDK
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        zivid-version: ['2.0.0+7c4918cf-14', '2.1.0+d2007e12-1', '2.2.0+f0867d62-1', '2.3.0+a08763f1-1', '2.4.0+a330c1a6-1']
+        ros-distro: ['ros:noetic-ros-base-focal', 'ros:kinetic-ros-base-xenial', 'ros:melodic-ros-base-bionic']
+        exclude:
+          - ros-distro: 'ros:noetic-ros-base-focal'              # These Zivid Versions are not supported because
+            zivid-version: '2.0.0+7c4918cf-14'                   # we did not support Ubuntu 20 until Zivid 2.3
+          - ros-distro: 'ros:noetic-ros-base-focal'
+            zivid-version: '2.1.0+d2007e12-1'
+          - ros-distro: 'ros:noetic-ros-base-focal'
+            zivid-version: '2.2.0+f0867d62-1'
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+        with:
+          lfs: false
+      - name: Build and Test
+        run: |
+          CI_TEST_ZIVID_VERSION=${{ matrix.zivid-version }} \
+          CI_TEST_OS=${{ matrix.ros-distro }} \
+          CI_TEST_COMPILER="g++-7" \
+          ./continuous-integration/run_build_and_test_in_docker.sh

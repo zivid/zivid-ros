@@ -7,7 +7,7 @@ on:
     - cron:  '0 22 * * *'
 
 env:
-  NEWEST_ZIVID_VERSION: '2.4.1+55718627-1'
+  NEWEST_ZIVID_VERSION: '2.4.2+1a2e8cfb-1'
 
 jobs:
   code-analysis:
@@ -64,18 +64,12 @@ jobs:
   build-driver-and-run-tests-for-older-sdk:
     name: Build driver and run tests for older Zivid SDK
     runs-on: ubuntu-latest
+    if: ${{ false }}  # Remove this line when adding zivid-version below
     strategy:
       fail-fast: true
       matrix:
-        zivid-version: ['2.0.0+7c4918cf-14', '2.1.0+d2007e12-1', '2.2.0+f0867d62-1', '2.3.0+a08763f1-1', '2.4.0+a330c1a6-1']
+        zivid-version: ['none'] # Remove if: ${{ false }} above, when adding a SDK version here
         ros-distro: ['ros:noetic-ros-base-focal', 'ros:kinetic-ros-base-xenial', 'ros:melodic-ros-base-bionic']
-        exclude:
-          - ros-distro: 'ros:noetic-ros-base-focal'              # These Zivid Versions are not supported because
-            zivid-version: '2.0.0+7c4918cf-14'                   # we did not support Ubuntu 20 until Zivid 2.3
-          - ros-distro: 'ros:noetic-ros-base-focal'
-            zivid-version: '2.1.0+d2007e12-1'
-          - ros-distro: 'ros:noetic-ros-base-focal'
-            zivid-version: '2.2.0+f0867d62-1'
     steps:
       - name: Check out code
         uses: actions/checkout@v2

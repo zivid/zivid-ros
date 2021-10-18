@@ -22,6 +22,11 @@ jobs:
         run: |
           CI_TEST_OS=ros:melodic-ros-base-bionic \
           ./continuous-integration/run_code_analysis_in_docker.sh
+      - name: Notify Teams
+        if: ${{ failure() && github.ref == 'refs/heads/master' }}
+        env:
+          CI_FAILURE_TEAMS_HOOK: ${{ secrets.CI_FAILURE_TEAMS_HOOK }}
+        run: python continuous-integration/notify_teams.py --status ${{ job.status }}
   build-and-test-newest-zivid:
     name: Build driver and run tests for newest Zivid SDK
     runs-on: ubuntu-latest
@@ -60,7 +65,27 @@ jobs:
           CI_TEST_OS=${{ matrix.os }} \
           CI_TEST_COMPILER=${{ matrix.compiler }} \
           ./continuous-integration/run_build_and_test_in_docker.sh
-
+      - name: Build Status
+        id: build-and-test-newest-status
+        if: ${{ failure() && github.ref == 'refs/heads/master' }}
+        run: echo "::set-output name=result::failure"
+    outputs:
+      build_result: ${{ steps.build-and-test-newest-status.outputs.result }}
+  send-notification-if-build-and-test-newest-zivid-fails: 
+    name: Send Teams notification if build-and-test fails
+    runs-on: ubuntu-latest
+    if: always()
+    needs: build-and-test-newest-zivid
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+        with:
+          lfs: false
+      - name: Notify Teams
+        env:
+          CI_FAILURE_TEAMS_HOOK: ${{ secrets.CI_FAILURE_TEAMS_HOOK }}
+        run: python continuous-integration/notify_teams.py --status ${{ needs.build-and-test-newest-zivid.outputs.build_result }}
+        if: needs.build-and-test-newest-zivid.outputs.build_result == 'failure'
   build-driver-and-run-tests-for-older-sdk:
     name: Build driver and run tests for older Zivid SDK
     runs-on: ubuntu-latest
@@ -81,3 +106,24 @@ jobs:
           CI_TEST_OS=${{ matrix.ros-distro }} \
           CI_TEST_COMPILER="g++-7" \
           ./continuous-integration/run_build_and_test_in_docker.sh
+      - name: Build Status
+        id: build-and-test-older-status
+        if: ${{ failure() && github.ref == 'refs/heads/master' }}
+        run: echo "::set-output name=result::failure"
+    outputs:
+      build_result: ${{ steps.build-and-test-older-status.outputs.result }}
+  send-notification-if-build-and-test-older-sdk-fails:
+    name: Send Teams notification if build-driver-and-run-tests-for-older-sdk fails
+    runs-on: ubuntu-latest
+    if: always()
+    needs: build-driver-and-run-tests-for-older-sdk
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+        with:
+          lfs: false
+      - name: Notify Teams
+        env:
+          CI_FAILURE_TEAMS_HOOK: ${{ secrets.CI_FAILURE_TEAMS_HOOK }}
+        run: python continuous-integration/notify_teams.py --status ${{ needs.build-and-test-older-zivid.outputs.build_result }}
+        if: needs.build-and-test-older-zivid.outputs.build_result == 'failure'

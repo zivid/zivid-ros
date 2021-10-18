@@ -7,7 +7,7 @@ on:
     - cron:  '0 22 * * *'
 
 env:
-  NEWEST_ZIVID_VERSION: '2.4.2+1a2e8cfb-1'
+  NEWEST_ZIVID_VERSION: '2.5.0+19fa6891-1'
 
 jobs:
   code-analysis:
@@ -71,7 +71,7 @@ jobs:
         run: echo "::set-output name=result::failure"
     outputs:
       build_result: ${{ steps.build-and-test-newest-status.outputs.result }}
-  send-notification-if-build-and-test-newest-zivid-fails: 
+  send-notification-if-build-and-test-newest-zivid-fails:
     name: Send Teams notification if build-and-test fails
     runs-on: ubuntu-latest
     if: always()
@@ -89,11 +89,10 @@ jobs:
   build-driver-and-run-tests-for-older-sdk:
     name: Build driver and run tests for older Zivid SDK
     runs-on: ubuntu-latest
-    if: ${{ false }}  # Remove this line when adding zivid-version below
     strategy:
       fail-fast: true
       matrix:
-        zivid-version: ['none'] # Remove if: ${{ false }} above, when adding a SDK version here
+        zivid-version: ['2.4.2+1a2e8cfb-1']
         ros-distro: ['ros:noetic-ros-base-focal', 'ros:kinetic-ros-base-xenial', 'ros:melodic-ros-base-bionic']
     steps:
       - name: Check out code

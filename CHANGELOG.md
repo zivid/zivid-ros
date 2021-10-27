@@ -2,6 +2,11 @@
 
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 2.3.0
+
+* Add support for normals. Normals are exposed via topic "normals/xyz".
+* The minimum supported Zivid SDK version is now SDK 2.5.
+
 ## 2.2.0
 
 * Add support for version 2.2.0 of the Zivid SDK.

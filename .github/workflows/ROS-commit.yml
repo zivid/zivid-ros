@@ -89,10 +89,11 @@ jobs:
   build-driver-and-run-tests-for-older-sdk:
     name: Build driver and run tests for older Zivid SDK
     runs-on: ubuntu-latest
+    if: ${{ false }}  # Remove this line when adding zivid-version below
     strategy:
       fail-fast: true
       matrix:
-        zivid-version: ['2.4.2+1a2e8cfb-1']
+        zivid-version: ['none'] # Remove if: ${{ false }} above, when adding a SDK version here
         ros-distro: ['ros:noetic-ros-base-focal', 'ros:kinetic-ros-base-xenial', 'ros:melodic-ros-base-bionic']
     steps:
       - name: Check out code

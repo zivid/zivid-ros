@@ -32,7 +32,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(Boost REQUIRED COMPONENTS filesystem)
 
-find_package(Zivid 2.0.0 COMPONENTS Core REQUIRED)
+find_package(Zivid 2.5.0 COMPONENTS Core REQUIRED)
 message(STATUS "Found Zivid version ${Zivid_VERSION}")
 
 find_package(OpenMP REQUIRED)

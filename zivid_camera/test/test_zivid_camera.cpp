@@ -550,8 +550,6 @@ TEST_F(CaptureOutputTest, testCaptureNormals)
   }
 }
 
-#if ZIVID_CORE_VERSION_MAJOR > 2 || (ZIVID_CORE_VERSION_MAJOR == 2 && ZIVID_CORE_VERSION_MINOR >= 2)
-// The stripe engine setting was added in SDK 2.2
 TEST_F(TestWithFileCamera, testSettingsEngine)
 {
   waitForReady();
@@ -578,7 +576,6 @@ TEST_F(TestWithFileCamera, testSettingsEngine)
   short_wait_duration.sleep();
   ASSERT_EQ(points_sub.numMessages(), 1U);
 }
-#endif
 
 TEST_F(ZividNodeTest, testCaptureCameraInfo)
 {

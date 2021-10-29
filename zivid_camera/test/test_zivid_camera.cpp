@@ -205,6 +205,16 @@ protected:
     }
   }
 
+  template <typename FieldType>
+  void assertPointCloud2Field(const FieldType& field, const std::string& name, uint32_t offset, uint32_t datatype,
+                              uint32_t count)
+  {
+    ASSERT_EQ(field.name, name);
+    ASSERT_EQ(field.offset, offset);
+    ASSERT_EQ(field.datatype, datatype);
+    ASSERT_EQ(field.count, count);
+  }
+
   void assertCameraInfoForFileCamera(const sensor_msgs::CameraInfo& ci) const
   {
     ASSERT_EQ(ci.width, 1920U);
@@ -353,6 +363,11 @@ TEST_F(CaptureOutputTest, testCapturePointsXYZGBA)
   const auto& last_pc2 = points_sub.lastMessage();
   ASSERT_TRUE(last_pc2.has_value());
   assertSensorMsgsPointCloud2Meta(*last_pc2, 1920U, 1200U, 16U);
+  ASSERT_EQ(last_pc2->fields.size(), 4U);
+  assertPointCloud2Field(last_pc2->fields[0], "x", 0, sensor_msgs::PointField::FLOAT32, 1);
+  assertPointCloud2Field(last_pc2->fields[1], "y", 4, sensor_msgs::PointField::FLOAT32, 1);
+  assertPointCloud2Field(last_pc2->fields[2], "z", 8, sensor_msgs::PointField::FLOAT32, 1);
+  assertPointCloud2Field(last_pc2->fields[3], "rgba", 12, sensor_msgs::PointField::FLOAT32, 1);
 
   const auto point_cloud = captureViaSDKDefaultSettings();
   const auto expected_xyzrgba = point_cloud.copyData<Zivid::PointXYZColorRGBA>();
@@ -387,6 +402,10 @@ TEST_F(CaptureOutputTest, testCapturePointsXYZ)
   ASSERT_TRUE(point_cloud.has_value());
   assertSensorMsgsPointCloud2Meta(*point_cloud, 1920U, 1200U,
                                   16U);  // 3x4 bytes for xyz + 4 bytes padding (w) = 16 bytes total
+  ASSERT_EQ(point_cloud->fields.size(), 3U);
+  assertPointCloud2Field(point_cloud->fields[0], "x", 0, sensor_msgs::PointField::FLOAT32, 1);
+  assertPointCloud2Field(point_cloud->fields[1], "y", 4, sensor_msgs::PointField::FLOAT32, 1);
+  assertPointCloud2Field(point_cloud->fields[2], "z", 8, sensor_msgs::PointField::FLOAT32, 1);
 
   auto point_cloud_sdk = captureViaSDKDefaultSettings();
   auto expected_xyz = point_cloud_sdk.copyData<Zivid::PointXYZ>();

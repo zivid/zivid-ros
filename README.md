@@ -638,6 +638,6 @@ grant agreement No 732287. For more information, visit [rosin-project.eu](http:/
 [header-image]: https://www.zivid.com/hubfs/softwarefiles/images/zivid-generic-github-header.png
 
 [zivid-knowledge-base-url]: https://support.zivid.com
-[zivid-software-installation-url]: https://support.zivid.com/latest/rst/academy/getting-started/zivid-software-installation.html
-[install-opencl-drivers-ubuntu-url]: https://support.zivid.com/latest/rst/academy/getting-started/zivid-software-installation/gpu/install-opencl-drivers-ubuntu.html
-[hdr-getting-good-point-clouds-url]: https://support.zivid.com/latest/rst/academy/camera/capturing-high-quality-point-clouds/getting-the-right-exposure-for-good-point-clouds.html
+[zivid-software-installation-url]: https://support.zivid.com/latest/getting-started/software-installation.html
+[install-opencl-drivers-ubuntu-url]: https://support.zivid.com/latest/getting-started/software-installation/gpu/install-opencl-drivers-ubuntu.html
+[hdr-getting-good-point-clouds-url]: https://support.zivid.com/latest/academy/camera/capturing-high-quality-point-clouds/getting-the-right-exposure-for-good-point-clouds.html

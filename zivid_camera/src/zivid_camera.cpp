@@ -94,6 +94,7 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   , use_latched_publisher_for_color_image_(false)
   , use_latched_publisher_for_depth_image_(false)
   , use_latched_publisher_for_snr_image_(false)
+  , use_latched_publisher_for_normals_xyz_(false)
   , image_transport_(nh_)
   , header_seq_(0)
 {
@@ -134,6 +135,7 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   priv_.param<bool>("use_latched_publisher_for_color_image", use_latched_publisher_for_color_image_, false);
   priv_.param<bool>("use_latched_publisher_for_depth_image", use_latched_publisher_for_depth_image_, false);
   priv_.param<bool>("use_latched_publisher_for_snr_image", use_latched_publisher_for_snr_image_, false);
+  priv_.param<bool>("use_latched_publisher_for_normals_xyz", use_latched_publisher_for_normals_xyz_, false);
 
   if (file_camera_mode)
   {
@@ -215,6 +217,8 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
       image_transport_.advertiseCamera("color/image_color", 1, use_latched_publisher_for_color_image_);
   depth_image_publisher_ = image_transport_.advertiseCamera("depth/image", 1, use_latched_publisher_for_depth_image_);
   snr_image_publisher_ = image_transport_.advertiseCamera("snr/image", 1, use_latched_publisher_for_snr_image_);
+  normals_xyz_publisher_ =
+      nh_.advertise<sensor_msgs::PointCloud2>("normals/xyz", 1, use_latched_publisher_for_normals_xyz_);
 
   ROS_INFO("Advertising services");
   camera_info_model_name_service_ =
@@ -424,8 +428,10 @@ void ZividCamera::publishFrame(Zivid::Frame&& frame)
   const bool publish_color_img = shouldPublishColorImg();
   const bool publish_depth_img = shouldPublishDepthImg();
   const bool publish_snr_img = shouldPublishSnrImg();
+  const bool publish_normals_xyz = shouldPublishNormalsXYZ();
 
-  if (publish_points_xyz || publish_points_xyzrgba || publish_color_img || publish_depth_img || publish_snr_img)
+  if (publish_points_xyz || publish_points_xyzrgba || publish_color_img || publish_depth_img || publish_snr_img ||
+      publish_normals_xyz)
   {
     const auto header = makeHeader();
     auto point_cloud = frame.pointCloud();
@@ -461,6 +467,10 @@ void ZividCamera::publishFrame(Zivid::Frame&& frame)
         publishSnrImage(header, camera_info, point_cloud);
       }
     }
+    if (publish_normals_xyz)
+    {
+      publishNormalsXYZ(header, point_cloud);
+    }
   }
 }
 
@@ -489,6 +499,11 @@ bool ZividCamera::shouldPublishSnrImg() const
   return snr_image_publisher_.getNumSubscribers() > 0 || use_latched_publisher_for_snr_image_;
 }
 
+bool ZividCamera::shouldPublishNormalsXYZ() const
+{
+  return normals_xyz_publisher_.getNumSubscribers() > 0 || use_latched_publisher_for_normals_xyz_;
+}
+
 std_msgs::Header ZividCamera::makeHeader()
 {
   std_msgs::Header header;
@@ -500,7 +515,7 @@ std_msgs::Header ZividCamera::makeHeader()
 
 void ZividCamera::publishPointCloudXYZ(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud)
 {
-  ROS_DEBUG("Publishing points/xyz");
+  ROS_DEBUG_STREAM("Publishing " << points_xyz_publisher_.getTopic());
 
   // We are using the Zivid::XYZW type here for compatibility with the pcl::PointXYZ type, which contains an
   // padding float for performance reasons. We could use the "pcl_conversion" utility functions to construct
@@ -523,7 +538,7 @@ void ZividCamera::publishPointCloudXYZ(const std_msgs::Header& header, const Ziv
 
 void ZividCamera::publishPointCloudXYZRGBA(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud)
 {
-  ROS_DEBUG("Publishing points/xyzrgba");
+  ROS_DEBUG_STREAM("Publishing " << points_xyzrgba_publisher_.getTopic());
 
   auto msg = boost::make_shared<sensor_msgs::PointCloud2>();
   fillCommonMsgFields(*msg, header, point_cloud.width(), point_cloud.height());
@@ -547,7 +562,7 @@ void ZividCamera::publishPointCloudXYZRGBA(const std_msgs::Header& header, const
 void ZividCamera::publishColorImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
                                     const Zivid::PointCloud& point_cloud)
 {
-  ROS_DEBUG("Publishing color image");
+  ROS_DEBUG_STREAM("Publishing " << color_image_publisher_.getTopic() << " from point cloud");
   auto image = makePointCloudImage<Zivid::ColorRGBA>(point_cloud, header, sensor_msgs::image_encodings::RGBA8);
   color_image_publisher_.publish(image, camera_info);
 }
@@ -555,8 +570,7 @@ void ZividCamera::publishColorImage(const std_msgs::Header& header, const sensor
 void ZividCamera::publishColorImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
                                     const Zivid::Image<Zivid::ColorRGBA>& image)
 {
-  ROS_DEBUG("Publishing color image");
-
+  ROS_DEBUG_STREAM("Publishing " << color_image_publisher_.getTopic() << " from Image");
   auto msg = makeImage(header, sensor_msgs::image_encodings::RGBA8, image.width(), image.height());
   const auto uint8_ptr_begin = reinterpret_cast<const uint8_t*>(image.data());
   const auto uint8_ptr_end = reinterpret_cast<const uint8_t*>(image.data() + image.size());
@@ -567,7 +581,7 @@ void ZividCamera::publishColorImage(const std_msgs::Header& header, const sensor
 void ZividCamera::publishDepthImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
                                     const Zivid::PointCloud& point_cloud)
 {
-  ROS_DEBUG("Publishing depth image");
+  ROS_DEBUG_STREAM("Publishing " << depth_image_publisher_.getTopic());
   auto image = makePointCloudImage<Zivid::PointZ>(point_cloud, header, sensor_msgs::image_encodings::TYPE_32FC1);
   depth_image_publisher_.publish(image, camera_info);
 }
@@ -575,9 +589,28 @@ void ZividCamera::publishDepthImage(const std_msgs::Header& header, const sensor
 void ZividCamera::publishSnrImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
                                   const Zivid::PointCloud& point_cloud)
 {
-  ROS_DEBUG("Publishing SNR image");
+  ROS_DEBUG_STREAM("Publishing " << snr_image_publisher_.getTopic());
   auto image = makePointCloudImage<Zivid::SNR>(point_cloud, header, sensor_msgs::image_encodings::TYPE_32FC1);
   snr_image_publisher_.publish(image, camera_info);
+}
+
+void ZividCamera::publishNormalsXYZ(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud)
+{
+  ROS_DEBUG_STREAM("Publishing " << normals_xyz_publisher_.getTopic());
+
+  using ZividDataType = Zivid::NormalXYZ;
+  auto msg = boost::make_shared<sensor_msgs::PointCloud2>();
+  fillCommonMsgFields(*msg, header, point_cloud.width(), point_cloud.height());
+  msg->fields.reserve(3);
+  msg->fields.push_back(createPointField("normal_x", 0, sensor_msgs::PointField::FLOAT32, 1));
+  msg->fields.push_back(createPointField("normal_y", 4, sensor_msgs::PointField::FLOAT32, 1));
+  msg->fields.push_back(createPointField("normal_z", 8, sensor_msgs::PointField::FLOAT32, 1));
+  msg->is_dense = false;
+  msg->point_step = sizeof(ZividDataType);
+  msg->row_step = msg->point_step * msg->width;
+  msg->data.resize(msg->row_step * msg->height);
+  point_cloud.copyData<ZividDataType>(reinterpret_cast<ZividDataType*>(msg->data.data()));
+  normals_xyz_publisher_.publish(msg);
 }
 
 sensor_msgs::CameraInfoConstPtr ZividCamera::makeCameraInfo(const std_msgs::Header& header, std::size_t width,

@@ -54,6 +54,7 @@ private:
   bool shouldPublishColorImg() const;
   bool shouldPublishDepthImg() const;
   bool shouldPublishSnrImg() const;
+  bool shouldPublishNormalsXYZ() const;
   std_msgs::Header makeHeader();
   void publishPointCloudXYZ(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud);
   void publishPointCloudXYZRGBA(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud);
@@ -65,6 +66,7 @@ private:
                          const Zivid::PointCloud& point_cloud);
   void publishSnrImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
                        const Zivid::PointCloud& point_cloud);
+  void publishNormalsXYZ(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud);
   sensor_msgs::CameraInfoConstPtr makeCameraInfo(const std_msgs::Header& header, std::size_t width, std::size_t height,
                                                  const Zivid::CameraIntrinsics& intrinsics);
 
@@ -82,12 +84,14 @@ private:
   bool use_latched_publisher_for_color_image_;
   bool use_latched_publisher_for_depth_image_;
   bool use_latched_publisher_for_snr_image_;
+  bool use_latched_publisher_for_normals_xyz_;
   ros::Publisher points_xyz_publisher_;
   ros::Publisher points_xyzrgba_publisher_;
   image_transport::ImageTransport image_transport_;
   image_transport::CameraPublisher color_image_publisher_;
   image_transport::CameraPublisher depth_image_publisher_;
   image_transport::CameraPublisher snr_image_publisher_;
+  ros::Publisher normals_xyz_publisher_;
   ros::ServiceServer camera_info_serial_number_service_;
   ros::ServiceServer camera_info_model_name_service_;
   ros::ServiceServer capture_service_;

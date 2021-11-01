@@ -72,6 +72,7 @@ protected:
   static constexpr auto snr_image_topic_name = "/zivid_camera/snr/image";
   static constexpr auto points_xyz_topic_name = "/zivid_camera/points/xyz";
   static constexpr auto points_xyzrgba_topic_name = "/zivid_camera/points/xyzrgba";
+  static constexpr auto normals_xyz_topic_name = "/zivid_camera/normals/xyz";
   static constexpr size_t num_dr_capture_servers = 10;
   static constexpr auto file_camera_path = "/usr/share/Zivid/data/FileCameraZividOne.zfc";
 
@@ -205,6 +206,16 @@ protected:
     }
   }
 
+  template <typename FieldType>
+  void assertPointCloud2Field(const FieldType& field, const std::string& name, uint32_t offset, uint32_t datatype,
+                              uint32_t count)
+  {
+    ASSERT_EQ(field.name, name);
+    ASSERT_EQ(field.offset, offset);
+    ASSERT_EQ(field.datatype, datatype);
+    ASSERT_EQ(field.count, count);
+  }
+
   void assertCameraInfoForFileCamera(const sensor_msgs::CameraInfo& ci) const
   {
     ASSERT_EQ(ci.width, 1920U);
@@ -275,6 +286,7 @@ TEST_F(ZividNodeTest, testCapturePublishesTopics)
   auto snr_image_sub = subscribe<sensor_msgs::Image>(snr_image_topic_name);
   auto points_xyz_sub = subscribe<sensor_msgs::PointCloud2>(points_xyz_topic_name);
   auto points_xyzrgba_sub = subscribe<sensor_msgs::PointCloud2>(points_xyzrgba_topic_name);
+  auto normals_xyz_sub = subscribe<sensor_msgs::PointCloud2>(normals_xyz_topic_name);
 
   auto assert_num_topics_received = [&](std::size_t numTopics) {
     ASSERT_EQ(color_camera_info_sub.numMessages(), numTopics);
@@ -285,6 +297,7 @@ TEST_F(ZividNodeTest, testCapturePublishesTopics)
     ASSERT_EQ(snr_image_sub.numMessages(), numTopics);
     ASSERT_EQ(points_xyz_sub.numMessages(), numTopics);
     ASSERT_EQ(points_xyzrgba_sub.numMessages(), numTopics);
+    ASSERT_EQ(normals_xyz_sub.numMessages(), numTopics);
   };
 
   short_wait_duration.sleep();
@@ -328,6 +341,18 @@ protected:
     return camera_.capture(Zivid::Settings2D{ Zivid::Settings2D::Acquisitions{ Zivid::Settings2D::Acquisition{} } });
   }
 
+  void compareFloat(float a, float b, float delta = 1e-6f) const
+  {
+    if (std::isnan(a))
+    {
+      ASSERT_TRUE(std::isnan(b));
+    }
+    else
+    {
+      ASSERT_NEAR(a, b, delta);
+    }
+  }
+
   void comparePointCoordinate(float ros_coordinate, float sdk_coordinate) const
   {
     if (std::isnan(ros_coordinate))
@@ -353,6 +378,11 @@ TEST_F(CaptureOutputTest, testCapturePointsXYZGBA)
   const auto& last_pc2 = points_sub.lastMessage();
   ASSERT_TRUE(last_pc2.has_value());
   assertSensorMsgsPointCloud2Meta(*last_pc2, 1920U, 1200U, 16U);
+  ASSERT_EQ(last_pc2->fields.size(), 4U);
+  assertPointCloud2Field(last_pc2->fields[0], "x", 0, sensor_msgs::PointField::FLOAT32, 1);
+  assertPointCloud2Field(last_pc2->fields[1], "y", 4, sensor_msgs::PointField::FLOAT32, 1);
+  assertPointCloud2Field(last_pc2->fields[2], "z", 8, sensor_msgs::PointField::FLOAT32, 1);
+  assertPointCloud2Field(last_pc2->fields[3], "rgba", 12, sensor_msgs::PointField::FLOAT32, 1);
 
   const auto point_cloud = captureViaSDKDefaultSettings();
   const auto expected_xyzrgba = point_cloud.copyData<Zivid::PointXYZColorRGBA>();
@@ -387,6 +417,10 @@ TEST_F(CaptureOutputTest, testCapturePointsXYZ)
   ASSERT_TRUE(point_cloud.has_value());
   assertSensorMsgsPointCloud2Meta(*point_cloud, 1920U, 1200U,
                                   16U);  // 3x4 bytes for xyz + 4 bytes padding (w) = 16 bytes total
+  ASSERT_EQ(point_cloud->fields.size(), 3U);
+  assertPointCloud2Field(point_cloud->fields[0], "x", 0, sensor_msgs::PointField::FLOAT32, 1);
+  assertPointCloud2Field(point_cloud->fields[1], "y", 4, sensor_msgs::PointField::FLOAT32, 1);
+  assertPointCloud2Field(point_cloud->fields[2], "z", 8, sensor_msgs::PointField::FLOAT32, 1);
 
   auto point_cloud_sdk = captureViaSDKDefaultSettings();
   auto expected_xyz = point_cloud_sdk.copyData<Zivid::PointXYZ>();
@@ -467,8 +501,55 @@ TEST_F(CaptureOutputTest, testCaptureSNRImage)
   }
 }
 
-#if ZIVID_CORE_VERSION_MAJOR > 2 || (ZIVID_CORE_VERSION_MAJOR == 2 && ZIVID_CORE_VERSION_MINOR >= 2)
-// The stripe engine setting was added in SDK 2.2
+TEST_F(CaptureOutputTest, testCaptureNormals)
+{
+  auto normals_sub = subscribe<sensor_msgs::PointCloud2>(normals_xyz_topic_name);
+
+  enableFirst3DAcquisitionAndCapture();
+
+  const auto& point_cloud = normals_sub.lastMessage();
+  ASSERT_TRUE(point_cloud.has_value());
+  assertSensorMsgsPointCloud2Meta(*point_cloud, 1920U, 1200U,
+                                  3U * sizeof(float));  // 12 bytes total
+  ASSERT_EQ(point_cloud->fields.size(), 3U);
+  assertPointCloud2Field(point_cloud->fields[0], "normal_x", 0, sensor_msgs::PointField::FLOAT32, 1);
+  assertPointCloud2Field(point_cloud->fields[1], "normal_y", 4, sensor_msgs::PointField::FLOAT32, 1);
+  assertPointCloud2Field(point_cloud->fields[2], "normal_z", 8, sensor_msgs::PointField::FLOAT32, 1);
+
+  auto point_cloud_sdk = captureViaSDKDefaultSettings();
+  auto expected_normal_xyz_before_transform = point_cloud_sdk.copyData<Zivid::NormalXYZ>();
+  ASSERT_EQ(point_cloud->width, expected_normal_xyz_before_transform.width());
+  ASSERT_EQ(point_cloud->height, expected_normal_xyz_before_transform.height());
+  ASSERT_EQ(point_cloud->width * point_cloud->height, expected_normal_xyz_before_transform.size());
+
+  // Transform from mm to m (like is done internally in Zivid driver)
+  const float scale = 0.001f;
+  point_cloud_sdk.transform(Zivid::Matrix4x4{ scale, 0, 0, 0, 0, scale, 0, 0, 0, 0, scale, 0, 0, 0, 0, 1 });
+  auto expected_normal_xyz_after_transform = point_cloud_sdk.copyData<Zivid::NormalXYZ>();
+  ASSERT_EQ(expected_normal_xyz_after_transform.size(), expected_normal_xyz_before_transform.size());
+
+  for (std::size_t i = 0; i < expected_normal_xyz_before_transform.size(); i++)
+  {
+    const uint8_t* cloud_ptr = &point_cloud->data[i * point_cloud->point_step];
+    const float normal_x = *reinterpret_cast<const float*>(&cloud_ptr[0]);
+    const float normal_y = *reinterpret_cast<const float*>(&cloud_ptr[4]);
+    const float normal_z = *reinterpret_cast<const float*>(&cloud_ptr[8]);
+
+    const auto& expected_sdk_before_transform = expected_normal_xyz_before_transform(i);
+    // We do a transform in the ROS driver to scale from mm to meters. However, `expected_normal_xyz`
+    // are calculated without transform, so we need a slightly higher delta to compare.
+    constexpr float delta = 0.001f;
+    ASSERT_NO_FATAL_FAILURE(compareFloat(normal_x, expected_sdk_before_transform.x, delta));
+    ASSERT_NO_FATAL_FAILURE(compareFloat(normal_y, expected_sdk_before_transform.y, delta));
+    ASSERT_NO_FATAL_FAILURE(compareFloat(normal_z, expected_sdk_before_transform.z, delta));
+
+    const auto& expected_sdk_after_transform = expected_normal_xyz_after_transform(i);
+    ASSERT_NO_FATAL_FAILURE(compareFloat(normal_x, expected_sdk_after_transform.x));
+    ASSERT_NO_FATAL_FAILURE(compareFloat(normal_y, expected_sdk_after_transform.y));
+    ASSERT_NO_FATAL_FAILURE(compareFloat(normal_z, expected_sdk_after_transform.z));
+  }
+}
+
 TEST_F(TestWithFileCamera, testSettingsEngine)
 {
   waitForReady();
@@ -495,7 +576,6 @@ TEST_F(TestWithFileCamera, testSettingsEngine)
   short_wait_duration.sleep();
   ASSERT_EQ(points_sub.numMessages(), 1U);
 }
-#endif
 
 TEST_F(ZividNodeTest, testCaptureCameraInfo)
 {

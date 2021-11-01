@@ -43,7 +43,7 @@ sudo apt-get install -y python3-catkin-tools python3-osrf-pycommon git
 
 ### Zivid SDK
 
-To use the ROS driver you need to download and install the "Zivid Core" package. Zivid SDK version 2.0 to 2.5
+To use the ROS driver you need to download and install the "Zivid Core" package. Zivid SDK version 2.5
 is supported. See [releases](https://github.com/zivid/zivid-ros/releases) for older ROS driver releases that
 supports older SDK versions.
 
@@ -339,6 +339,14 @@ Camera calibration and metadata.
 
 Each pixel contains the SNR (signal-to-noise ratio) value. The image is encoded as 32-bit
 float. Published as a part of the [capture](#capture) service.
+
+### normals/xyz
+[sensor_msgs/PointCloud2](http://docs.ros.org/api/sensor_msgs/html/msg/PointCloud2.html)
+
+Normals for the point cloud. The included fields are normal x, y and z coordinates.
+Each coordinate is a float value. There are no additional padding floats, so point-step is
+12 bytes (3*4 bytes). The normals are unit vectors. Note that subscribing to this topic
+will cause some additional processing time for calculating the normals.
 
 ## Configuration
 

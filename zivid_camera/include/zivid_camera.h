@@ -48,6 +48,8 @@ private:
                                                      CaptureAssistantSuggestSettings::Response& res);
   void serviceHandlerHandleCameraConnectionLoss();
   bool isConnectedServiceHandler(IsConnected::Request& req, IsConnected::Response& res);
+  bool loadSettingsServiceHandler(LoadSettings::Request& req, LoadSettings::Response&);
+  void loadSettingsFromFile(std::string full_path);
   void publishFrame(Zivid::Frame&& frame);
   bool shouldPublishPointsXYZ() const;
   bool shouldPublishPointsXYZRGBA() const;
@@ -98,6 +100,7 @@ private:
   ros::ServiceServer capture_2d_service_;
   ros::ServiceServer capture_assistant_suggest_settings_service_;
   ros::ServiceServer is_connected_service_;
+  ros::ServiceServer load_settings_service_;
   std::unique_ptr<Capture3DSettingsController> capture_settings_controller_;
   std::unique_ptr<Capture2DSettingsController> capture_2d_settings_controller_;
   Zivid::Application zivid_;

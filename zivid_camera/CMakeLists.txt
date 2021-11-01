@@ -89,6 +89,7 @@ add_service_files(
   CameraInfoModelName.srv
   CameraInfoSerialNumber.srv
   IsConnected.srv
+  LoadSettings.srv
 )
 generate_messages(
   DEPENDENCIES

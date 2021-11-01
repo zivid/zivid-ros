@@ -198,6 +198,13 @@ rosrun command:
 ROS_NAMESPACE=zivid_camera rosrun zivid_camera zivid_camera_node _frame_id:=camera1
 ```
 
+`settings_file_path` (string, default: "")
+> Specify the path to a settings `.yml` file. If specified, this file is used to construct the
+> [Zivid Settings](https://www.zivid.com/hubfs/softwarefiles/releases/2.5.0+19fa6891-1/doc/cpp/classZivid_1_1Settings.html#aa6fc7bf87c7a5f672b57397aab01ac3e)
+> and apply them at start up. All calls to the [capture](#capture) service will be made using these settings,
+> unless they are change via e.g. the [capture_assistant/suggest_settings](#capture_assistantsuggest_settings)
+> service.
+
 `file_camera_path` (string, default: "")
 > Specify the path to a file camera to use instead of a real Zivid camera. This can be used to
 > develop without access to hardware. The file camera returns the same point cloud for every capture.
@@ -284,6 +291,11 @@ The connection status is updated by the driver every 10 seconds and before each 
 service call. If the camera is not in `Connected` state the driver will attempt to re-connect to
 the camera when it detects that the camera is available. This can happen if the camera is
 power-cycled or the USB cable is unplugged and then replugged.
+
+### load_settings
+[zivid_camera/LoadSettings.srv](./zivid_camera/srv/LoadSettings.srv)
+
+Loads settings from a `.yml` file and applies them to the Zivid Camera.
 
 ## Topics
 

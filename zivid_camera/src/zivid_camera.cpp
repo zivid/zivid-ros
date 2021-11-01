@@ -13,6 +13,7 @@
 #include <Zivid/Experimental/Calibration.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/predef.h>
 
 #include <sstream>
@@ -130,6 +131,9 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   priv_.param<decltype(file_camera_path)>("file_camera_path", file_camera_path, "");
   const bool file_camera_mode = !file_camera_path.empty();
 
+  std::string settings_file_path;
+  priv_.param<decltype(settings_file_path)>("settings_file_path", settings_file_path, "");
+
   priv_.param<bool>("use_latched_publisher_for_points_xyz", use_latched_publisher_for_points_xyz_, false);
   priv_.param<bool>("use_latched_publisher_for_points_xyzrgba", use_latched_publisher_for_points_xyzrgba_, false);
   priv_.param<bool>("use_latched_publisher_for_color_image", use_latched_publisher_for_color_image_, false);
@@ -208,6 +212,19 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   // to 3D except there is only 1 acquisition.
   capture_2d_settings_controller_ = std::make_unique<Capture2DSettingsController>(nh_, camera_, "settings_2d", 1);
 
+  if (!settings_file_path.empty())
+  {
+    ROS_INFO_STREAM("Setting up Capture Setting Controller using file: " << settings_file_path);
+    try
+    {
+      loadSettingsFromFile(settings_file_path);
+    }
+    catch (const std::exception& e)
+    {
+      ROS_WARN_STREAM("Failed to load settings from file " << settings_file_path << ": " << e.what());
+    }
+  }
+
   ROS_INFO("Advertising topics");
   points_xyz_publisher_ =
       nh_.advertise<sensor_msgs::PointCloud2>("points/xyz", 1, use_latched_publisher_for_points_xyz_);
@@ -230,6 +247,7 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   capture_2d_service_ = nh_.advertiseService("capture_2d", &ZividCamera::capture2DServiceHandler, this);
   capture_assistant_suggest_settings_service_ = nh_.advertiseService(
       "capture_assistant/suggest_settings", &ZividCamera::captureAssistantSuggestSettingsServiceHandler, this);
+  load_settings_service_ = nh_.advertiseService("load_settings", &ZividCamera::loadSettingsServiceHandler, this);
 
   ROS_INFO("Zivid camera driver is now ready!");
 }
@@ -418,6 +436,24 @@ void ZividCamera::serviceHandlerHandleCameraConnectionLoss()
 bool ZividCamera::isConnectedServiceHandler(IsConnected::Request&, IsConnected::Response& res)
 {
   res.is_connected = camera_status_ == CameraStatus::Connected;
+  return true;
+}
+
+void ZividCamera::loadSettingsFromFile(std::string full_path)
+{
+  if (!boost::filesystem::exists(full_path))
+  {
+    throw std::runtime_error("Specified file does not exist: " + std::string(full_path.c_str()));
+  }
+  const auto settings = Zivid::Settings(full_path.c_str());
+  capture_settings_controller_->setZividSettings(settings);
+}
+
+bool ZividCamera::loadSettingsServiceHandler(LoadSettings::Request& req, LoadSettings::Response&)
+{
+  ROS_DEBUG_STREAM(__func__ << ": Request: " << req);
+
+  loadSettingsFromFile(req.full_path);
   return true;
 }
 

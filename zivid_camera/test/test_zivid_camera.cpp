@@ -748,10 +748,10 @@ TEST_F(DynamicReconfigureMinMaxDefaultTest, testDynamicReconfigureSettingsMinMax
                                                                                              1);
 }
 
-class ZividCATest : public TestWithFileCamera
+class TestWithSettingsClients : public TestWithFileCamera
 {
 protected:
-  ZividCATest() : camera_settings_client_("/zivid_camera/settings")
+  TestWithSettingsClients() : camera_settings_client_("/zivid_camera/settings")
   {
     settings_acquisition_clients_.reserve(num_dr_capture_servers);
     for (std::size_t i = 0; i < num_dr_capture_servers; i++)
@@ -816,6 +816,15 @@ protected:
     ASSERT_EQ(filters.reflection().removal().isEnabled().value(), cfg.processing_filters_reflection_removal_enabled);
   }
 
+private:
+  dynamic_reconfigure::Client<zivid_camera::SettingsConfig> camera_settings_client_;
+  std::vector<std::unique_ptr<dynamic_reconfigure::Client<zivid_camera::SettingsAcquisitionConfig>>>
+      settings_acquisition_clients_;
+};
+
+class ZividCATest : public TestWithSettingsClients
+{
+protected:
   Zivid::CaptureAssistant::SuggestSettingsParameters::AmbientLightFrequency toAPIAmbientLightFrequency(
       zivid_camera::CaptureAssistantSuggestSettings::Request::_ambient_light_frequency_type ambient_light_frequency)
   {
@@ -863,11 +872,6 @@ protected:
       ASSERT_EQ(false, settingsAcquisitionConfig(i).enabled);
     }
   }
-
-private:
-  dynamic_reconfigure::Client<zivid_camera::SettingsConfig> camera_settings_client_;
-  std::vector<std::unique_ptr<dynamic_reconfigure::Client<zivid_camera::SettingsAcquisitionConfig>>>
-      settings_acquisition_clients_;
 };
 
 TEST_F(ZividCATest, testCaptureAssistantServiceAvailable)

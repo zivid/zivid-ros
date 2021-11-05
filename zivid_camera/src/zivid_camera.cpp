@@ -215,14 +215,7 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   if (!settings_file_path.empty())
   {
     ROS_INFO_STREAM("Setting up Capture Setting Controller using file: " << settings_file_path);
-    try
-    {
-      loadSettingsFromFile(settings_file_path);
-    }
-    catch (const std::exception& e)
-    {
-      ROS_WARN_STREAM("Failed to load settings from file " << settings_file_path << ": " << e.what());
-    }
+    loadSettingsFromFile(settings_file_path);
   }
 
   ROS_INFO("Advertising topics");

@@ -751,7 +751,7 @@ TEST_F(DynamicReconfigureMinMaxDefaultTest, testDynamicReconfigureSettingsMinMax
 class TestWithSettingsClients : public TestWithFileCamera
 {
 protected:
-  TestWithSettingsClients() : camera_settings_client_("/zivid_camera/settings")
+  TestWithSettingsClients() : settings_client_("/zivid_camera/settings")
   {
     settings_acquisition_clients_.reserve(num_settings_acquisition_dr_servers);
     for (std::size_t i = 0; i < num_settings_acquisition_dr_servers; i++)
@@ -765,7 +765,7 @@ protected:
   zivid_camera::SettingsConfig settingsConfig()
   {
     zivid_camera::SettingsConfig cfg;
-    EXPECT_TRUE(camera_settings_client_.getCurrentConfiguration(cfg, dr_get_max_wait_duration));
+    EXPECT_TRUE(settings_client_.getCurrentConfiguration(cfg, dr_get_max_wait_duration));
     return cfg;
   }
 
@@ -836,7 +836,7 @@ private:
   }
 
 private:
-  dynamic_reconfigure::Client<zivid_camera::SettingsConfig> camera_settings_client_;
+  dynamic_reconfigure::Client<zivid_camera::SettingsConfig> settings_client_;
   std::vector<std::unique_ptr<dynamic_reconfigure::Client<zivid_camera::SettingsAcquisitionConfig>>>
       settings_acquisition_clients_;
 };

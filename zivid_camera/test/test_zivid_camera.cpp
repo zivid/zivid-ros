@@ -823,6 +823,7 @@ private:
     ASSERT_EQ(color.balance().blue().value(), cfg.processing_color_balance_blue);
     ASSERT_EQ(color.balance().green().value(), cfg.processing_color_balance_green);
     ASSERT_EQ(color.balance().red().value(), cfg.processing_color_balance_red);
+    ASSERT_EQ(color.gamma().value(), cfg.processing_color_gamma);
 
     const auto& filters = s.processing().filters();
     ASSERT_EQ(filters.noise().removal().isEnabled().value(), cfg.processing_filters_noise_removal_enabled);

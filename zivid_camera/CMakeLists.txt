@@ -86,6 +86,8 @@ add_service_files(
   Capture.srv
   Capture2D.srv
   CaptureAssistantSuggestSettings.srv
+  LoadSettingsFromFile.srv
+  LoadSettings2DFromFile.srv
   CameraInfoModelName.srv
   CameraInfoSerialNumber.srv
   IsConnected.srv

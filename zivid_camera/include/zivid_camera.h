@@ -46,6 +46,8 @@ private:
   bool capture2DServiceHandler(Capture2D::Request& req, Capture2D::Response& res);
   bool captureAssistantSuggestSettingsServiceHandler(CaptureAssistantSuggestSettings::Request& req,
                                                      CaptureAssistantSuggestSettings::Response& res);
+  bool loadSettingsFromFileServiceHandler(LoadSettingsFromFile::Request& req, LoadSettingsFromFile::Response&);
+  bool loadSettings2DFromFileServiceHandler(LoadSettings2DFromFile::Request& req, LoadSettings2DFromFile::Response&);
   void serviceHandlerHandleCameraConnectionLoss();
   bool isConnectedServiceHandler(IsConnected::Request& req, IsConnected::Response& res);
   void publishFrame(Zivid::Frame&& frame);
@@ -97,6 +99,8 @@ private:
   ros::ServiceServer capture_service_;
   ros::ServiceServer capture_2d_service_;
   ros::ServiceServer capture_assistant_suggest_settings_service_;
+  ros::ServiceServer load_settings_from_file_service_;
+  ros::ServiceServer load_settings_2d_from_file_service_;
   ros::ServiceServer is_connected_service_;
   std::unique_ptr<Capture3DSettingsController> capture_settings_controller_;
   std::unique_ptr<Capture2DSettingsController> capture_2d_settings_controller_;

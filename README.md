@@ -283,6 +283,22 @@ capture, see [capture](#capture).
 
 See [Sample Capture 2D](#sample-capture-2d) for code example.
 
+### load_settings_from_file
+[zivid_camera/LoadSettingsFromFile.srv](./zivid_camera/srv/LoadSettingsFromFile.srv)
+
+Loads 3D settings from a `.yml` file saved from Zivid Studio or the Zivid SDK. The settings are
+visible via dynamic_reconfigure, see section [Configuration](#configuration).
+When this service has returned you can invoke the [capture](#capture) service to trigger a 3D
+capture using these settings.
+
+### load_settings_2d_from_file
+[zivid_camera/LoadSettings2DFromFile.srv](./zivid_camera/srv/LoadSettings2DFromFile.srv)
+
+Loads 2D settings from a `.yml` file saved from Zivid Studio or the Zivid SDK. The settings are
+visible via dynamic_reconfigure, see section [Configuration](#configuration). When this
+service has returned you can invoke the [capture_2d](#capture) service to trigger a 2D capture
+using these settings.
+
 ### camera_info/model_name
 [zivid_camera/CameraInfoModelName.srv](./zivid_camera/srv/CameraInfoModelName.srv)
 
@@ -418,7 +434,11 @@ you have connected to the camera. To initialize a settings Config object you sho
 values using `dynamic_reconfigure::Client<T>::getDefaultConfiguration()`. See the [C++ samples](#samples)
 for how to do this. For Python users this is already handled by dynamic_reconfigure.client.Client.
 
-**Note:** The Capture Assistant feature can be used to find optimized 3D capture settings for your
+**Tip:** Use the [load_settings_from_file](#load_settings_from_file)
+or [load_settings_2d_from_file](#load_settings_2d_from_file) service to load 3D/2D settings from a
+.yml file saved from Zivid Studio or the Zivid SDK.
+
+**Tip:** The Capture Assistant feature can be used to find optimized 3D capture settings for your
 scene. Refer to service [capture_assistant/suggest_settings](#capture_assistantsuggest_settings).
 
 ### 3D Settings

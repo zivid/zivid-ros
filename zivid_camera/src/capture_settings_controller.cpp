@@ -10,6 +10,33 @@
 
 #include <dynamic_reconfigure/server.h>
 
+namespace
+{
+template <typename Node>
+void recursivelyFillInUnsetWithCameraDefault(Node& node, const Zivid::CameraInfo& cameraInfo)
+{
+  if constexpr (Node::nodeType == Zivid::DataModel::NodeType::group ||
+                Node::nodeType == Zivid::DataModel::NodeType::leafDataModelList)
+  {
+    node.forEach([&cameraInfo](auto& child) { recursivelyFillInUnsetWithCameraDefault(child, cameraInfo); });
+  }
+  else if (!node.hasValue())
+  {
+    static_assert(Node::nodeType == Zivid::DataModel::NodeType::leafValue);
+    node = Zivid::Experimental::SettingsInfo::defaultValue<Node>(cameraInfo);
+  }
+}
+
+template <typename ZividSettingsType>
+ZividSettingsType fillInUnsetWithCameraDefault(const ZividSettingsType& settings, const Zivid::CameraInfo& cameraInfo)
+{
+  ZividSettingsType copy{ settings };
+  recursivelyFillInUnsetWithCameraDefault(copy, cameraInfo);
+  return copy;
+}
+
+}  // namespace
+
 namespace zivid_camera
 {
 template <typename ConfigType, typename ZividSettings>
@@ -71,7 +98,7 @@ CaptureSettingsController<ZividSettingsType, SettingsConfigType,
                                                                                     Zivid::Camera& camera,
                                                                                     const std::string& config_node_name,
                                                                                     std::size_t num_acquisition_servers)
-  : config_node_name_(config_node_name)
+  : config_node_name_{ config_node_name }, camera_info_{ camera.info() }
 {
   general_config_dr_server_ = std::make_unique<SettingsConfigTypeDRServer>(config_node_name_, nh, camera);
 
@@ -112,12 +139,16 @@ template <typename ZividSettingsType, typename SettingsConfigType, typename Sett
 void CaptureSettingsController<ZividSettingsType, SettingsConfigType, SettingsAcquisitionConfigType>::setZividSettings(
     const ZividSettingsType& settings)
 {
-  const auto& acquisitions = settings.acquisitions();
+  const auto numAcquisitions = settings.acquisitions().size();
+  if (numAcquisitions == 0)
+  {
+    throw std::runtime_error("At least one Acquisition must be provided");
+  }
 
-  if (acquisitions.size() > numAcquisitionConfigServers())
+  if (numAcquisitions > numAcquisitionConfigServers())
   {
     std::stringstream error;
-    error << "The number of acquisitions (" + std::to_string(acquisitions.size()) + ") "
+    error << "The number of acquisitions (" + std::to_string(numAcquisitions) + ") "
           << "is larger than the number of dynamic_reconfigure " + config_node_name_ + "/acquisition_<n> servers ("
           << std::to_string(numAcquisitionConfigServers()) << "). ";
     if constexpr (std::is_same_v<ZividSettingsType, Zivid::Settings>)
@@ -132,9 +163,11 @@ void CaptureSettingsController<ZividSettingsType, SettingsConfigType, SettingsAc
     throw std::runtime_error(error.str());
   }
 
-  ROS_DEBUG_STREAM("Updating settings to " << settings);
-  general_config_dr_server_->setConfig(zividSettingsToConfig<SettingsConfigType>(settings));
+  const auto filledSettings = fillInUnsetWithCameraDefault(settings, camera_info_);
+  ROS_DEBUG_STREAM("Updating settings to " << filledSettings);
+  general_config_dr_server_->setConfig(zividSettingsToConfig<SettingsConfigType>(filledSettings));
 
+  const auto& acquisitions = filledSettings.acquisitions();
   for (std::size_t i = 0; i < acquisitions.size(); i++)
   {
     auto config = zividSettingsToConfig<SettingsAcquisitionConfigType>(acquisitions.at(i));

@@ -243,6 +243,10 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   capture_2d_service_ = nh_.advertiseService("capture_2d", &ZividCamera::capture2DServiceHandler, this);
   capture_assistant_suggest_settings_service_ = nh_.advertiseService(
       "capture_assistant/suggest_settings", &ZividCamera::captureAssistantSuggestSettingsServiceHandler, this);
+  load_settings_from_file_service_ =
+      nh_.advertiseService("load_settings_from_file", &ZividCamera::loadSettingsFromFileServiceHandler, this);
+  load_settings_2d_from_file_service_ =
+      nh_.advertiseService("load_settings_2d_from_file", &ZividCamera::loadSettings2DFromFileServiceHandler, this);
 
   ROS_INFO("Zivid camera driver is now ready!");
 }
@@ -416,7 +420,23 @@ bool ZividCamera::captureAssistantSuggestSettingsServiceHandler(CaptureAssistant
   capture_settings_controller_->setZividSettings(suggested_settings);
 
   return true;
-}  // namespace zivid_camera
+}
+
+bool ZividCamera::loadSettingsFromFileServiceHandler(LoadSettingsFromFile::Request& req,
+                                                     LoadSettingsFromFile::Response&)
+{
+  ROS_DEBUG_STREAM(__func__ << ": Request: " << req);
+  capture_settings_controller_->setZividSettings(Zivid::Settings{ req.file_path.c_str() });
+  return true;
+}
+
+bool ZividCamera::loadSettings2DFromFileServiceHandler(LoadSettings2DFromFile::Request& req,
+                                                       LoadSettings2DFromFile::Response&)
+{
+  ROS_DEBUG_STREAM(__func__ << ": Request: " << req);
+  capture_2d_settings_controller_->setZividSettings(Zivid::Settings2D{ req.file_path.c_str() });
+  return true;
+}
 
 void ZividCamera::serviceHandlerHandleCameraConnectionLoss()
 {

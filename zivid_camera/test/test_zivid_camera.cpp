@@ -73,7 +73,7 @@ protected:
   static constexpr auto points_xyz_topic_name = "/zivid_camera/points/xyz";
   static constexpr auto points_xyzrgba_topic_name = "/zivid_camera/points/xyzrgba";
   static constexpr auto normals_xyz_topic_name = "/zivid_camera/normals/xyz";
-  static constexpr size_t num_dr_capture_servers = 10;
+  static constexpr size_t num_settings_acquisition_dr_servers = 10;
   static constexpr auto file_camera_path = "/usr/share/Zivid/data/FileCameraZividOne.zfc";
 
   template <typename Type>
@@ -753,8 +753,8 @@ class TestWithSettingsClients : public TestWithFileCamera
 protected:
   TestWithSettingsClients() : camera_settings_client_("/zivid_camera/settings")
   {
-    settings_acquisition_clients_.reserve(num_dr_capture_servers);
-    for (std::size_t i = 0; i < num_dr_capture_servers; i++)
+    settings_acquisition_clients_.reserve(num_settings_acquisition_dr_servers);
+    for (std::size_t i = 0; i < num_settings_acquisition_dr_servers; i++)
     {
       using Client = dynamic_reconfigure::Client<zivid_camera::SettingsAcquisitionConfig>;
       settings_acquisition_clients_.emplace_back(
@@ -779,7 +779,7 @@ protected:
   std::size_t numEnabled3DAcquisitions() const
   {
     std::size_t enabled_acquisitions = 0;
-    for (std::size_t i = 0; i < num_dr_capture_servers; i++)
+    for (std::size_t i = 0; i < num_settings_acquisition_dr_servers; i++)
     {
       if (settingsAcquisitionConfig(i).enabled)
       {
@@ -800,7 +800,7 @@ protected:
     {
       compareSettingsAcquisitionConfigWithSettings(acquisitions[i], settingsAcquisitionConfig(i));
     }
-    for (std::size_t i = acquisitions.size(); i < num_dr_capture_servers; i++)
+    for (std::size_t i = acquisitions.size(); i < num_settings_acquisition_dr_servers; i++)
     {
       ASSERT_EQ(false, settingsAcquisitionConfig(i).enabled);
     }

@@ -789,6 +789,24 @@ protected:
     return enabled_acquisitions;
   }
 
+  void compareSettingsWithNodeState(const Zivid::Settings& settings)
+  {
+    compareSettingsConfigWithSettings(settings, settingsConfig());
+
+    const auto& acquisitions = settings.acquisitions();
+    ASSERT_EQ(acquisitions.size(), numEnabled3DAcquisitions());
+
+    for (std::size_t i = 0; i < acquisitions.size(); i++)
+    {
+      compareSettingsAcquisitionConfigWithSettings(acquisitions[i], settingsAcquisitionConfig(i));
+    }
+    for (std::size_t i = acquisitions.size(); i < num_dr_capture_servers; i++)
+    {
+      ASSERT_EQ(false, settingsAcquisitionConfig(i).enabled);
+    }
+  }
+
+private:
   void compareSettingsAcquisitionConfigWithSettings(const Zivid::Settings::Acquisition& a,
                                                     const zivid_camera::SettingsAcquisitionConfig& cfg) const
   {
@@ -858,19 +876,7 @@ protected:
       toAPIAmbientLightFrequency(ambient_light_frequency)
     };
     const auto api_settings = Zivid::CaptureAssistant::suggestSettings(camera_, suggest_settings_parameters);
-    const auto& acquisitions = api_settings.acquisitions();
-
-    ASSERT_EQ(acquisitions.size(), numEnabled3DAcquisitions());
-
-    compareSettingsConfigWithSettings(api_settings, settingsConfig());
-    for (std::size_t i = 0; i < acquisitions.size(); i++)
-    {
-      compareSettingsAcquisitionConfigWithSettings(acquisitions[i], settingsAcquisitionConfig(i));
-    }
-    for (std::size_t i = acquisitions.size(); i < num_dr_capture_servers; i++)
-    {
-      ASSERT_EQ(false, settingsAcquisitionConfig(i).enabled);
-    }
+    compareSettingsWithNodeState(api_settings);
   }
 };
 

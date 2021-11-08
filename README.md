@@ -191,11 +191,21 @@ ROS_NAMESPACE=zivid_camera rosrun nodelet nodelet standalone zivid_camera/nodele
 The following parameters can be specified when starting the driver. Note that all the parameters are
 optional, and typically not required to set.
 
-For example, to launch the driver with `frame_id` specified, append `_frame_id:=camera1` to the
-rosrun command:
+For example, to run the zivid_camera driver with `frame_id` specified, append `_frame_id:=camera1` to the
+`rosrun` command:
 
 ```bash
 ROS_NAMESPACE=zivid_camera rosrun zivid_camera zivid_camera_node _frame_id:=camera1
+```
+
+Or, if using `roslaunch` specify the parameter using `<param>`:
+
+```xml
+<launch>
+    <node name="zivid_camera" pkg="zivid_camera" type="zivid_camera_node" ns="zivid_camera" output="screen">
+        <param type="string" name="frame_id" value="camera_1" />
+    </node>
+</launch>
 ```
 
 `file_camera_path` (string, default: "")

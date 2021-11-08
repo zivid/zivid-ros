@@ -229,6 +229,13 @@ Or, if using `roslaunch` specify the parameter using `<param>`:
 > the command line or rosparam the serial number must be prefixed with a colon (`:12345`).
 > This parameter is optional. By default the driver will connect to the first available camera.
 
+`update_firmware_automatically` (bool, default: true)
+> Specify if the firmware of the connected camera should be automatically updated to the correct
+> version when the Zivid ROS driver starts. If set to false, if the firmware version is out of date
+> then camera must be manually updated, for example using Zivid Studio or `ZividFirmwareUpdater`.
+> Read more about [firmware update in our knowledgebase][firmware-update-kb-url].
+> This parameter is optional, and by default it is true.
+
 ## Services
 
 ### capture_assistant/suggest_settings
@@ -651,3 +658,4 @@ grant agreement No 732287. For more information, visit [rosin-project.eu](http:/
 [zivid-software-installation-url]: https://support.zivid.com/latest/getting-started/software-installation.html
 [install-opencl-drivers-ubuntu-url]: https://support.zivid.com/latest/getting-started/software-installation/gpu/install-opencl-drivers-ubuntu.html
 [hdr-getting-good-point-clouds-url]: https://support.zivid.com/latest/academy/camera/capturing-high-quality-point-clouds/getting-the-right-exposure-for-good-point-clouds.html
+[firmware-update-kb-url]: https://support.zivid.com/latest/academy/camera/firmware-update.html

@@ -137,6 +137,9 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   priv_.param<bool>("use_latched_publisher_for_snr_image", use_latched_publisher_for_snr_image_, false);
   priv_.param<bool>("use_latched_publisher_for_normals_xyz", use_latched_publisher_for_normals_xyz_, false);
 
+  bool update_firmware_automatically = true;
+  priv_.param<bool>("update_firmware_automatically", update_firmware_automatically, update_firmware_automatically);
+
   if (file_camera_mode)
   {
     ROS_INFO("Creating file camera from file '%s'", file_camera_path.c_str());
@@ -181,11 +184,21 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
 
     if (!Zivid::Firmware::isUpToDate(camera_))
     {
-      ROS_INFO("The camera firmware is not up-to-date, starting update");
-      Zivid::Firmware::update(camera_, [](double progress, const std::string& state) {
-        ROS_INFO("  [%.0f%%] %s", progress, state.c_str());
-      });
-      ROS_INFO("Firmware update completed");
+      if (update_firmware_automatically)
+      {
+        ROS_INFO("The camera firmware is not up-to-date, and update_firmware_automatically is true, starting update");
+        Zivid::Firmware::update(camera_, [](double progress, const std::string& state) {
+          ROS_INFO("  [%.0f%%] %s", progress, state.c_str());
+        });
+        ROS_INFO("Firmware update completed");
+      }
+      else
+      {
+        ROS_ERROR("The camera firmware is not up-to-date, and update_firmware_automatically is false. Throwing error.");
+        throw std::runtime_error("The firmware on camera '" + camera_.info().serialNumber().value() +
+                                 "' is not up to date. The launch parameter update_firmware_automatically "
+                                 "is set to false. Please update the firmware on this camera manually.");
+      }
     }
   }
 

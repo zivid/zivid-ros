@@ -51,7 +51,7 @@ private:
   using SettingsAcquisitionConfigTypeDRServer =
       ConfigDRServer<SettingsAcquisitionConfigType, typename ZividSettingsType::Acquisition>;
   std::string config_node_name_;
-  Zivid::CameraInfo m_cameraInfo;
+  Zivid::CameraInfo camera_info_;
   std::unique_ptr<SettingsConfigTypeDRServer> general_config_dr_server_;
   std::vector<std::unique_ptr<SettingsAcquisitionConfigTypeDRServer>> acquisition_config_dr_servers_;
 };

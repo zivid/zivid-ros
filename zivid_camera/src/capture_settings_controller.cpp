@@ -98,7 +98,7 @@ CaptureSettingsController<ZividSettingsType, SettingsConfigType,
                                                                                     Zivid::Camera& camera,
                                                                                     const std::string& config_node_name,
                                                                                     std::size_t num_acquisition_servers)
-  : config_node_name_{ config_node_name }, m_cameraInfo{ camera.info() }
+  : config_node_name_{ config_node_name }, camera_info_{ camera.info() }
 {
   general_config_dr_server_ = std::make_unique<SettingsConfigTypeDRServer>(config_node_name_, nh, camera);
 
@@ -163,7 +163,7 @@ void CaptureSettingsController<ZividSettingsType, SettingsConfigType, SettingsAc
     throw std::runtime_error(error.str());
   }
 
-  const auto filledSettings = fillInUnsetWithCameraDefault(settings, m_cameraInfo);
+  const auto filledSettings = fillInUnsetWithCameraDefault(settings, camera_info_);
   ROS_DEBUG_STREAM("Updating settings to " << filledSettings);
   general_config_dr_server_->setConfig(zividSettingsToConfig<SettingsConfigType>(filledSettings));
 

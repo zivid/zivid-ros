@@ -191,11 +191,21 @@ ROS_NAMESPACE=zivid_camera rosrun nodelet nodelet standalone zivid_camera/nodele
 The following parameters can be specified when starting the driver. Note that all the parameters are
 optional, and typically not required to set.
 
-For example, to launch the driver with `frame_id` specified, append `_frame_id:=camera1` to the
-rosrun command:
+For example, to run the zivid_camera driver with `frame_id` specified, append `_frame_id:=camera1` to the
+`rosrun` command:
 
 ```bash
 ROS_NAMESPACE=zivid_camera rosrun zivid_camera zivid_camera_node _frame_id:=camera1
+```
+
+Or, if using `roslaunch` specify the parameter using `<param>`:
+
+```xml
+<launch>
+    <node name="zivid_camera" pkg="zivid_camera" type="zivid_camera_node" ns="zivid_camera" output="screen">
+        <param type="string" name="frame_id" value="camera_1" />
+    </node>
+</launch>
 ```
 
 `file_camera_path` (string, default: "")
@@ -218,6 +228,13 @@ ROS_NAMESPACE=zivid_camera rosrun zivid_camera zivid_camera_node _frame_id:=came
 > Specify the serial number of the Zivid camera to use. Important: When passing this value via
 > the command line or rosparam the serial number must be prefixed with a colon (`:12345`).
 > This parameter is optional. By default the driver will connect to the first available camera.
+
+`update_firmware_automatically` (bool, default: true)
+> Specify if the firmware of the connected camera should be automatically updated to the correct
+> version when the Zivid ROS driver starts. If set to false, if the firmware version is out of date
+> then camera must be manually updated, for example using Zivid Studio or `ZividFirmwareUpdater`.
+> Read more about [firmware update in our knowledgebase][firmware-update-kb-url].
+> This parameter is optional, and by default it is true.
 
 ## Services
 
@@ -641,3 +658,4 @@ grant agreement No 732287. For more information, visit [rosin-project.eu](http:/
 [zivid-software-installation-url]: https://support.zivid.com/latest/getting-started/software-installation.html
 [install-opencl-drivers-ubuntu-url]: https://support.zivid.com/latest/getting-started/software-installation/gpu/install-opencl-drivers-ubuntu.html
 [hdr-getting-good-point-clouds-url]: https://support.zivid.com/latest/academy/camera/capturing-high-quality-point-clouds/getting-the-right-exposure-for-good-point-clouds.html
+[firmware-update-kb-url]: https://support.zivid.com/latest/academy/camera/firmware-update.html

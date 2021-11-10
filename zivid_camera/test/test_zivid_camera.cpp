@@ -9,6 +9,8 @@
 #include <zivid_camera/Capture.h>
 #include <zivid_camera/Capture2D.h>
 #include <zivid_camera/CaptureAssistantSuggestSettings.h>
+#include <zivid_camera/LoadSettingsFromFile.h>
+#include <zivid_camera/LoadSettings2DFromFile.h>
 #include <zivid_camera/SettingsAcquisitionConfig.h>
 #include <zivid_camera/Settings2DAcquisitionConfig.h>
 #include <zivid_camera/SettingsConfig.h>
@@ -29,17 +31,30 @@
 
 #include "gtest_include_wrapper.h"
 
+#include <boost/filesystem.hpp>
+
 #include <ros/ros.h>
 
 using SecondsD = std::chrono::duration<double>;
 
 namespace
 {
+template <typename T>
+struct DependentFalse : std::false_type
+{
+};
+
 template <class Rep, class Period>
 ros::Duration toRosDuration(const std::chrono::duration<Rep, Period>& d)
 {
   return ros::Duration{ std::chrono::duration_cast<SecondsD>(d).count() };
 }
+
+std::string testDataDir()
+{
+  return (boost::filesystem::path{ __FILE__ }.parent_path() / "data").string();
+}
+
 }  // namespace
 
 class ZividNodeTestBase : public testing::Test
@@ -64,6 +79,9 @@ protected:
   static constexpr auto capture_2d_service_name = "/zivid_camera/capture_2d";
   static constexpr auto capture_assistant_suggest_settings_service_name = "/zivid_camera/capture_assistant/"
                                                                           "suggest_settings";
+  static constexpr auto load_settings_from_file_service_name = "/zivid_camera/load_settings_from_file";
+  static constexpr auto load_settings_2d_from_file_service_name = "/zivid_camera/load_settings_2d_from_file";
+
   static constexpr auto color_camera_info_topic_name = "/zivid_camera/color/camera_info";
   static constexpr auto color_image_color_topic_name = "/zivid_camera/color/image_color";
   static constexpr auto depth_camera_info_topic_name = "/zivid_camera/depth/camera_info";
@@ -73,7 +91,8 @@ protected:
   static constexpr auto points_xyz_topic_name = "/zivid_camera/points/xyz";
   static constexpr auto points_xyzrgba_topic_name = "/zivid_camera/points/xyzrgba";
   static constexpr auto normals_xyz_topic_name = "/zivid_camera/normals/xyz";
-  static constexpr size_t num_dr_capture_servers = 10;
+  static constexpr size_t num_settings_acquisition_dr_servers = 10;
+  static constexpr size_t num_settings_2d_acquisition_dr_servers = 1;
   static constexpr auto file_camera_path = "/usr/share/Zivid/data/FileCameraZividOne.zfc";
 
   template <typename Type>
@@ -748,40 +767,77 @@ TEST_F(DynamicReconfigureMinMaxDefaultTest, testDynamicReconfigureSettingsMinMax
                                                                                              1);
 }
 
-class ZividCATest : public TestWithFileCamera
+class TestWithSettingsClients : public TestWithFileCamera
 {
 protected:
-  ZividCATest() : camera_settings_client_("/zivid_camera/settings")
+  TestWithSettingsClients()
+    : settings_client_("/zivid_camera/settings"), settings_2d_client_("/zivid_camera/settings_2d")
   {
-    settings_acquisition_clients_.reserve(num_dr_capture_servers);
-    for (std::size_t i = 0; i < num_dr_capture_servers; i++)
+    settings_acquisition_clients_.reserve(num_settings_acquisition_dr_servers);
+    for (std::size_t i = 0; i < num_settings_acquisition_dr_servers; i++)
     {
       using Client = dynamic_reconfigure::Client<zivid_camera::SettingsAcquisitionConfig>;
       settings_acquisition_clients_.emplace_back(
           std::make_unique<Client>("/zivid_camera/settings/acquisition_" + std::to_string(i)));
     }
+    settings_2d_acquisition_clients_.reserve(num_settings_2d_acquisition_dr_servers);
+    for (std::size_t i = 0; i < num_settings_2d_acquisition_dr_servers; i++)
+    {
+      using Client = dynamic_reconfigure::Client<zivid_camera::Settings2DAcquisitionConfig>;
+      settings_2d_acquisition_clients_.emplace_back(
+          std::make_unique<Client>("/zivid_camera/settings_2d/acquisition_" + std::to_string(i)));
+    }
   }
 
-  zivid_camera::SettingsConfig settingsConfig()
+  template <typename ZividSettingsType>
+  auto settingsConfig()
   {
-    zivid_camera::SettingsConfig cfg;
-    EXPECT_TRUE(camera_settings_client_.getCurrentConfiguration(cfg, dr_get_max_wait_duration));
-    return cfg;
+    if constexpr (std::is_same_v<ZividSettingsType, Zivid::Settings>)
+    {
+      zivid_camera::SettingsConfig cfg;
+      EXPECT_TRUE(settings_client_.getCurrentConfiguration(cfg, dr_get_max_wait_duration));
+      return cfg;
+    }
+    else if constexpr (std::is_same_v<ZividSettingsType, Zivid::Settings2D>)
+    {
+      zivid_camera::Settings2DConfig cfg;
+      EXPECT_TRUE(settings_2d_client_.getCurrentConfiguration(cfg, dr_get_max_wait_duration));
+      return cfg;
+    }
+    else
+    {
+      static_assert(DependentFalse<ZividSettingsType>::value, "Unsupported ZividSettingsType");
+    }
   }
 
-  zivid_camera::SettingsAcquisitionConfig settingsAcquisitionConfig(std::size_t i) const
+  template <typename ZividSettingsType>
+  auto settingsAcquisitionConfig(std::size_t i) const
   {
-    zivid_camera::SettingsAcquisitionConfig cfg;
-    EXPECT_TRUE(settings_acquisition_clients_[i]->getCurrentConfiguration(cfg, dr_get_max_wait_duration));
-    return cfg;
+    if constexpr (std::is_same_v<ZividSettingsType, Zivid::Settings>)
+    {
+      zivid_camera::SettingsAcquisitionConfig cfg;
+      EXPECT_TRUE(settings_acquisition_clients_[i]->getCurrentConfiguration(cfg, dr_get_max_wait_duration));
+      return cfg;
+    }
+    else if constexpr (std::is_same_v<ZividSettingsType, Zivid::Settings2D>)
+    {
+      zivid_camera::Settings2DAcquisitionConfig cfg;
+      EXPECT_TRUE(settings_2d_acquisition_clients_[i]->getCurrentConfiguration(cfg, dr_get_max_wait_duration));
+      return cfg;
+    }
+    else
+    {
+      static_assert(DependentFalse<ZividSettingsType>::value, "Unsupported ZividSettingsType");
+    }
   }
 
-  std::size_t numEnabled3DAcquisitions() const
+  template <typename ZividSettingsType>
+  auto numEnabledAcquisitions() const
   {
     std::size_t enabled_acquisitions = 0;
-    for (std::size_t i = 0; i < num_dr_capture_servers; i++)
+    for (std::size_t i = 0; i < maxAllowedAcquisitions<ZividSettingsType>(); i++)
     {
-      if (settingsAcquisitionConfig(i).enabled)
+      if (settingsAcquisitionConfig<ZividSettingsType>(i).enabled)
       {
         enabled_acquisitions++;
       }
@@ -789,8 +845,44 @@ protected:
     return enabled_acquisitions;
   }
 
-  void compareSettingsAcquisitionConfigWithSettings(const Zivid::Settings::Acquisition& a,
-                                                    const zivid_camera::SettingsAcquisitionConfig& cfg) const
+  template <typename ZividSettingsType>
+  std::size_t maxAllowedAcquisitions() const
+  {
+    if constexpr (std::is_same_v<ZividSettingsType, Zivid::Settings>)
+    {
+      return num_settings_acquisition_dr_servers;
+    }
+    else if constexpr (std::is_same_v<ZividSettingsType, Zivid::Settings2D>)
+    {
+      return num_settings_2d_acquisition_dr_servers;
+    }
+    else
+    {
+      static_assert(DependentFalse<ZividSettingsType>::value, "Unsupported ZividSettingsType");
+    }
+  }
+
+  template <typename ZividSettingsType>
+  void compareSettingsWithNodeState(const ZividSettingsType& settings)
+  {
+    compareSettingsConfigWithSettings(settings, settingsConfig<ZividSettingsType>());
+
+    const auto& acquisitions = settings.acquisitions();
+    ASSERT_EQ(acquisitions.size(), numEnabledAcquisitions<ZividSettingsType>());
+
+    for (std::size_t i = 0; i < acquisitions.size(); i++)
+    {
+      compareSettingsAcquisitionConfigWithSettings(acquisitions[i], settingsAcquisitionConfig<ZividSettingsType>(i));
+    }
+    for (std::size_t i = acquisitions.size(); i < maxAllowedAcquisitions<ZividSettingsType>(); i++)
+    {
+      ASSERT_EQ(false, settingsAcquisitionConfig<ZividSettingsType>(i).enabled);
+    }
+  }
+
+private:
+  template <typename ZividSettingsAcquisitionType, typename CfgType>
+  void compareSettingsAcquisitionConfigWithSettings(const ZividSettingsAcquisitionType& a, const CfgType& cfg) const
   {
     ASSERT_EQ(true, cfg.enabled);
     ASSERT_EQ(a.aperture().value(), cfg.aperture);
@@ -805,6 +897,7 @@ protected:
     ASSERT_EQ(color.balance().blue().value(), cfg.processing_color_balance_blue);
     ASSERT_EQ(color.balance().green().value(), cfg.processing_color_balance_green);
     ASSERT_EQ(color.balance().red().value(), cfg.processing_color_balance_red);
+    ASSERT_EQ(color.gamma().value(), cfg.processing_color_gamma);
 
     const auto& filters = s.processing().filters();
     ASSERT_EQ(filters.noise().removal().isEnabled().value(), cfg.processing_filters_noise_removal_enabled);
@@ -816,6 +909,123 @@ protected:
     ASSERT_EQ(filters.reflection().removal().isEnabled().value(), cfg.processing_filters_reflection_removal_enabled);
   }
 
+  void compareSettingsConfigWithSettings(const Zivid::Settings2D& s, const zivid_camera::Settings2DConfig& cfg) const
+  {
+    const auto& color = s.processing().color();
+    ASSERT_EQ(color.balance().blue().value(), cfg.processing_color_balance_blue);
+    ASSERT_EQ(color.balance().green().value(), cfg.processing_color_balance_green);
+    ASSERT_EQ(color.balance().red().value(), cfg.processing_color_balance_red);
+    ASSERT_EQ(color.gamma().value(), cfg.processing_color_gamma);
+  }
+
+private:
+  dynamic_reconfigure::Client<zivid_camera::SettingsConfig> settings_client_;
+  std::vector<std::unique_ptr<dynamic_reconfigure::Client<zivid_camera::SettingsAcquisitionConfig>>>
+      settings_acquisition_clients_;
+  dynamic_reconfigure::Client<zivid_camera::Settings2DConfig> settings_2d_client_;
+  std::vector<std::unique_ptr<dynamic_reconfigure::Client<zivid_camera::Settings2DAcquisitionConfig>>>
+      settings_2d_acquisition_clients_;
+};
+
+class LoadSettingsTest : public TestWithSettingsClients
+{
+protected:
+  template <typename CmdType, typename ZividSettingsType>
+  void testLoadSettingsFromFile(const std::string& serviceName, const std::vector<std::string>& fileNames)
+  {
+    ASSERT_TRUE(ros::service::waitForService(serviceName, short_wait_duration));
+
+    auto testLoadSettings = [&](const auto& fileName) {
+      CmdType cmd;
+      cmd.request.file_path = testDataDir() + "/settings/" + fileName;
+      ASSERT_TRUE(ros::service::call(serviceName, cmd));
+      short_wait_duration.sleep();
+
+      auto expectedSettings = ZividSettingsType{ cmd.request.file_path };
+      recursivelyFillInUnsetWithCameraDefault(expectedSettings, camera_.info());
+      compareSettingsWithNodeState(expectedSettings);
+    };
+
+    for (const auto& fileName : fileNames)
+    {
+      testLoadSettings(fileName);
+    }
+  }
+
+  template <typename CmdType>
+  void testLoadInvalidSettingsGivesError(const std::string& serviceName)
+  {
+    ASSERT_TRUE(ros::service::waitForService(serviceName, short_wait_duration));
+    CmdType cmd;
+    cmd.request.file_path = testDataDir() + "/settings/invalid_file.yml";
+    ASSERT_TRUE(boost::filesystem::exists(cmd.request.file_path));
+    ASSERT_FALSE(ros::service::call(serviceName, cmd));
+  }
+
+  template <typename CmdType>
+  void testLoadNonExistentFileGivesError(const std::string& serviceName)
+  {
+    ASSERT_TRUE(ros::service::waitForService(serviceName, short_wait_duration));
+    CmdType cmd;
+    cmd.request.file_path = "/tmp/foo/bar";
+    ASSERT_FALSE(boost::filesystem::exists(cmd.request.file_path));
+    ASSERT_FALSE(ros::service::call(serviceName, cmd));
+  }
+
+private:
+  template <typename Node>
+  static void recursivelyFillInUnsetWithCameraDefault(Node& node, const Zivid::CameraInfo& cameraInfo)
+  {
+    if constexpr (Node::nodeType == Zivid::DataModel::NodeType::group ||
+                  Node::nodeType == Zivid::DataModel::NodeType::leafDataModelList)
+    {
+      node.forEach([&cameraInfo](auto& child) { recursivelyFillInUnsetWithCameraDefault(child, cameraInfo); });
+    }
+    else if (!node.hasValue())
+    {
+      static_assert(Node::nodeType == Zivid::DataModel::NodeType::leafValue);
+      node = Zivid::Experimental::SettingsInfo::defaultValue<Node>(cameraInfo);
+    }
+  }
+};
+
+TEST_F(LoadSettingsTest, testLoadSettingsFromFile)
+{
+  testLoadSettingsFromFile<zivid_camera::LoadSettingsFromFile, Zivid::Settings>(
+      load_settings_from_file_service_name,
+      { "3d/single.yml", "3d/hdr.yml", "3d/hdr_with_not_set_values.yml", "3d/single.yml" });
+}
+
+TEST_F(LoadSettingsTest, testLoadSettings2DFromFile)
+{
+  testLoadSettingsFromFile<zivid_camera::LoadSettings2DFromFile, Zivid::Settings2D>(
+      load_settings_2d_from_file_service_name,
+      { "2d/single_1.yml", "2d/single_2.yml", "2d/single_with_not_set_values.yml", "2d/single_1.yml" });
+}
+
+TEST_F(LoadSettingsTest, testLoadSettingsFromInvalidFileGivesError)
+{
+  testLoadInvalidSettingsGivesError<zivid_camera::LoadSettingsFromFile>(load_settings_from_file_service_name);
+}
+
+TEST_F(LoadSettingsTest, testLoadSettings2DFromInvalidFileGivesError)
+{
+  testLoadInvalidSettingsGivesError<zivid_camera::LoadSettings2DFromFile>(load_settings_2d_from_file_service_name);
+}
+
+TEST_F(LoadSettingsTest, testLoadSettingsFromNonExistentFileGivesError)
+{
+  testLoadNonExistentFileGivesError<zivid_camera::LoadSettingsFromFile>(load_settings_from_file_service_name);
+}
+
+TEST_F(LoadSettingsTest, testLoadSettings2DFromNonExistentFileGivesError)
+{
+  testLoadNonExistentFileGivesError<zivid_camera::LoadSettings2DFromFile>(load_settings_2d_from_file_service_name);
+}
+
+class ZividCATest : public TestWithSettingsClients
+{
+protected:
   Zivid::CaptureAssistant::SuggestSettingsParameters::AmbientLightFrequency toAPIAmbientLightFrequency(
       zivid_camera::CaptureAssistantSuggestSettings::Request::_ambient_light_frequency_type ambient_light_frequency)
   {
@@ -849,25 +1059,8 @@ protected:
       toAPIAmbientLightFrequency(ambient_light_frequency)
     };
     const auto api_settings = Zivid::CaptureAssistant::suggestSettings(camera_, suggest_settings_parameters);
-    const auto& acquisitions = api_settings.acquisitions();
-
-    ASSERT_EQ(acquisitions.size(), numEnabled3DAcquisitions());
-
-    compareSettingsConfigWithSettings(api_settings, settingsConfig());
-    for (std::size_t i = 0; i < acquisitions.size(); i++)
-    {
-      compareSettingsAcquisitionConfigWithSettings(acquisitions[i], settingsAcquisitionConfig(i));
-    }
-    for (std::size_t i = acquisitions.size(); i < num_dr_capture_servers; i++)
-    {
-      ASSERT_EQ(false, settingsAcquisitionConfig(i).enabled);
-    }
+    compareSettingsWithNodeState(api_settings);
   }
-
-private:
-  dynamic_reconfigure::Client<zivid_camera::SettingsConfig> camera_settings_client_;
-  std::vector<std::unique_ptr<dynamic_reconfigure::Client<zivid_camera::SettingsAcquisitionConfig>>>
-      settings_acquisition_clients_;
 };
 
 TEST_F(ZividCATest, testCaptureAssistantServiceAvailable)
@@ -892,10 +1085,10 @@ TEST_F(ZividCATest, testGoingFromMultipleAcquisitionsTo1Acquisition)
 {
   using Request = zivid_camera::CaptureAssistantSuggestSettings::Request;
   performSuggestSettingsAndCompareWithCppAPI(ros::Duration{ 10.0 }, Request::AMBIENT_LIGHT_FREQUENCY_NONE);
-  ASSERT_GT(numEnabled3DAcquisitions(), 1U);
+  ASSERT_GT(numEnabledAcquisitions<Zivid::Settings>(), 1U);
 
   performSuggestSettingsAndCompareWithCppAPI(ros::Duration{ 0.2 }, Request::AMBIENT_LIGHT_FREQUENCY_NONE);
-  ASSERT_EQ(numEnabled3DAcquisitions(), 1U);
+  ASSERT_EQ(numEnabledAcquisitions<Zivid::Settings>(), 1U);
 }
 
 TEST_F(ZividCATest, testCaptureAssistantWithInvalidMaxCaptureTimeFails)

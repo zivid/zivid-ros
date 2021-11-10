@@ -957,12 +957,18 @@ protected:
   {
     ASSERT_TRUE(ros::service::waitForService(serviceName, short_wait_duration));
     CmdType cmd;
-    cmd.request.file_path = "/tmp/foo/bar";
-    ASSERT_FALSE(boost::filesystem::exists(cmd.request.file_path));
-    ASSERT_FALSE(ros::service::call(serviceName, cmd));
-
     cmd.request.file_path = testDataDir() + "/settings/invalid_file.yml";
     ASSERT_TRUE(boost::filesystem::exists(cmd.request.file_path));
+    ASSERT_FALSE(ros::service::call(serviceName, cmd));
+  }
+
+  template <typename CmdType>
+  void testLoadNonExistentFileGivesError(const std::string& serviceName)
+  {
+    ASSERT_TRUE(ros::service::waitForService(serviceName, short_wait_duration));
+    CmdType cmd;
+    cmd.request.file_path = "/tmp/foo/bar";
+    ASSERT_FALSE(boost::filesystem::exists(cmd.request.file_path));
     ASSERT_FALSE(ros::service::call(serviceName, cmd));
   }
 
@@ -997,14 +1003,24 @@ TEST_F(LoadSettingsTest, testLoadSettings2DFromFile)
       { "2d/single_1.yml", "2d/single_2.yml", "2d/single_with_not_set_values.yml", "2d/single_1.yml" });
 }
 
-TEST_F(LoadSettingsTest, testLoadSettingsFromInvalidFilesGivesError)
+TEST_F(LoadSettingsTest, testLoadSettingsFromInvalidFileGivesError)
 {
   testLoadInvalidSettingsGivesError<zivid_camera::LoadSettingsFromFile>(load_settings_from_file_service_name);
 }
 
-TEST_F(LoadSettingsTest, testLoadSettings2DFromInvalidFilesGivesError)
+TEST_F(LoadSettingsTest, testLoadSettings2DFromInvalidFileGivesError)
 {
   testLoadInvalidSettingsGivesError<zivid_camera::LoadSettings2DFromFile>(load_settings_2d_from_file_service_name);
+}
+
+TEST_F(LoadSettingsTest, testLoadSettingsFromNonExistentFileGivesError)
+{
+  testLoadNonExistentFileGivesError<zivid_camera::LoadSettingsFromFile>(load_settings_from_file_service_name);
+}
+
+TEST_F(LoadSettingsTest, testLoadSettings2DFromNonExistentFileGivesError)
+{
+  testLoadNonExistentFileGivesError<zivid_camera::LoadSettings2DFromFile>(load_settings_2d_from_file_service_name);
 }
 
 class ZividCATest : public TestWithSettingsClients

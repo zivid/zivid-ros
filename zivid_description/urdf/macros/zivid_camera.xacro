@@ -1,25 +1,25 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
-    <xacro:macro name="zivid_camera" params="prefix">
-        <!-- Zivid Properties -->
-        <xacro:property name="M_PI" value="3.1415926535897931" />
+    <!-- Properties -->
+    <material name="zivid_gray">
+        <color rgba="0.25 0.25 0.25 1"/>
+    </material>
 
+    <xacro:macro name="zivid_camera" params="prefix">
         <!-- Zivid Base Link -->
         <link name="${prefix}base_link">
             <!-- Visuals -->
             <visual>
-                <origin xyz="-0.0030 -0.0758 0.0445" rpy="${0.5*M_PI} 0 ${0.5*M_PI}"/>
-                <material name="blue">
-                    <color rgba="0.25 0.25 0.25 1"/>
-                </material>
+                <origin xyz="-0.0030 -0.0758 0.0445" rpy="${0.5*pi} 0 ${0.5*pi}"/>
                 <geometry>
                     <mesh filename="package://zivid_description/meshes/visual/zivid-one-plus.stl" scale="0.001 0.001 0.001"/>
                 </geometry>
+                <material name="zivid_gray"/>
             </visual>
 
             <!-- Collisions -->
             <collision>
-                <origin xyz="-0.0030 -0.0758 0.0445" rpy="${0.5*M_PI} 0 ${0.5*M_PI}"/>
+                <origin xyz="-0.0030 -0.0758 0.0445" rpy="${0.5*pi} 0 ${0.5*pi}"/>
                 <geometry>
                     <mesh filename="package://zivid_description/meshes/collision/zivid-one-plus.stl" scale="0.001 0.001 0.001"/>
                 </geometry>
@@ -32,13 +32,13 @@
 
         <!-- Zivid Optical (Measurement) and Projector Joints -->
         <joint name="${prefix}optical_joint" type="fixed">
-            <origin xyz="0.065 0.062 0.0445" rpy="-${0.5*M_PI} 0 -${0.5*M_PI + 8.5/180*M_PI}"/>
+            <origin xyz="0.065 0.062 0.0445" rpy="-${0.5*pi} 0 -${0.5*pi + 8.5/180*pi}"/>
             <parent link="${prefix}base_link"/>
             <child link="${prefix}optical_frame"/>
         </joint>
 
         <joint name="${prefix}projector_joint" type="fixed">
-            <origin xyz="-0.0030 -0.0758 0.0445" rpy="-${0.5*M_PI} 0 -${0.5*M_PI}"/>
+            <origin xyz="-0.0030 -0.0758 0.0445" rpy="-${0.5*pi} 0 -${0.5*pi}"/>
             <parent link="${prefix}base_link"/>
             <child link="${prefix}projector_frame"/>
         </joint>

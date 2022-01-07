@@ -7,7 +7,7 @@ on:
     - cron:  '0 22 * * *'
 
 env:
-  NEWEST_ZIVID_VERSION: '2.5.0+19fa6891-1'
+  NEWEST_ZIVID_VERSION: '2.6.0+fa0036c5-1'
 
 jobs:
   code-analysis:
@@ -89,11 +89,10 @@ jobs:
   build-driver-and-run-tests-for-older-sdk:
     name: Build driver and run tests for older Zivid SDK
     runs-on: ubuntu-latest
-    if: ${{ false }}  # Remove this line when adding zivid-version below
     strategy:
       fail-fast: true
       matrix:
-        zivid-version: ['none'] # Remove if: ${{ false }} above, when adding a SDK version here
+        zivid-version: ['2.5.0+19fa6891-1']
         ros-distro: ['ros:noetic-ros-base-focal', 'ros:kinetic-ros-base-xenial', 'ros:melodic-ros-base-bionic']
     steps:
       - name: Check out code

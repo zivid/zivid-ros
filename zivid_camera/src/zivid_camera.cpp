@@ -16,6 +16,7 @@
 #include <boost/predef.h>
 
 #include <sstream>
+#include <stdexcept>
 #include <thread>
 #include <cstdint>
 
@@ -79,6 +80,86 @@ std::string toString(zivid_camera::CameraStatus camera_status)
       return "Idle";
   }
   return "N/A";
+}
+
+auto reconnectWithRetry(Zivid::Camera& camera)
+{
+  std::size_t connectAttempt = 0;
+  while (true)
+  {
+    connectAttempt++;
+    ROS_INFO_STREAM("Disconnecting from camera... (attempt " << connectAttempt << ")");
+    try
+    {
+      camera.disconnect();
+    }
+    catch (const std::exception& e)
+    {
+      ROS_INFO_STREAM("Ignoring disconnect exception \"" << e.what() << "\"");
+    }
+
+    ROS_INFO("Re-connecting to camera...");
+    try
+    {
+      camera.connect();
+      ROS_INFO("Re-connected successfully!");
+      return;
+    }
+    catch (const std::exception& e)
+    {
+      if (connectAttempt < 10)
+      {
+        ROS_INFO_STREAM("Ignoring connect exception \"" << e.what() << "\" (attempt " << connectAttempt << ")");
+      }
+      else
+      {
+        ROS_ERROR_STREAM("Exception during connect(). Max reconnect retries reached, rethrowing \"" << e.what()
+                                                                                                    << "\"");
+        std::rethrow_exception(std::current_exception());
+      }
+    }
+    ROS_INFO("Waiting 1 second");
+    std::this_thread::sleep_for(std::chrono::milliseconds{ 1000 });
+  }
+}
+
+template <typename SettingsType>
+auto captureWithRetry(Zivid::Camera& camera, const SettingsType& settings)
+{
+  std::size_t captureAttempt = 0;
+  while (true)
+  {
+    captureAttempt++;
+    try
+    {
+      ROS_INFO_STREAM("Capturing (" << SettingsType::name << ") with " << settings.acquisitions().size()
+                                    << " acquisition(s) (attempt " << captureAttempt << ")");
+      ROS_DEBUG_STREAM(settings);
+      return camera.capture(settings);
+    }
+    catch (const std::exception& e)
+    {
+      ROS_INFO_STREAM("Got exception from capture: " << e.what() << ". captureAttempt=" << captureAttempt);
+
+      if (captureAttempt < 2)
+      {
+        ROS_INFO("Capture failed - retrying");
+        // While loop above will cause us to capture again
+      }
+      else if (captureAttempt < 7)
+      {
+        ROS_INFO("Capture failed. Will disconnect and re-connect to camera and then try again");
+        reconnectWithRetry(camera);
+        // While loop above will cause us to capture again
+      }
+      else
+      {
+        ROS_INFO_STREAM("Exception during capture(). CaptureAttempt is "
+                        << captureAttempt << "! Max retries attempted, rethrowing exception");
+        std::rethrow_exception(std::current_exception());
+      }
+    }
+  }
 }
 
 }  // namespace
@@ -348,9 +429,7 @@ bool ZividCamera::captureServiceHandler(Capture::Request&, Capture::Response&)
     throw std::runtime_error("capture called with 0 enabled acquisitions!");
   }
 
-  ROS_INFO("Capturing with %zd acquisition(s)", settings.acquisitions().size());
-  ROS_DEBUG_STREAM(settings);
-  publishFrame(camera_.capture(settings));
+  publishFrame(captureWithRetry(camera_, settings));
   return true;
 }
 
@@ -367,8 +446,7 @@ bool ZividCamera::capture2DServiceHandler(Capture2D::Request&, Capture2D::Respon
     throw std::runtime_error("capture_2d called with 0 enabled acquisitions!");
   }
 
-  ROS_DEBUG_STREAM(settings2D);
-  auto frame2D = camera_.capture(settings2D);
+  auto frame2D = captureWithRetry(camera_, settings2D);
   if (shouldPublishColorImg())
   {
     const auto header = makeHeader();

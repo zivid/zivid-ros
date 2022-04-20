@@ -45,6 +45,7 @@ endfunction()
 register_cpp_sample(NAME sample_capture_cpp SRC src/sample_capture.cpp)
 register_cpp_sample(NAME sample_capture_2d_cpp SRC src/sample_capture_2d.cpp)
 register_cpp_sample(NAME sample_capture_assistant_cpp SRC src/sample_capture_assistant.cpp)
+register_cpp_sample(NAME sample_capture_with_settings_from_yml_cpp SRC src/sample_capture_with_settings_from_yml.cpp)
 
 ####################
 ## Python Samples ##
@@ -67,6 +68,7 @@ endfunction()
 register_python_sample(SRC scripts/sample_capture.py)
 register_python_sample(SRC scripts/sample_capture_2d.py)
 register_python_sample(SRC scripts/sample_capture_assistant.py)
+register_python_sample(SRC scripts/sample_capture_with_settings_from_yml.py)
 
 ####################
 ## Launch scripts ##

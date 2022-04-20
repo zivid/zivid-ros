@@ -291,6 +291,8 @@ visible via dynamic_reconfigure, see section [Configuration](#configuration).
 When this service has returned you can invoke the [capture](#capture) service to trigger a 3D
 capture using these settings.
 
+See [Sample Capture with Settings from File](#sample-capture-with-settings-from-file) for code example.
+
 ### load_settings_2d_from_file
 [zivid_camera/LoadSettings2DFromFile.srv](./zivid_camera/srv/LoadSettings2DFromFile.srv)
 
@@ -591,6 +593,29 @@ Using rosrun (when `roscore` and `zivid_camera` are running):
 ```bash
 rosrun zivid_samples sample_capture_2d_cpp
 rosrun zivid_samples sample_capture_2d.py
+```
+
+### Sample Capture with Settings from File
+
+This sample shows how to [configure](#configuration) the 3D capture settings
+by invoking the [load_settings_from_file](#load_settings_from_file) service and
+how to invoke the [capture](#capture) service.
+
+:note:
+An equivalent service [load_settings_2d_from_file](#load_settings_2d_from_file) exists
+for 2D capture settings.
+
+Source code: [C++](./zivid_samples/src/sample_capture_with_settings_from_yml.cpp), [Python](./zivid_samples/scripts/sample_capture_with_settings_from_yml.py)
+
+Using roslaunch (also launches `roscore`, `zivid_camera`, `rviz` and `rqt_reconfigure`):
+```bash
+roslaunch zivid_samples sample.launch type:=sample_capture_with_settings_from_yml_cpp
+roslaunch zivid_samples sample.launch type:=sample_capture_with_settings_from_yml.py
+```
+Using rosrun (when `roscore` and `zivid_camera` are running):
+```bash
+rosrun zivid_samples sample_capture_with_settings_from_yml_cpp
+rosrun zivid_samples sample_capture_with_settings_from_yml.py
 ```
 
 ## Frequently Asked Questions

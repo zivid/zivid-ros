@@ -43,6 +43,7 @@ private:
   bool cameraInfoSerialNumberServiceHandler(CameraInfoSerialNumber::Request& req,
                                             CameraInfoSerialNumber::Response& res);
   bool captureServiceHandler(Capture::Request& req, Capture::Response& res);
+  bool captureAndSaveServiceHandler(CaptureAndSave::Request& req, CaptureAndSave::Response& res);
   bool capture2DServiceHandler(Capture2D::Request& req, Capture2D::Response& res);
   bool captureAssistantSuggestSettingsServiceHandler(CaptureAssistantSuggestSettings::Request& req,
                                                      CaptureAssistantSuggestSettings::Response& res);
@@ -50,7 +51,8 @@ private:
   bool loadSettings2DFromFileServiceHandler(LoadSettings2DFromFile::Request& req, LoadSettings2DFromFile::Response&);
   void serviceHandlerHandleCameraConnectionLoss();
   bool isConnectedServiceHandler(IsConnected::Request& req, IsConnected::Response& res);
-  void publishFrame(Zivid::Frame&& frame);
+  void publishFrame(const Zivid::Frame& frame);
+  Zivid::Frame invokeCaptureAndPublishFrame();
   bool shouldPublishPointsXYZ() const;
   bool shouldPublishPointsXYZRGBA() const;
   bool shouldPublishColorImg() const;
@@ -97,6 +99,7 @@ private:
   ros::ServiceServer camera_info_serial_number_service_;
   ros::ServiceServer camera_info_model_name_service_;
   ros::ServiceServer capture_service_;
+  ros::ServiceServer capture_and_save_service_;
   ros::ServiceServer capture_2d_service_;
   ros::ServiceServer capture_assistant_suggest_settings_service_;
   ros::ServiceServer load_settings_from_file_service_;

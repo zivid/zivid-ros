@@ -271,6 +271,16 @@ visible via dynamic_reconfigure, see section [Configuration](#configuration). Wh
 service has returned you can invoke the [capture_2d](#capture) service to trigger a 2D capture
 using these settings.
 
+### capture_and_save
+[zivid_camera/CaptureAndSave.srv](./zivid_camera/srv/CaptureAndSave.srv)
+
+It does exactly the same as the [capture](#capture) service in addition to saving the frame to
+a file. This service takes a path as an argument. The chosen format is detected via the file extension.
+See [knowledge base](https://support.zivid.com/en/latest/reference-articles/point-cloud-structure-and-output-formats.html#zivid-output-formats)
+for a list of available output formats.
+
+See [Sample Capture and Save](#sample-capture-and-save) for code example.
+
 ### camera_info/model_name
 [zivid_camera/CameraInfoModelName.srv](./zivid_camera/srv/CameraInfoModelName.srv)
 
@@ -609,6 +619,27 @@ Using rosrun (when `roscore` and `zivid_camera` are running):
 ```bash
 rosrun zivid_samples sample_capture_with_settings_from_yml_cpp
 rosrun zivid_samples sample_capture_with_settings_from_yml.py
+```
+
+### Sample Capture and Save
+
+This sample performs a single-acquisition 3D capture and saves the frame as ZDF file.
+This sample shows how to simply [enable the first default acquisition](#configuration),
+and how to invoke the [capture_and_save](#capture_and_save) service.
+The file is saved to `/tmp/capture_py.zdf` for the Python sample and
+`/tmp/capture_cpp.zdf` for the C++ sample.
+
+Source code: [C++](./zivid_samples/src/sample_capture_and_save.cpp), [Python](./zivid_samples/scripts/sample_capture_and_save.py)
+
+Using roslaunch (also launches `roscore`, `zivid_camera`, `rviz` and `rqt_reconfigure`):
+```bash
+roslaunch zivid_samples sample.launch type:=sample_capture_and_save_cpp
+roslaunch zivid_samples sample.launch type:=sample_capture_and_save.py
+```
+Using rosrun (when `roscore` and `zivid_camera` are running):
+```bash
+rosrun zivid_samples sample_capture_and_save_cpp
+rosrun zivid_samples sample_capture_and_save.py
 ```
 
 ## Frequently Asked Questions

@@ -84,6 +84,7 @@ add_service_files(
   srv
   FILES
   Capture.srv
+  CaptureAndSaveFrame.srv
   Capture2D.srv
   CaptureAssistantSuggestSettings.srv
   LoadSettingsFromFile.srv

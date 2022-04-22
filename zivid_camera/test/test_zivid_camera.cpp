@@ -7,6 +7,7 @@
 #include <zivid_camera/CameraInfoSerialNumber.h>
 #include <zivid_camera/CameraInfoModelName.h>
 #include <zivid_camera/Capture.h>
+#include <zivid_camera/CaptureAndSaveFrame.h>
 #include <zivid_camera/Capture2D.h>
 #include <zivid_camera/CaptureAssistantSuggestSettings.h>
 #include <zivid_camera/LoadSettingsFromFile.h>
@@ -76,6 +77,7 @@ protected:
   const ros::Duration short_wait_duration{ 0.25 };
   const ros::Duration dr_get_max_wait_duration{ 5 };
   static constexpr auto capture_service_name = "/zivid_camera/capture";
+  static constexpr auto capture_service_and_save_frame_name = "/zivid_camera/capture_and_save_frame";
   static constexpr auto capture_2d_service_name = "/zivid_camera/capture_2d";
   static constexpr auto capture_assistant_suggest_settings_service_name = "/zivid_camera/capture_assistant/"
                                                                           "suggest_settings";
@@ -654,6 +656,60 @@ TEST_F(CaptureOutputTest, testCapture2D)
   short_wait_duration.sleep();
   assert_num_topics_received(2);
   verify_image_and_camera_info(*color_image_color_sub.lastMessage(), *color_camera_info_sub.lastMessage());
+}
+
+class CaptureAndSaveFrameTest : public TestWithFileCamera
+{
+protected:
+  void capture_and_save_frame_to_path(std::string file_path, bool expected_result)
+  {
+    enableFirst3DAcquisition();
+    zivid_camera::CaptureAndSaveFrame capture_and_save_frame;
+    capture_and_save_frame.request.file_path = file_path;
+    if (expected_result)
+    {
+      ASSERT_TRUE(ros::service::call(capture_service_and_save_frame_name, capture_and_save_frame));
+      ASSERT_TRUE(boost::filesystem::exists(file_path));
+    }
+    else
+    {
+      ASSERT_FALSE(ros::service::call(capture_service_and_save_frame_name, capture_and_save_frame));
+      ASSERT_FALSE(boost::filesystem::exists(file_path));
+    }
+  }
+};
+
+TEST_F(CaptureAndSaveFrameTest, testCaptureAndSaveFrameNoPath)
+{
+  enableFirst3DAcquisition();
+  zivid_camera::CaptureAndSaveFrame capture_and_save_frame;
+  // Capture_and_save_frame fails when no path is provided
+  ASSERT_FALSE(ros::service::call(capture_service_and_save_frame_name, capture_and_save_frame));
+}
+
+TEST_F(CaptureAndSaveFrameTest, testCaptureAndSaveFrameInvalidPath)
+{
+  capture_and_save_frame_to_path("invalid_path", false);
+}
+
+TEST_F(CaptureAndSaveFrameTest, testCaptureAndSaveFrameInvalidExtension)
+{
+  capture_and_save_frame_to_path("/tmp/invalid_extension.wrong", false);
+}
+
+TEST_F(CaptureAndSaveFrameTest, testCaptureAndSaveFrameZDF)
+{
+  capture_and_save_frame_to_path("/tmp/valid.zdf", true);
+}
+
+TEST_F(CaptureAndSaveFrameTest, testCaptureAndSaveFramePLY)
+{
+  capture_and_save_frame_to_path("/tmp/valid.ply", true);
+}
+
+TEST_F(CaptureAndSaveFrameTest, testCaptureAndSaveFramePCD)
+{
+  capture_and_save_frame_to_path("/tmp/valid.pcd", true);
 }
 
 class DynamicReconfigureMinMaxDefaultTest : public TestWithFileCamera

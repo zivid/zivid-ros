@@ -309,16 +309,16 @@ TEST_F(ZividNodeTest, testCapturePublishesTopics)
   auto points_xyzrgba_sub = subscribe<sensor_msgs::PointCloud2>(points_xyzrgba_topic_name);
   auto normals_xyz_sub = subscribe<sensor_msgs::PointCloud2>(normals_xyz_topic_name);
 
-  auto assert_num_topics_received = [&](std::size_t numTopics) {
-    ASSERT_EQ(color_camera_info_sub.numMessages(), numTopics);
-    ASSERT_EQ(color_image_color_sub.numMessages(), numTopics);
-    ASSERT_EQ(depth_camera_info_sub.numMessages(), numTopics);
-    ASSERT_EQ(depth_image_sub.numMessages(), numTopics);
-    ASSERT_EQ(snr_camera_info_sub.numMessages(), numTopics);
-    ASSERT_EQ(snr_image_sub.numMessages(), numTopics);
-    ASSERT_EQ(points_xyz_sub.numMessages(), numTopics);
-    ASSERT_EQ(points_xyzrgba_sub.numMessages(), numTopics);
-    ASSERT_EQ(normals_xyz_sub.numMessages(), numTopics);
+  auto assert_num_topics_received = [&](std::size_t num_topics) {
+    ASSERT_EQ(color_camera_info_sub.numMessages(), num_topics);
+    ASSERT_EQ(color_image_color_sub.numMessages(), num_topics);
+    ASSERT_EQ(depth_camera_info_sub.numMessages(), num_topics);
+    ASSERT_EQ(depth_image_sub.numMessages(), num_topics);
+    ASSERT_EQ(snr_camera_info_sub.numMessages(), num_topics);
+    ASSERT_EQ(snr_image_sub.numMessages(), num_topics);
+    ASSERT_EQ(points_xyz_sub.numMessages(), num_topics);
+    ASSERT_EQ(points_xyzrgba_sub.numMessages(), num_topics);
+    ASSERT_EQ(normals_xyz_sub.numMessages(), num_topics);
   };
 
   short_wait_duration.sleep();
@@ -661,8 +661,30 @@ TEST_F(CaptureOutputTest, testCapture2D)
 class CaptureAndSaveFrameTest : public TestWithFileCamera
 {
 protected:
-  void capture_and_save_frame_to_path(std::string file_path, bool expected_result)
-  {
+  void capture_and_save_frame_to_path(const std::string &file_path, bool expected_result)
+  {    
+    auto color_camera_info_sub = subscribe<sensor_msgs::CameraInfo>(color_camera_info_topic_name);
+    auto color_image_color_sub = subscribe<sensor_msgs::Image>(color_image_color_topic_name);
+    auto depth_camera_info_sub = subscribe<sensor_msgs::CameraInfo>(depth_camera_info_topic_name);
+    auto depth_image_sub = subscribe<sensor_msgs::Image>(depth_image_topic_name);
+    auto snr_camera_info_sub = subscribe<sensor_msgs::CameraInfo>(snr_camera_info_topic_name);
+    auto snr_image_sub = subscribe<sensor_msgs::Image>(snr_image_topic_name);
+    auto points_xyz_sub = subscribe<sensor_msgs::PointCloud2>(points_xyz_topic_name);
+    auto points_xyzrgba_sub = subscribe<sensor_msgs::PointCloud2>(points_xyzrgba_topic_name);
+    auto normals_xyz_sub = subscribe<sensor_msgs::PointCloud2>(normals_xyz_topic_name);
+
+    auto assert_num_topics_received = [&](std::size_t num_topics) {
+      ASSERT_EQ(color_camera_info_sub.numMessages(), num_topics);
+      ASSERT_EQ(color_image_color_sub.numMessages(), num_topics);
+      ASSERT_EQ(depth_camera_info_sub.numMessages(), num_topics);
+      ASSERT_EQ(depth_image_sub.numMessages(), num_topics);
+      ASSERT_EQ(snr_camera_info_sub.numMessages(), num_topics);
+      ASSERT_EQ(snr_image_sub.numMessages(), num_topics);
+      ASSERT_EQ(points_xyz_sub.numMessages(), num_topics);
+      ASSERT_EQ(points_xyzrgba_sub.numMessages(), num_topics);
+      ASSERT_EQ(normals_xyz_sub.numMessages(), num_topics);
+    };
+
     enableFirst3DAcquisition();
     zivid_camera::CaptureAndSaveFrame capture_and_save_frame;
     capture_and_save_frame.request.file_path = file_path;
@@ -676,15 +698,14 @@ protected:
       ASSERT_FALSE(ros::service::call(capture_service_and_save_frame_name, capture_and_save_frame));
       ASSERT_FALSE(boost::filesystem::exists(file_path));
     }
+    short_wait_duration.sleep();
+    assert_num_topics_received(1);
   }
 };
 
 TEST_F(CaptureAndSaveFrameTest, testCaptureAndSaveFrameNoPath)
 {
-  enableFirst3DAcquisition();
-  zivid_camera::CaptureAndSaveFrame capture_and_save_frame;
-  // Capture_and_save_frame fails when no path is provided
-  ASSERT_FALSE(ros::service::call(capture_service_and_save_frame_name, capture_and_save_frame));
+  capture_and_save_frame_to_path("", false);
 }
 
 TEST_F(CaptureAndSaveFrameTest, testCaptureAndSaveFrameInvalidPath)

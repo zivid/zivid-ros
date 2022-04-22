@@ -178,6 +178,46 @@ protected:
     return SubscriptionWrapper<Type>::make(nh_, name);
   }
 
+  class AllCaptureTopicsSubscriber
+  {
+  public:
+    AllCaptureTopicsSubscriber(ZividNodeTest& nodeTest)
+      : color_camera_info_sub_(nodeTest.subscribe<sensor_msgs::CameraInfo>(color_camera_info_topic_name))
+      , color_image_color_sub_(nodeTest.subscribe<sensor_msgs::Image>(color_image_color_topic_name))
+      , depth_camera_info_sub_(nodeTest.subscribe<sensor_msgs::CameraInfo>(depth_camera_info_topic_name))
+      , depth_image_sub_(nodeTest.subscribe<sensor_msgs::Image>(depth_image_topic_name))
+      , snr_camera_info_sub_(nodeTest.subscribe<sensor_msgs::CameraInfo>(snr_camera_info_topic_name))
+      , snr_image_sub_(nodeTest.subscribe<sensor_msgs::Image>(snr_image_topic_name))
+      , points_xyz_sub_(nodeTest.subscribe<sensor_msgs::PointCloud2>(points_xyz_topic_name))
+      , points_xyzrgba_sub_(nodeTest.subscribe<sensor_msgs::PointCloud2>(points_xyzrgba_topic_name))
+      , normals_xyz_sub_(nodeTest.subscribe<sensor_msgs::PointCloud2>(normals_xyz_topic_name))
+    {
+    }
+
+    SubscriptionWrapper<sensor_msgs::CameraInfo> color_camera_info_sub_;
+    SubscriptionWrapper<sensor_msgs::Image> color_image_color_sub_;
+    SubscriptionWrapper<sensor_msgs::CameraInfo> depth_camera_info_sub_;
+    SubscriptionWrapper<sensor_msgs::Image> depth_image_sub_;
+    SubscriptionWrapper<sensor_msgs::CameraInfo> snr_camera_info_sub_;
+    SubscriptionWrapper<sensor_msgs::Image> snr_image_sub_;
+    SubscriptionWrapper<sensor_msgs::PointCloud2> points_xyz_sub_;
+    SubscriptionWrapper<sensor_msgs::PointCloud2> points_xyzrgba_sub_;
+    SubscriptionWrapper<sensor_msgs::PointCloud2> normals_xyz_sub_;
+
+    void assert_num_topics_received(std::size_t numTopics)
+    {
+      ASSERT_EQ(color_camera_info_sub_.numMessages(), numTopics);
+      ASSERT_EQ(color_image_color_sub_.numMessages(), numTopics);
+      ASSERT_EQ(depth_camera_info_sub_.numMessages(), numTopics);
+      ASSERT_EQ(depth_image_sub_.numMessages(), numTopics);
+      ASSERT_EQ(snr_camera_info_sub_.numMessages(), numTopics);
+      ASSERT_EQ(snr_image_sub_.numMessages(), numTopics);
+      ASSERT_EQ(points_xyz_sub_.numMessages(), numTopics);
+      ASSERT_EQ(points_xyzrgba_sub_.numMessages(), numTopics);
+      ASSERT_EQ(normals_xyz_sub_.numMessages(), numTopics);
+    }
+  };
+
   template <class A, class B>
   void assertArrayFloatEq(const A& actual, const B& expected) const
   {
@@ -299,53 +339,33 @@ TEST_F(ZividNodeTest, testCapturePublishesTopics)
 {
   waitForReady();
 
-  auto color_camera_info_sub = subscribe<sensor_msgs::CameraInfo>(color_camera_info_topic_name);
-  auto color_image_color_sub = subscribe<sensor_msgs::Image>(color_image_color_topic_name);
-  auto depth_camera_info_sub = subscribe<sensor_msgs::CameraInfo>(depth_camera_info_topic_name);
-  auto depth_image_sub = subscribe<sensor_msgs::Image>(depth_image_topic_name);
-  auto snr_camera_info_sub = subscribe<sensor_msgs::CameraInfo>(snr_camera_info_topic_name);
-  auto snr_image_sub = subscribe<sensor_msgs::Image>(snr_image_topic_name);
-  auto points_xyz_sub = subscribe<sensor_msgs::PointCloud2>(points_xyz_topic_name);
-  auto points_xyzrgba_sub = subscribe<sensor_msgs::PointCloud2>(points_xyzrgba_topic_name);
-  auto normals_xyz_sub = subscribe<sensor_msgs::PointCloud2>(normals_xyz_topic_name);
-
-  auto assert_num_topics_received = [&](std::size_t num_topics) {
-    ASSERT_EQ(color_camera_info_sub.numMessages(), num_topics);
-    ASSERT_EQ(color_image_color_sub.numMessages(), num_topics);
-    ASSERT_EQ(depth_camera_info_sub.numMessages(), num_topics);
-    ASSERT_EQ(depth_image_sub.numMessages(), num_topics);
-    ASSERT_EQ(snr_camera_info_sub.numMessages(), num_topics);
-    ASSERT_EQ(snr_image_sub.numMessages(), num_topics);
-    ASSERT_EQ(points_xyz_sub.numMessages(), num_topics);
-    ASSERT_EQ(points_xyzrgba_sub.numMessages(), num_topics);
-    ASSERT_EQ(normals_xyz_sub.numMessages(), num_topics);
-  };
+  AllCaptureTopicsSubscriber allCaptureTopicsSubscriber(*this);
 
   short_wait_duration.sleep();
-  assert_num_topics_received(0);
+  allCaptureTopicsSubscriber.assert_num_topics_received(0);
 
   zivid_camera::Capture capture;
   // Capture fails when no acquisitions are enabled
   ASSERT_FALSE(ros::service::call(capture_service_name, capture));
   short_wait_duration.sleep();
-  assert_num_topics_received(0);
+  allCaptureTopicsSubscriber.assert_num_topics_received(0);
 
   enableFirst3DAcquisition();
 
   ASSERT_TRUE(ros::service::call(capture_service_name, capture));
   short_wait_duration.sleep();
-  assert_num_topics_received(1);
+  allCaptureTopicsSubscriber.assert_num_topics_received(1);
 
   ASSERT_TRUE(ros::service::call(capture_service_name, capture));
   short_wait_duration.sleep();
-  assert_num_topics_received(2);
+  allCaptureTopicsSubscriber.assert_num_topics_received(2);
 
   ASSERT_TRUE(ros::service::call(capture_service_name, capture));
   short_wait_duration.sleep();
-  assert_num_topics_received(3);
+  allCaptureTopicsSubscriber.assert_num_topics_received(3);
 
   short_wait_duration.sleep();
-  assert_num_topics_received(3);
+  allCaptureTopicsSubscriber.assert_num_topics_received(3);
 }
 
 class CaptureOutputTest : public TestWithFileCamera
@@ -661,29 +681,9 @@ TEST_F(CaptureOutputTest, testCapture2D)
 class CaptureAndSaveFrameTest : public TestWithFileCamera
 {
 protected:
-  void capture_and_save_frame_to_path(const std::string &file_path, bool expected_result)
-  {    
-    auto color_camera_info_sub = subscribe<sensor_msgs::CameraInfo>(color_camera_info_topic_name);
-    auto color_image_color_sub = subscribe<sensor_msgs::Image>(color_image_color_topic_name);
-    auto depth_camera_info_sub = subscribe<sensor_msgs::CameraInfo>(depth_camera_info_topic_name);
-    auto depth_image_sub = subscribe<sensor_msgs::Image>(depth_image_topic_name);
-    auto snr_camera_info_sub = subscribe<sensor_msgs::CameraInfo>(snr_camera_info_topic_name);
-    auto snr_image_sub = subscribe<sensor_msgs::Image>(snr_image_topic_name);
-    auto points_xyz_sub = subscribe<sensor_msgs::PointCloud2>(points_xyz_topic_name);
-    auto points_xyzrgba_sub = subscribe<sensor_msgs::PointCloud2>(points_xyzrgba_topic_name);
-    auto normals_xyz_sub = subscribe<sensor_msgs::PointCloud2>(normals_xyz_topic_name);
-
-    auto assert_num_topics_received = [&](std::size_t num_topics) {
-      ASSERT_EQ(color_camera_info_sub.numMessages(), num_topics);
-      ASSERT_EQ(color_image_color_sub.numMessages(), num_topics);
-      ASSERT_EQ(depth_camera_info_sub.numMessages(), num_topics);
-      ASSERT_EQ(depth_image_sub.numMessages(), num_topics);
-      ASSERT_EQ(snr_camera_info_sub.numMessages(), num_topics);
-      ASSERT_EQ(snr_image_sub.numMessages(), num_topics);
-      ASSERT_EQ(points_xyz_sub.numMessages(), num_topics);
-      ASSERT_EQ(points_xyzrgba_sub.numMessages(), num_topics);
-      ASSERT_EQ(normals_xyz_sub.numMessages(), num_topics);
-    };
+  void capture_and_save_frame_to_path(const std::string& file_path, bool expected_result)
+  {
+    AllCaptureTopicsSubscriber allCaptureTopicsSubscriber(*this);
 
     enableFirst3DAcquisition();
     zivid_camera::CaptureAndSaveFrame capture_and_save_frame;
@@ -699,7 +699,7 @@ protected:
       ASSERT_FALSE(boost::filesystem::exists(file_path));
     }
     short_wait_duration.sleep();
-    assert_num_topics_received(1);
+    allCaptureTopicsSubscriber.assert_num_topics_received(1);
   }
 };
 

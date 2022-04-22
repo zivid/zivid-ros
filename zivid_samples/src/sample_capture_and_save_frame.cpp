@@ -1,6 +1,7 @@
 #include <zivid_camera/SettingsAcquisitionConfig.h>
 #include <zivid_camera/SettingsConfig.h>
 #include <zivid_camera/CaptureAndSaveFrame.h>
+#include <Zivid/Version.h>
 #include <dynamic_reconfigure/Reconfigure.h>
 #include <dynamic_reconfigure/client.h>
 #include <ros/ros.h>
@@ -27,20 +28,24 @@ void capture_and_save_frame()
   CHECK(ros::service::call("/zivid_camera/capture_and_save_frame", capture_and_save_frame));
 }
 
+#if ZIVID_CORE_VERSION_MAJOR >= 2 && ZIVID_CORE_VERSION_MINOR >= 6
 void enable_diagnostics()
 {
-  dynamic_reconfigure::Client<zivid_camera::SettingsConfig> settings_client("/zivid_camera/"
-                                                                            "settings/");
+  {
+    dynamic_reconfigure::Client<zivid_camera::SettingsConfig> settings_client("/zivid_camera/"
+                                                                              "settings/");
 
-  // To initialize the settings_config object we need to load the default configuration from the server.
-  // The default values of settings depends on which Zivid camera model is connected.
-  zivid_camera::SettingsConfig settings_config;
-  CHECK(settings_client.getDefaultConfiguration(settings_config, default_wait_duration));
+    // To initialize the settings_config object we need to load the default configuration from the server.
+    // The default values of settings depends on which Zivid camera model is connected.
+    zivid_camera::SettingsConfig settings_config;
+    CHECK(settings_client.getDefaultConfiguration(settings_config, default_wait_duration));
 
-  ROS_INFO("Enabling the diagnostics mode");
-  settings_config.diagnostics_enabled = true;
-  CHECK(settings_client.setConfiguration(settings_config));
+    ROS_INFO("Enabling the diagnostics mode");
+    settings_config.diagnostics_enabled = true;
+    CHECK(settings_client.setConfiguration(settings_config));
+  }
 }
+#endif
 
 void enable_first_acquisition()
 {
@@ -71,7 +76,9 @@ int main(int argc, char** argv)
   ros::AsyncSpinner spinner(1);
   spinner.start();
 
+#if ZIVID_CORE_VERSION_MAJOR >= 2 && ZIVID_CORE_VERSION_MINOR >= 6
   enable_diagnostics();
+#endif
 
   enable_first_acquisition();
 

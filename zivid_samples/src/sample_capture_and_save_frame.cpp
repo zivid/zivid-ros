@@ -1,4 +1,5 @@
 #include <zivid_camera/SettingsAcquisitionConfig.h>
+#include <zivid_camera/SettingsConfig.h>
 #include <zivid_camera/CaptureAndSaveFrame.h>
 #include <dynamic_reconfigure/Reconfigure.h>
 #include <dynamic_reconfigure/client.h>
@@ -26,6 +27,36 @@ void capture_and_save_frame()
   CHECK(ros::service::call("/zivid_camera/capture_and_save_frame", capture_and_save_frame));
 }
 
+void enable_diagnostics()
+{
+  dynamic_reconfigure::Client<zivid_camera::SettingsConfig> settings_client("/zivid_camera/"
+                                                                            "settings/");
+
+  // To initialize the settings_config object we need to load the default configuration from the server.
+  // The default values of settings depends on which Zivid camera model is connected.
+  zivid_camera::SettingsConfig settings_config;
+  CHECK(settings_client.getDefaultConfiguration(settings_config, default_wait_duration));
+
+  ROS_INFO("Enabling the diagnostics mode");
+  settings_config.diagnostics_enabled = true;
+  CHECK(settings_client.setConfiguration(settings_config));
+}
+
+void enable_first_acquisition()
+{
+  dynamic_reconfigure::Client<zivid_camera::SettingsAcquisitionConfig> acquisition_0_client("/zivid_camera/settings/"
+                                                                                            "acquisition_0/");
+
+  // To initialize the acquisition_0_config object we need to load the default configuration from the server.
+  // The default values of settings depends on which Zivid camera model is connected.
+  zivid_camera::SettingsAcquisitionConfig acquisition_0_config;
+  CHECK(acquisition_0_client.getDefaultConfiguration(acquisition_0_config, default_wait_duration));
+
+  ROS_INFO("Enabling the first acquisition");
+  acquisition_0_config.enabled = true;
+  CHECK(acquisition_0_client.setConfiguration(acquisition_0_config));
+}
+
 }  // namespace
 
 int main(int argc, char** argv)
@@ -40,17 +71,9 @@ int main(int argc, char** argv)
   ros::AsyncSpinner spinner(1);
   spinner.start();
 
-  dynamic_reconfigure::Client<zivid_camera::SettingsAcquisitionConfig> acquisition_0_client("/zivid_camera/settings/"
-                                                                                            "acquisition_0/");
+  enable_diagnostics();
 
-  // To initialize the acquisition_0_config object we need to load the default configuration from the server.
-  // The default values of settings depends on which Zivid camera model is connected.
-  zivid_camera::SettingsAcquisitionConfig acquisition_0_config;
-  CHECK(acquisition_0_client.getDefaultConfiguration(acquisition_0_config, default_wait_duration));
-
-  ROS_INFO("Enabling the first acquisition");
-  acquisition_0_config.enabled = true;
-  CHECK(acquisition_0_client.setConfiguration(acquisition_0_config));
+  enable_first_acquisition();
 
   ROS_INFO("Calling capture_and_save_frame");
 

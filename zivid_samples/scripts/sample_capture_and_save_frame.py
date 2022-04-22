@@ -19,19 +19,27 @@ class Sample:
             "/zivid_camera/capture_and_save_frame", CaptureAndSaveFrame
         )
 
-        rospy.loginfo("Enabling the first acquisition")
-        acquisition_0_client = dynamic_reconfigure.client.Client(
-            "/zivid_camera/settings/acquisition_0"
-        )
-        acquisition_0_config = {
-            "enabled": True,
-        }
-        acquisition_0_client.update_configuration(acquisition_0_config)
+        self.enable_diagnostic()
+        self.enable_first_acquistion()
 
     def capture(self):
         rospy.loginfo("Calling capture_and_save_frame service")
         file_path = "/tmp/capture_py.zdf"
         self.capture_and_save_frame_service(file_path)
+
+    def enable_diagnostic(self):
+        rospy.loginfo("Enabling the diagnostics mode")
+        settings_client = dynamic_reconfigure.client.Client("/zivid_camera/settings/")
+        settings_config = {"diagnostics_enabled": True}
+        settings_client.update_configuration(settings_config)
+
+    def enable_first_acquistion(self):
+        rospy.loginfo("Enabling the first acquisition")
+        acquisition_0_client = dynamic_reconfigure.client.Client(
+            "/zivid_camera/settings/acquisition_0"
+        )
+        acquisition_0_config = {"enabled": True}
+        acquisition_0_client.update_configuration(acquisition_0_config)
 
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@ on:
     - cron:  '0 22 * * *'
 
 env:
-  NEWEST_ZIVID_VERSION: '2.6.1+6cec8609-3'
+  NEWEST_ZIVID_VERSION: '2.7.0+e31dcbe2-1'
 
 jobs:
   code-analysis:
@@ -52,8 +52,6 @@ jobs:
             compiler: 'clang++-7'
           - os: 'ros:melodic-ros-base-bionic'
             compiler: 'clang++-8'
-          - os: 'ros:kinetic-ros-base-xenial' # Default g++/clang++ on Xenial are old and don't support
-            compiler: 'g++-7'                 # all of C++17, so we test with g++-7
     steps:
       - name: Check out code
         uses: actions/checkout@v2
@@ -92,7 +90,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        zivid-version: ['2.5.0+19fa6891-1', '2.6.0+fa0036c5-1']
+        zivid-version: ['2.5.0+19fa6891-1', '2.6.0+fa0036c5-1', '2.6.1+6cec8609-3']
         ros-distro: ['ros:noetic-ros-base-focal', 'ros:kinetic-ros-base-xenial', 'ros:melodic-ros-base-bionic']
     steps:
       - name: Check out code

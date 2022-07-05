@@ -144,12 +144,17 @@ protected:
 
   void enableFirst3DAcquisition()
   {
+    std::cerr << "In enableFirst3DAcquisition\n";
     dynamic_reconfigure::Client<zivid_camera::SettingsAcquisitionConfig> acquisition_0_client("/zivid_camera/settings/"
                                                                                               "acquisition_0/");
+    medium_wait_duration.sleep();
     zivid_camera::SettingsAcquisitionConfig acquisition_0_cfg;
+    std::cerr << "   Calling getDefaultConfiguration\n";
     ASSERT_TRUE(acquisition_0_client.getDefaultConfiguration(acquisition_0_cfg, dr_get_max_wait_duration));
     acquisition_0_cfg.enabled = true;
+    std::cerr << "   Calling setConfiguration\n";
     ASSERT_TRUE(acquisition_0_client.setConfiguration(acquisition_0_cfg));
+    std::cerr << "Done enableFirst3DAcquisition\n";
   }
 
   void enableFirst2DAcquisition()
@@ -157,6 +162,7 @@ protected:
     dynamic_reconfigure::Client<zivid_camera::Settings2DAcquisitionConfig> acquisition_0_client("/zivid_camera/"
                                                                                                 "settings_2d/"
                                                                                                 "acquisition_0/");
+    short_wait_duration.sleep();
     zivid_camera::Settings2DAcquisitionConfig cfg;
     ASSERT_TRUE(acquisition_0_client.getDefaultConfiguration(cfg, dr_get_max_wait_duration));
     cfg.enabled = true;

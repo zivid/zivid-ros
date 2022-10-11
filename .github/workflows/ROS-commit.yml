@@ -7,7 +7,7 @@ on:
     - cron:  '0 22 * * *'
 
 env:
-  NEWEST_ZIVID_VERSION: '2.7.0+e31dcbe2-1'
+  NEWEST_ZIVID_VERSION: '2.8.0+891708ba-1'
 
 jobs:
   code-analysis:
@@ -90,8 +90,8 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        zivid-version: ['2.5.0+19fa6891-1', '2.6.0+fa0036c5-1', '2.6.1+6cec8609-3']
-        ros-distro: ['ros:noetic-ros-base-focal', 'ros:kinetic-ros-base-xenial', 'ros:melodic-ros-base-bionic']
+        zivid-version: ['2.5.0+19fa6891-1', '2.6.0+fa0036c5-1', '2.6.1+6cec8609-3', '2.7.0+e31dcbe2-1']
+        ros-distro: ['ros:noetic-ros-base-focal', 'ros:melodic-ros-base-bionic']
     steps:
       - name: Check out code
         uses: actions/checkout@v2

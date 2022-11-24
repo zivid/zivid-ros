@@ -5,7 +5,7 @@
         <color rgba="0.25 0.25 0.25 1"/>
     </material>
 
-    <xacro:macro name="zivid_camera" params="prefix">
+    <xacro:macro name="zivid_one_plus_camera" params="prefix">
         <!-- Zivid Base Link -->
         <link name="${prefix}base_link">
             <!-- Visuals -->

@@ -28,19 +28,12 @@
 
         <!-- Zivid Optical (Measurement) and Projector Frames -->
         <link name="${prefix}optical_frame"/>
-        <link name="${prefix}projector_frame"/>
 
         <!-- Zivid Optical (Measurement) and Projector Joints -->
         <joint name="${prefix}optical_joint" type="fixed">
             <origin xyz="0.065 0.062 0.0445" rpy="-${0.5*pi} 0 -${0.5*pi + 8.5/180*pi}"/>
             <parent link="${prefix}base_link"/>
             <child link="${prefix}optical_frame"/>
-        </joint>
-
-        <joint name="${prefix}projector_joint" type="fixed">
-            <origin xyz="-0.0030 -0.0758 0.0445" rpy="-${0.5*pi} 0 -${0.5*pi}"/>
-            <parent link="${prefix}base_link"/>
-            <child link="${prefix}projector_frame"/>
         </joint>
     </xacro:macro>
 </robot>

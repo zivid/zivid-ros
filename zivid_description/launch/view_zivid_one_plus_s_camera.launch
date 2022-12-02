@@ -1,5 +1,5 @@
 <launch>
-    <include file="$(find zivid_description)/launch/load_zivid_one_plus_camera.launch" />
+    <include file="$(find zivid_description)/launch/load_zivid_one_plus_s_camera.launch" />
 
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find zivid_description)/config/config.rviz" required="true"/>

@@ -704,7 +704,7 @@ This FTP (Focused Technical Project) has received funding from the European Unio
 Horizon 2020 research and innovation programme under the project ROSIN with the
 grant agreement No 732287. For more information, visit [rosin-project.eu](http://rosin-project.eu/).
 
-[ci-badge]: https://img.shields.io/github/workflow/status/zivid/zivid-ros/ROS%20Commit/master
+[ci-badge]: https://img.shields.io/github/actions/workflow/status/zivid/zivid-ros/ROS-commit.yml?branch=master
 [ci-url]: https://github.com/zivid/zivid-ros/actions?query=workflow%3A%22ROS+Commit%22+branch%3Amaster+
 [header-image]: https://www.zivid.com/hubfs/softwarefiles/images/zivid-generic-github-header.png
 

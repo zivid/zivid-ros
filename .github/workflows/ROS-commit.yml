@@ -2,8 +2,9 @@ name: ROS Commit
 # Note: If the workflow name is changed, the CI badge URL in the README must also be updated
 
 on:
-  push:       # Push trigger runs on any pushed branch.
-  schedule:   # Scheduled trigger runs on the latest commit on the default branch.
+  push:           # Push trigger runs on any pushed branch.
+  pull_request:   # Run on new and updated PR's.
+  schedule:      # Scheduled trigger runs on the latest commit on the default branch.
     - cron:  '0 22 * * *'
 
 env:

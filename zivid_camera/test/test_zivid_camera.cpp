@@ -511,7 +511,7 @@ TEST_F(CaptureOutputTest, testCapturePointsXYZWithROI)
     }
     return count;
   }();
-  ASSERT_EQ(numExpectedNaNZ, 2154265);
+  ASSERT_EQ(numExpectedNaNZ, 2154265U);
 
   for (size_t i = 0; i < expected.size(); ++i)
   {

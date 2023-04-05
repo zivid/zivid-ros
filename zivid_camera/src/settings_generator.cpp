@@ -3,6 +3,7 @@
 // Settings2D::Acquisition). The utility header files are used by the zivid_camera library.
 // This program is compiled and run during the build stage of the zivid_camera library.
 
+#include <Zivid/Point.h>
 #include <Zivid/Settings.h>
 #include <Zivid/Settings2D.h>
 
@@ -197,23 +198,33 @@ public:
     {
       return false;
     }
-    if constexpr (Zivid::DataModel::HasValidRange<SettingsNode>::value)
+    else if constexpr (Zivid::DataModel::HasValidRange<SettingsNode>::value)
     {
       return SettingsNode::validRange().min();
     }
-    if constexpr (IsEnumSetting<SettingsNode>::value)
+    else if constexpr (IsEnumSetting<SettingsNode>::value)
     {
       return *SettingsNode::validValues().begin();
     }
-    return ValueType{ 0 };
+    else if constexpr (std::is_same_v<ValueType, Zivid::Range<double>>)
+    {
+      return ValueType{ 0.0, 0.0 };
+    }
+    else if constexpr (std::is_same<ValueType, Zivid::PointXYZ>::value)
+    {
+      return ValueType{ 0.0f, 0.0f, 0.0f };
+    }
+    else
+    {
+      return ValueType{ 0 };
+    }
   }
 
   template <typename ValueType>
   auto convertValueToRosValue(ValueType value)
   {
-    // Convert from our own setting value types to types that ROS params supports (double, int, bool)
-
-    if constexpr (std::is_same_v<ValueType, bool> || std::is_same_v<ValueType, double>)
+    if constexpr (std::is_same_v<ValueType, bool> || std::is_same_v<ValueType, double> ||
+                  std::is_same_v<ValueType, int>)
     {
       return value;
     }
@@ -228,6 +239,14 @@ public:
     else if constexpr (std::is_enum_v<ValueType>)
     {
       return static_cast<int>(value);
+    }
+    else if constexpr (std::is_same_v<ValueType, Zivid::Range<double>>)
+    {
+      return value;
+    }
+    else if constexpr (std::is_same_v<ValueType, Zivid::PointXYZ>)
+    {
+      return value;
     }
     else
     {
@@ -250,6 +269,10 @@ public:
     {
       return "int_t";
     }
+    else if constexpr (std::is_same_v<RosType, Zivid::Range<double>> || std::is_same_v<RosType, Zivid::PointXYZ>)
+    {
+      return "double_t";
+    }
     else
     {
       static_assert(DependentFalse<RosType>::value, "Could not convert RosType to a ROS typename string.");
@@ -266,6 +289,10 @@ public:
     else if constexpr (std::is_same_v<RosType, double> || std::is_same_v<RosType, int>)
     {
       return std::to_string(v);
+    }
+    else if constexpr (std::is_same_v<RosType, Zivid::Range<double>> || std::is_same_v<RosType, Zivid::PointXYZ>)
+    {
+      return "0.0";
     }
     else
     {
@@ -305,21 +332,44 @@ public:
           << boost::algorithm::join(enum_constants, ",\n    ") << "\n],\n \"" << description << "\")\n";
     }
 
-    ss_ << "gen.add(\"" << setting_name << "\", " << type_name << ", " << level << ", "
-        << "\"" << description << "\", " << default_value_str;
+    if constexpr (std::is_same_v<std::decay_t<decltype(default_value)>, Zivid::PointXYZ>)
+    {
+      for (const auto comp : std::array{ "x", "y", "z" })
+      {
+        const auto comp_name = setting_name + "_" + comp;
+        ss_ << "gen.add(\"" << comp_name << "\", " << type_name << ", " << level << ", "
+            << "\"" << description + " [" + comp + "]"
+            << "\", " << default_value_str << ")\n";
+      }
+    }
+    else if constexpr (std::is_same_v<std::decay_t<decltype(default_value)>, Zivid::Range<double>>)
+    {
+      for (const auto comp : std::array{ "min", "max" })
+      {
+        const auto comp_name = setting_name + "_" + comp;
+        ss_ << "gen.add(\"" << comp_name << "\", " << type_name << ", " << level << ", "
+            << "\"" << description + " [" + comp + "]"
+            << "\", " << default_value_str << ")\n";
+      }
+    }
+    else
+    {
+      ss_ << "gen.add(\"" << setting_name << "\", " << type_name << ", " << level << ", "
+          << "\"" << description << "\", " << default_value_str;
 
-    if constexpr (Zivid::DataModel::HasValidRange<SettingsNode>::value)
-    {
-      ss_ << ", " << valueTypeToRosTypeString(node.validRange().min()) << ", "
-          << valueTypeToRosTypeString(node.validRange().max());
+      if constexpr (Zivid::DataModel::HasValidRange<SettingsNode>::value)
+      {
+        ss_ << ", " << valueTypeToRosTypeString(node.validRange().min()) << ", "
+            << valueTypeToRosTypeString(node.validRange().max());
+      }
+      else if constexpr (IsEnumSetting<SettingsNode>::value)
+      {
+        const auto min_index = 0;
+        const auto max_index = node.validValues().size() - 1;
+        ss_ << ", " << min_index << ", " << max_index << ", edit_method=" << rosGeneratedEnumVariableName(setting_name);
+      }
+      ss_ << ")\n";
     }
-    else if constexpr (IsEnumSetting<SettingsNode>::value)
-    {
-      const auto min_index = 0;
-      const auto max_index = node.validValues().size() - 1;
-      ss_ << ", " << min_index << ", " << max_index << ", edit_method=" << rosGeneratedEnumVariableName(setting_name);
-    }
-    ss_ << ")\n";
   }
 
   void insertEnabled()
@@ -396,6 +446,15 @@ public:
           << " to setting of type " + setting_node_class_name + ".\");\n"
           << "  }()\n";
     }
+    else if constexpr (std::is_same_v<ValueType, Zivid::PointXYZ>)
+    {
+      ss_ << "static_cast<float>(" << cfg_id << "_x), static_cast<float>(" << cfg_id << "_y), static_cast<float>("
+          << cfg_id << "_z)";
+    }
+    else if constexpr (std::is_same_v<ValueType, Zivid::Range<double>>)
+    {
+      ss_ << cfg_id << "_min, " << cfg_id << "_max ";
+    }
     else
     {
       ss_ << cfg_id;
@@ -436,22 +495,41 @@ public:
     const auto cfg_id = "cfg." + convertSettingsPathToConfigPath<SettingsRootGroup, SettingsNode>();
     const auto zivid_node_class_name = fullyQualifiedZividTypeName<SettingsNode>();
     const auto value_str = "s.get<" + zivid_node_class_name + ">().value()";
-    ss_ << "  " + cfg_id + " = ";
-    if constexpr (std::is_same_v<ValueType, std::chrono::microseconds>)
+
+    if constexpr (std::is_same_v<ValueType, Zivid::PointXYZ>)
     {
-      ss_ << "static_cast<int>(" + value_str + ".count());\n";
+      for (const auto comp : std::array{ "x", "y", "z" })
+      {
+        ss_ << "  " + cfg_id + "_" + comp + " = "
+            << "static_cast<float>(" + value_str + "." + comp + ");\n";
+      }
     }
-    else if constexpr (std::is_same_v<ValueType, std::size_t>)
+    else if constexpr (std::is_same_v<ValueType, Zivid::Range<double>>)
     {
-      ss_ << "static_cast<int>(" + value_str + ");\n";
-    }
-    else if constexpr (IsEnumSetting<SettingsNode>::value)
-    {
-      ss_ << "static_cast<int>(" + value_str + ");\n";
+      for (const auto comp : std::array{ "min", "max" })
+      {
+        ss_ << "  " + cfg_id + "_" + comp + " = " << value_str + "." + comp + "();\n";
+      }
     }
     else
     {
-      ss_ << value_str + ";\n";
+      ss_ << "  " + cfg_id + " = ";
+      if constexpr (std::is_same_v<ValueType, std::chrono::microseconds>)
+      {
+        ss_ << "static_cast<int>(" + value_str + ".count());\n";
+      }
+      else if constexpr (std::is_same_v<ValueType, std::size_t>)
+      {
+        ss_ << "static_cast<int>(" + value_str + ");\n";
+      }
+      else if constexpr (IsEnumSetting<SettingsNode>::value)
+      {
+        ss_ << "static_cast<int>(" + value_str + ");\n";
+      }
+      else
+      {
+        ss_ << value_str + ";\n";
+      }
     }
   }
 

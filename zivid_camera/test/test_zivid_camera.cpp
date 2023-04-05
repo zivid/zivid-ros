@@ -361,6 +361,11 @@ protected:
     return camera_.capture(Zivid::Settings2D{ Zivid::Settings2D::Acquisitions{ Zivid::Settings2D::Acquisition{} } });
   }
 
+  Zivid::PointCloud captureViaSDK(const Zivid::Settings& settings)
+  {
+    return camera_.capture(settings).pointCloud();
+  }
+
   void compareFloat(float a, float b, float delta = 1e-6f) const
   {
     if (std::isnan(a))
@@ -459,6 +464,69 @@ TEST_F(CaptureOutputTest, testCapturePointsXYZ)
     comparePointCoordinate(z, expected.z);
   }
 }
+
+#if (ZIVID_CORE_VERSION_MAJOR >= 2 && ZIVID_CORE_VERSION_MINOR >= 9) || ZIVID_CORE_VERSION_MAJOR > 2
+TEST_F(CaptureOutputTest, testCapturePointsXYZWithROI)
+{
+  auto points_sub = subscribe<sensor_msgs::PointCloud2>(points_xyz_topic_name);
+  dynamic_reconfigure::Client<zivid_camera::SettingsConfig> settings_client("/zivid_camera/settings/");
+  zivid_camera::SettingsConfig configOriginal;
+  ASSERT_TRUE(settings_client.getDefaultConfiguration(configOriginal, dr_get_max_wait_duration));
+  auto config = configOriginal;
+  config.region_of_interest_box_enabled = true;
+  config.region_of_interest_box_point_o_x = 1;
+  config.region_of_interest_box_point_o_y = 0;
+  config.region_of_interest_box_point_o_z = 619;
+  config.region_of_interest_box_point_a_x = 111;
+  config.region_of_interest_box_point_a_y = 2;
+  config.region_of_interest_box_point_a_z = 620;
+  config.region_of_interest_box_point_b_x = 3;
+  config.region_of_interest_box_point_b_y = 110;
+  config.region_of_interest_box_point_b_z = 621;
+  config.region_of_interest_box_extents_min = -10;
+  config.region_of_interest_box_extents_max = 10;
+  ASSERT_TRUE(settings_client.setConfiguration(config));
+
+  enableFirst3DAcquisitionAndCapture();
+  const auto& point_cloud = points_sub.lastMessage();
+  ASSERT_TRUE(point_cloud.has_value());
+
+  const auto point_cloud_sdk = captureViaSDK(Zivid::Settings{
+      Zivid::Settings::Acquisitions{ Zivid::Settings::Acquisition{} },
+      Zivid::Settings::RegionOfInterest::Box{
+          Zivid::Settings::RegionOfInterest::Box::Enabled::yes,
+          Zivid::Settings::RegionOfInterest::Box::PointO{ 1, 0, 619 },
+          Zivid::Settings::RegionOfInterest::Box::PointA{ 111, 2, 620 },
+          Zivid::Settings::RegionOfInterest::Box::PointB{ 3, 110, 621 },
+          Zivid::Settings::RegionOfInterest::Box::Extents{ -10, 10 },
+      },
+  });
+
+  auto expected = point_cloud_sdk.copyData<Zivid::PointXYZ>();
+  const auto numExpectedNaNZ = [&] {
+    size_t count = 0;
+    for (size_t i = 0; i < expected.size(); ++i)
+    {
+      count += std::isnan(expected(i).z);
+    }
+    return count;
+  }();
+  ASSERT_EQ(numExpectedNaNZ, 2154265);
+
+  for (size_t i = 0; i < expected.size(); ++i)
+  {
+    const uint8_t* point_ptr = &point_cloud->data[i * point_cloud->point_step];
+    const float x = *reinterpret_cast<const float*>(&point_ptr[0]);
+    const float y = *reinterpret_cast<const float*>(&point_ptr[4]);
+    const float z = *reinterpret_cast<const float*>(&point_ptr[8]);
+    comparePointCoordinate(x, expected(i).x);
+    comparePointCoordinate(y, expected(i).y);
+    comparePointCoordinate(z, expected(i).z);
+  }
+
+  ASSERT_TRUE(settings_client.setConfiguration(configOriginal));
+}
+#endif
 
 TEST_F(CaptureOutputTest, testCapture3DColorImage)
 {

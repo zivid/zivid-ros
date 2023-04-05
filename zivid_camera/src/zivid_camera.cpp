@@ -101,7 +101,7 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   ROS_INFO("Zivid ROS driver version %s", ZIVID_ROS_DRIVER_VERSION);
 
   ROS_INFO("Node's namespace is '%s'", nh_.getNamespace().c_str());
-  if (ros::this_node::getNamespace() == "/")
+  if (nh_.getNamespace() == "")
   {
     // Require the user to specify the namespace that this node will run in.
     // See REP-135 http://www.ros.org/reps/rep-0135.html

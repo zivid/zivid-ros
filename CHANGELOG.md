@@ -2,6 +2,12 @@
 
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 2.4.0
+
+* Added support for PointXYZ and Range settings that are required for Zivid SDK 2.9.0 and newer
+* Added launch parameter to disable firmware upgrade automatically
+* Add support for loading capture settings via YML file
+
 ## 2.3.0
 
 * Add support for normals. Normals are exposed via topic "normals/xyz".

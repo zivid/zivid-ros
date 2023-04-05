@@ -501,7 +501,7 @@ public:
       for (const auto comp : std::array{ "x", "y", "z" })
       {
         ss_ << "  " + cfg_id + "_" + comp + " = "
-            << "static_cast<float>(" + value_str + "." + comp + ");\n";
+            << "static_cast<double>(" + value_str + "." + comp + ");\n";
       }
     }
     else if constexpr (std::is_same_v<ValueType, Zivid::Range<double>>)

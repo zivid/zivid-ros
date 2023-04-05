@@ -107,7 +107,7 @@ fi
 
 echo "Install Zivid and Telicam debian packages"
 
-ZIVID_RELEASE_DIR="https://www.zivid.com/hubfs/softwarefiles/releases/$CI_TEST_ZIVID_VERSION"
+ZIVID_RELEASE_DIR="https://downloads.zivid.com/sdk/releases/$CI_TEST_ZIVID_VERSION"
 ZIVID_TELICAM_SDK_DEB="zivid-telicam-driver_3.0.1.1-3_amd64.deb"
 
 if [[ "$UBUNTU_VERSION" == "18.04" ]]; then

@@ -63,7 +63,12 @@ protected:
   ZividNodeTestBase()
   {
     const auto test_name = testing::UnitTest::GetInstance()->current_test_info()->name();
-    std::cerr << "Starting test " << test_name << "\n";
+    std::cerr << "Start of test " << test_name << "\n";
+  }
+  ~ZividNodeTestBase()
+  {
+    const auto test_name = testing::UnitTest::GetInstance()->current_test_info()->name();
+    std::cerr << "End of test " << test_name << "\n";
   }
 };
 
@@ -139,7 +144,11 @@ protected:
 
   void waitForReady()
   {
-    ASSERT_TRUE(ros::service::waitForService(capture_service_name, node_ready_wait_duration));
+    auto start = std::chrono::high_resolution_clock::now();
+    auto waitForReady = ros::service::waitForService(capture_service_name, node_ready_wait_duration);
+    auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start);
+    std::cerr << "waitForReady took " << dur.count() << " ms \n";
+    ASSERT_TRUE(waitForReady);
   }
 
   void enableFirst3DAcquisition()

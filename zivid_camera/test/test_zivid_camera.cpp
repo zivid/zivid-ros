@@ -63,7 +63,20 @@ protected:
   ZividNodeTestBase()
   {
     const auto test_name = testing::UnitTest::GetInstance()->current_test_info()->name();
-    std::cerr << "Starting test " << test_name << "\n";
+    std::cerr << "Start of test " << test_name << "\n";
+    printLine();
+  }
+
+  ~ZividNodeTestBase() override
+  {
+    const auto test_name = testing::UnitTest::GetInstance()->current_test_info()->name();
+    printLine();
+    std::cerr << "End of test " << test_name << "\n";
+  }
+
+  void printLine()
+  {
+    std::cerr << std::string(80, '-') << "\n";
   }
 };
 

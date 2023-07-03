@@ -28,7 +28,9 @@ fi
 
 function install_opencl_cpu_runtime {
 
-    # Install driver prerequisites
+    echo "Begin install of OpenCL CPU runtime"
+
+    echo "Install driver prerequisites"
     apt-yes install libnuma-dev lsb-core || exit $?
 
     TMP_DIR=$(mktemp --tmpdir --directory zivid-setup-opencl-cpu-XXXX) || exit $?
@@ -57,6 +59,8 @@ EOF
     ./install.sh --silent installer_config.cfg || exit $?
     popd || exit $?
     rm -r $TMP_DIR || exit $?
+
+    echo "Done installing OpenCL CPU runtime"
 }
 
 install_opencl_cpu_runtime || exit $?

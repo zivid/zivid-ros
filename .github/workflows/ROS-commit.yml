@@ -21,7 +21,7 @@ jobs:
           lfs: false
       - name: Run code_analysis.sh
         run: |
-          CI_TEST_OS=ros:melodic-ros-base-bionic \
+          CI_TEST_OS=ros:noetic-ros-base-focal \
           ./continuous-integration/run_code_analysis_in_docker.sh
       - name: Notify Teams
         if: ${{ failure() && github.ref == 'refs/heads/master' }}
@@ -34,7 +34,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: ['ros:noetic-ros-base-focal', 'ros:melodic-ros-base-bionic']
+        os: ['ros:noetic-ros-base-focal']
         compiler: ['g++', 'clang++']
         include:
           - os: 'ros:noetic-ros-base-focal'
@@ -45,14 +45,6 @@ jobs:
             compiler: 'clang++-11'
           - os: 'ros:noetic-ros-base-focal'
             compiler: 'clang++-12'
-          - os: 'ros:melodic-ros-base-bionic'
-            compiler: 'g++-8'
-          - os: 'ros:melodic-ros-base-bionic'
-            compiler: 'g++-9'
-          - os: 'ros:melodic-ros-base-bionic'
-            compiler: 'clang++-7'
-          - os: 'ros:melodic-ros-base-bionic'
-            compiler: 'clang++-8'
     steps:
       - name: Check out code
         uses: actions/checkout@v2
@@ -76,7 +68,7 @@ jobs:
       fail-fast: true
       matrix:
         zivid-version: ['2.5.0+19fa6891-1', '2.6.0+fa0036c5-1', '2.6.1+6cec8609-3', '2.7.0+e31dcbe2-1', '2.8.0+891708ba-1', '2.8.1+dd4dffea-1']
-        ros-distro: ['ros:noetic-ros-base-focal', 'ros:melodic-ros-base-bionic']
+        ros-distro: ['ros:noetic-ros-base-focal']
     steps:
       - name: Check out code
         uses: actions/checkout@v2

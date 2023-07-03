@@ -23,17 +23,10 @@ This is the official ROS driver for [Zivid 3D cameras](https://www.zivid.com/).
 
 ### ROS
 
-This driver supports Ubuntu 16.04 with ROS Kinetic, Ubuntu 18.04 with ROS Melodic and Ubuntu 20.04
-with ROS Noetic. Follow the official [ROS installation instructions](http://wiki.ros.org/ROS/Installation) for
-your OS.
+This driver supports Ubuntu 20.04 with ROS Noetic. Follow the official [ROS installation instructions](http://wiki.ros.org/ROS/Installation) for
+your OS. For support for earlier operating systems, see [releases](https://github.com/zivid/zivid-ros/releases).
 
 Also install catkin and git:
-
-Ubuntu 16.04/18.04:
-```bash
-sudo apt-get update
-sudo apt-get install -y python-catkin-tools git
-```
 
 Ubuntu 20.04:
 ```bash
@@ -58,15 +51,7 @@ An OpenCL 1.2 compatible GPU with driver installed is required by the SDK. Follo
 
 A C++17 compiler is required.
 
-Ubuntu 16.04:
-```bash
-sudo apt-get install -y software-properties-common
-sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-sudo apt-get update
-sudo apt-get install -y g++-8
-```
-
-Ubuntu 18.04/20.04:
+Ubuntu 20.04:
 ```bash
 sudo apt-get install -y g++
 ```
@@ -74,16 +59,6 @@ sudo apt-get install -y g++
 ### Downloading and building Zivid ROS driver
 
 First, load the setup.bash script into the current session.
-
-Ubuntu 16.04:
-```bash
-source /opt/ros/kinetic/setup.bash
-```
-
-Ubuntu 18.04:
-```bash
-source /opt/ros/melodic/setup.bash
-```
 
 Ubuntu 20.04:
 ```bash
@@ -111,12 +86,7 @@ rosdep install --from-paths src --ignore-src -r -y
 
 Finally, build the driver.
 
-Ubuntu 16.04:
-```bash
-catkin build -DCMAKE_CXX_COMPILER=/usr/bin/g++-8
-```
-
-Ubuntu 18.04/20.04:
+Ubuntu 20.04:
 ```bash
 catkin build
 ```

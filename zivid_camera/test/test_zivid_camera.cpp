@@ -150,16 +150,6 @@ protected:
     std::unique_ptr<Impl> impl_;
   };
 
-  void waitForReady()
-  {
-    std::cerr << __func__ << std::endl;
-    auto start = std::chrono::high_resolution_clock::now();
-    auto waitForReady = ros::service::waitForService(capture_service_name, node_ready_wait_duration);
-    auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start);
-    std::cerr << "waitForReady took " << dur.count() << " ms \n";
-    ASSERT_TRUE(waitForReady);
-  }
-
   void enableFirst3DAcquisition()
   {
     std::cerr << __func__ << std::endl;
@@ -285,15 +275,24 @@ class TestWithFileCamera : public ZividNodeTest
 protected:
   TestWithFileCamera() : camera_(zivid_.createFileCamera(file_camera_path))
   {
-    waitForReady();
   }
   Zivid::Application zivid_;
   Zivid::Camera camera_;
 };
 
+TEST_F(ZividNodeTest, testWaitForNodeReady)
+{
+  // This test must be the first test that is run
+  std::cerr << __func__ << std::endl;
+  auto start = std::chrono::high_resolution_clock::now();
+  auto waitForReady = ros::service::waitForService(capture_service_name, node_ready_wait_duration);
+  auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start);
+  std::cerr << "waitForReady took " << dur.count() << " ms \n";
+  ASSERT_TRUE(waitForReady);
+}
+
 TEST_F(ZividNodeTest, testServiceCameraInfoModelName)
 {
-  waitForReady();
   zivid_camera::CameraInfoModelName model_name;
   ASSERT_TRUE(ros::service::call("/zivid_camera/camera_info/model_name", model_name));
   ASSERT_EQ(model_name.response.model_name, std::string("FileCamera-") + ZIVID_CORE_VERSION);
@@ -301,7 +300,6 @@ TEST_F(ZividNodeTest, testServiceCameraInfoModelName)
 
 TEST_F(ZividNodeTest, testServiceCameraInfoSerialNumber)
 {
-  waitForReady();
   zivid_camera::CameraInfoSerialNumber serial_number;
   ASSERT_TRUE(ros::service::call("/zivid_camera/camera_info/serial_number", serial_number));
   ASSERT_EQ(serial_number.response.serial_number, "F1");
@@ -309,7 +307,6 @@ TEST_F(ZividNodeTest, testServiceCameraInfoSerialNumber)
 
 TEST_F(ZividNodeTest, testServiceIsConnected)
 {
-  waitForReady();
   zivid_camera::IsConnected is_connected;
   ASSERT_TRUE(ros::service::call("/zivid_camera/is_connected", is_connected));
   ASSERT_EQ(is_connected.response.is_connected, true);
@@ -317,8 +314,6 @@ TEST_F(ZividNodeTest, testServiceIsConnected)
 
 TEST_F(ZividNodeTest, testCapturePublishesTopics)
 {
-  waitForReady();
-
   auto color_camera_info_sub = subscribe<sensor_msgs::CameraInfo>(color_camera_info_topic_name);
   auto color_image_color_sub = subscribe<sensor_msgs::Image>(color_image_color_topic_name);
   auto depth_camera_info_sub = subscribe<sensor_msgs::CameraInfo>(depth_camera_info_topic_name);
@@ -661,7 +656,6 @@ TEST_F(CaptureOutputTest, testCaptureNormals)
 
 TEST_F(TestWithFileCamera, testSettingsEngine)
 {
-  waitForReady();
   enableFirst3DAcquisition();
   auto points_sub = subscribe<sensor_msgs::PointCloud2>(points_xyz_topic_name);
 
@@ -688,8 +682,6 @@ TEST_F(TestWithFileCamera, testSettingsEngine)
 
 TEST_F(ZividNodeTest, testCaptureCameraInfo)
 {
-  waitForReady();
-
   auto color_camera_info_sub = subscribe<sensor_msgs::CameraInfo>(color_camera_info_topic_name);
   auto depth_camera_info_sub = subscribe<sensor_msgs::CameraInfo>(depth_camera_info_topic_name);
   auto snr_camera_info_sub = subscribe<sensor_msgs::CameraInfo>(snr_camera_info_topic_name);
@@ -846,8 +838,6 @@ TEST_F(DynamicReconfigureMinMaxDefaultTest, testDynamicReconfigureSettingsMinMax
 {
   // Test the default, min and max configuration of the file camera used in the test suite. This
   // file camera is of model "Zivid One".
-  waitForReady();
-
   testGeneralMinMaxDefault<Zivid::Settings, zivid_camera::SettingsConfig>("/zivid_camera/settings/");
   testAcquisitionMinMaxDefault<Zivid::Settings, zivid_camera::SettingsAcquisitionConfig>("/zivid_camera/settings/", 10);
 

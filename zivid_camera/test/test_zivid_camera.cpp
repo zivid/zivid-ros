@@ -65,7 +65,7 @@ protected:
     const auto test_name = testing::UnitTest::GetInstance()->current_test_info()->name();
     std::cerr << "Start of test " << test_name << "\n";
   }
-  ~ZividNodeTestBase()
+  ~ZividNodeTestBase() override
   {
     const auto test_name = testing::UnitTest::GetInstance()->current_test_info()->name();
     std::cerr << "End of test " << test_name << "\n";
@@ -144,6 +144,7 @@ protected:
 
   void waitForReady()
   {
+    std::cerr << __func__ << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
     auto waitForReady = ros::service::waitForService(capture_service_name, node_ready_wait_duration);
     auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start);
@@ -153,6 +154,7 @@ protected:
 
   void enableFirst3DAcquisition()
   {
+    std::cerr << __func__ << std::endl;
     dynamic_reconfigure::Client<zivid_camera::SettingsAcquisitionConfig> acquisition_0_client("/zivid_camera/settings/"
                                                                                               "acquisition_0/");
     zivid_camera::SettingsAcquisitionConfig acquisition_0_cfg;
@@ -163,6 +165,7 @@ protected:
 
   void enableFirst2DAcquisition()
   {
+    std::cerr << __func__ << std::endl;
     dynamic_reconfigure::Client<zivid_camera::Settings2DAcquisitionConfig> acquisition_0_client("/zivid_camera/"
                                                                                                 "settings_2d/"
                                                                                                 "acquisition_0/");
@@ -174,6 +177,7 @@ protected:
 
   void enableFirst3DAcquisitionAndCapture()
   {
+    std::cerr << __func__ << std::endl;
     enableFirst3DAcquisition();
     zivid_camera::Capture capture;
     ASSERT_TRUE(ros::service::call(capture_service_name, capture));

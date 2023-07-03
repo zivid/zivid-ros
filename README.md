@@ -93,7 +93,7 @@ catkin build
 
 ## Getting started
 
-Connect the Zivid camera to your ethernet port on your PC. You can use the ZividListCameras command-line
+Connect the Zivid camera to your ethernet or USB3 port on your PC. You can use the ZividListCameras command-line
 tool available in the "Zivid Tools" package to confirm that your system has been configured correctly, and
 that the camera is discovered by your PC. You can also open Zivid Studio and connect to the camera.
 Close Zivid Studio before continuing with the rest of this guide.

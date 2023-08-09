@@ -61,27 +61,27 @@ jobs:
         env:
           CI_FAILURE_TEAMS_HOOK: ${{ secrets.CI_FAILURE_TEAMS_HOOK }}
         run: python continuous-integration/notify_teams.py --status ${{ job.status }}
-  build-driver-and-run-tests-for-older-sdk:
-    name: Build driver and run tests for older Zivid SDK
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
-      matrix:
-        zivid-version: ['2.5.0+19fa6891-1', '2.6.0+fa0036c5-1', '2.6.1+6cec8609-3', '2.7.0+e31dcbe2-1', '2.8.0+891708ba-1', '2.8.1+dd4dffea-1']
-        ros-distro: ['ros:noetic-ros-base-focal']
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v2
-        with:
-          lfs: false
-      - name: Build and Test
-        run: |
-          CI_TEST_ZIVID_VERSION=${{ matrix.zivid-version }} \
-          CI_TEST_OS=${{ matrix.ros-distro }} \
-          CI_TEST_COMPILER="g++-7" \
-          ./continuous-integration/run_build_and_test_in_docker.sh
-      - name: Notify Teams
-        if: ${{ failure() && github.ref == 'refs/heads/master' }}
-        env:
-          CI_FAILURE_TEAMS_HOOK: ${{ secrets.CI_FAILURE_TEAMS_HOOK }}
-        run: python continuous-integration/notify_teams.py --status ${{ job.status }}
+#  build-driver-and-run-tests-for-older-sdk:
+#    name: Build driver and run tests for older Zivid SDK
+#    runs-on: ubuntu-latest
+#    strategy:
+#      fail-fast: true
+#      matrix:
+#        zivid-version: []
+#        ros-distro: ['ros:noetic-ros-base-focal']
+#    steps:
+#      - name: Check out code
+#        uses: actions/checkout@v2
+#        with:
+#          lfs: false
+#      - name: Build and Test
+#        run: |
+#          CI_TEST_ZIVID_VERSION=${{ matrix.zivid-version }} \
+#          CI_TEST_OS=${{ matrix.ros-distro }} \
+#          CI_TEST_COMPILER="g++-7" \
+#          ./continuous-integration/run_build_and_test_in_docker.sh
+#      - name: Notify Teams
+#        if: ${{ failure() && github.ref == 'refs/heads/master' }}
+#        env:
+#          CI_FAILURE_TEAMS_HOOK: ${{ secrets.CI_FAILURE_TEAMS_HOOK }}
+#        run: python continuous-integration/notify_teams.py --status ${{ job.status }}

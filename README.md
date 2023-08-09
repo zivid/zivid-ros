@@ -36,7 +36,7 @@ sudo apt-get install -y python3-catkin-tools python3-osrf-pycommon git
 
 ### Zivid SDK
 
-To use the ROS driver you need to download and install the "Zivid Core" package. Zivid SDK version 2.5.0 to 2.9.0
+To use the ROS driver you need to download and install the "Zivid Core" package. Zivid SDK version 2.9.0
 is supported. See [releases](https://github.com/zivid/zivid-ros/releases) for older ROS driver releases that
 supports older SDK versions.
 
@@ -640,11 +640,11 @@ may try to connect to the same camera at the same time.
 This project comes with a set of unit and module tests to verify the provided functionality. To run
 the tests locally, first download and install the file camera used for testing:
 ```bash
-wget -q https://www.zivid.com/software/FileCameraZividOne.zip
-unzip ./FileCameraZividOne.zip
-rm ./FileCameraZividOne.zip
+wget -q https://www.zivid.com/software/FileCameraZivid2M70.zip
+unzip ./FileCameraZivid2M70.zip
+rm ./FileCameraZivid2M70.zip
 sudo mkdir -p /usr/share/Zivid/data/
-sudo mv ./FileCameraZividOne.zfc /usr/share/Zivid/data/
+sudo mv ./FileCameraZivid2M70.zfc /usr/share/Zivid/data/
 ```
 
 Then run the tests:

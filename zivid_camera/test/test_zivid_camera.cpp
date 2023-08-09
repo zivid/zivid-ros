@@ -107,7 +107,7 @@ protected:
   static constexpr auto normals_xyz_topic_name = "/zivid_camera/normals/xyz";
   static constexpr size_t num_settings_acquisition_dr_servers = 10;
   static constexpr size_t num_settings_2d_acquisition_dr_servers = 1;
-  static constexpr auto file_camera_path = "/usr/share/Zivid/data/FileCameraZividOne.zfc";
+  static constexpr auto file_camera_path = "/usr/share/Zivid/data/FileCameraZivid2M70.zfc";
 
   template <typename Type>
   class SubscriptionWrapper
@@ -246,15 +246,14 @@ protected:
 
   void assertCameraInfoForFileCamera(const sensor_msgs::CameraInfo& ci) const
   {
-    ASSERT_EQ(ci.width, 1920U);
+    ASSERT_EQ(ci.width, 1944U);
     ASSERT_EQ(ci.height, 1200U);
     ASSERT_EQ(ci.distortion_model, "plumb_bob");
 
     //     [fx  0 cx]
     // K = [ 0 fy cy]
     //     [ 0  0  1]
-    assertArrayFloatEq(
-        ci.K, std::array<double, 9>{ 2759.12329102, 0, 958.78460693, 0, 2758.73681641, 634.94018555, 0, 0, 1 });
+    assertArrayFloatEq(ci.K, std::array<double, 9>{ 1781.448, 0, 990.49268, 0, 1781.5297, 585.81781, 0, 0, 1 });
 
     // R = I
     assertArrayFloatEq(ci.R, std::array<double, 9>{ 1, 0, 0, 0, 1, 0, 0, 0, 1 });
@@ -262,8 +261,8 @@ protected:
     //     [fx'  0  cx' Tx]
     // P = [ 0  fy' cy' Ty]
     //     [ 0   0   1   0]
-    assertArrayFloatEq(ci.P, std::array<double, 12>{ 2759.12329102, 0, 958.78460693, 0, 0, 2758.73681641, 634.94018555,
-                                                     0, 0, 0, 1, 0 });
+    assertArrayFloatEq(ci.P,
+                       std::array<double, 12>{ 1781.448, 0, 990.49268, 0, 0, 1781.5297, 585.81781, 0, 0, 0, 1, 0 });
   }
 };
 
@@ -410,7 +409,7 @@ TEST_F(CaptureOutputTest, testCapturePointsXYZGBA)
 
   const auto& last_pc2 = points_sub.lastMessage();
   ASSERT_TRUE(last_pc2.has_value());
-  assertSensorMsgsPointCloud2Meta(*last_pc2, 1920U, 1200U, 16U);
+  assertSensorMsgsPointCloud2Meta(*last_pc2, 1944U, 1200U, 16U);
   ASSERT_EQ(last_pc2->fields.size(), 4U);
   assertPointCloud2Field(last_pc2->fields[0], "x", 0, sensor_msgs::PointField::FLOAT32, 1);
   assertPointCloud2Field(last_pc2->fields[1], "y", 4, sensor_msgs::PointField::FLOAT32, 1);
@@ -448,7 +447,7 @@ TEST_F(CaptureOutputTest, testCapturePointsXYZ)
 
   const auto& point_cloud = points_sub.lastMessage();
   ASSERT_TRUE(point_cloud.has_value());
-  assertSensorMsgsPointCloud2Meta(*point_cloud, 1920U, 1200U,
+  assertSensorMsgsPointCloud2Meta(*point_cloud, 1944U, 1200U,
                                   16U);  // 3x4 bytes for xyz + 4 bytes padding (w) = 16 bytes total
   ASSERT_EQ(point_cloud->fields.size(), 3U);
   assertPointCloud2Field(point_cloud->fields[0], "x", 0, sensor_msgs::PointField::FLOAT32, 1);
@@ -473,7 +472,6 @@ TEST_F(CaptureOutputTest, testCapturePointsXYZ)
   }
 }
 
-#if (ZIVID_CORE_VERSION_MAJOR >= 2 && ZIVID_CORE_VERSION_MINOR >= 9) || ZIVID_CORE_VERSION_MAJOR > 2
 TEST_F(CaptureOutputTest, testCapturePointsXYZWithROI)
 {
   auto points_sub = subscribe<sensor_msgs::PointCloud2>(points_xyz_topic_name);
@@ -482,17 +480,17 @@ TEST_F(CaptureOutputTest, testCapturePointsXYZWithROI)
   ASSERT_TRUE(settings_client.getDefaultConfiguration(configOriginal, dr_get_max_wait_duration));
   auto config = configOriginal;
   config.region_of_interest_box_enabled = true;
-  config.region_of_interest_box_point_o_x = 1;
-  config.region_of_interest_box_point_o_y = 0;
-  config.region_of_interest_box_point_o_z = 619;
-  config.region_of_interest_box_point_a_x = 111;
-  config.region_of_interest_box_point_a_y = 2;
-  config.region_of_interest_box_point_a_z = 620;
-  config.region_of_interest_box_point_b_x = 3;
-  config.region_of_interest_box_point_b_y = 110;
-  config.region_of_interest_box_point_b_z = 621;
-  config.region_of_interest_box_extents_min = -10;
-  config.region_of_interest_box_extents_max = 10;
+  config.region_of_interest_box_point_o_x = -370.5;
+  config.region_of_interest_box_point_o_y = -288;
+  config.region_of_interest_box_point_o_z = 886;
+  config.region_of_interest_box_point_a_x = -354;
+  config.region_of_interest_box_point_a_y = 191.5;
+  config.region_of_interest_box_point_a_z = 673;
+  config.region_of_interest_box_point_b_x = 420;
+  config.region_of_interest_box_point_b_y = -250;
+  config.region_of_interest_box_point_b_z = 876.5;
+  config.region_of_interest_box_extents_min = -2;
+  config.region_of_interest_box_extents_max = 200.5;
   ASSERT_TRUE(settings_client.setConfiguration(config));
 
   enableFirst3DAcquisitionAndCapture();
@@ -503,10 +501,10 @@ TEST_F(CaptureOutputTest, testCapturePointsXYZWithROI)
       Zivid::Settings::Acquisitions{ Zivid::Settings::Acquisition{} },
       Zivid::Settings::RegionOfInterest::Box{
           Zivid::Settings::RegionOfInterest::Box::Enabled::yes,
-          Zivid::Settings::RegionOfInterest::Box::PointO{ 1, 0, 619 },
-          Zivid::Settings::RegionOfInterest::Box::PointA{ 111, 2, 620 },
-          Zivid::Settings::RegionOfInterest::Box::PointB{ 3, 110, 621 },
-          Zivid::Settings::RegionOfInterest::Box::Extents{ -10, 10 },
+          Zivid::Settings::RegionOfInterest::Box::PointO{ -370.5, -288, 886 },
+          Zivid::Settings::RegionOfInterest::Box::PointA{ -354, 191.5, 673 },
+          Zivid::Settings::RegionOfInterest::Box::PointB{ 420, -250, 876.5 },
+          Zivid::Settings::RegionOfInterest::Box::Extents{ -2, 200.5 },
       },
   });
 
@@ -537,7 +535,6 @@ TEST_F(CaptureOutputTest, testCapturePointsXYZWithROI)
 
   ASSERT_TRUE(settings_client.setConfiguration(configOriginal));
 }
-#endif
 
 TEST_F(CaptureOutputTest, testCapture3DColorImage)
 {
@@ -547,7 +544,7 @@ TEST_F(CaptureOutputTest, testCapture3DColorImage)
   const auto image = color_image_sub.lastMessage();
   ASSERT_TRUE(image.has_value());
   const std::size_t bytes_per_pixel = 4U;
-  assertSensorMsgsImageMeta(*image, 1920U, 1200U, bytes_per_pixel, "rgba8");
+  assertSensorMsgsImageMeta(*image, 1944U, 1200U, bytes_per_pixel, "rgba8");
 
   const auto point_cloud = captureViaSDKDefaultSettings();
   const auto expected_rgba = point_cloud.copyData<Zivid::ColorRGBA>();
@@ -563,7 +560,7 @@ TEST_F(CaptureOutputTest, testCaptureDepthImage)
   const auto image = depth_image_sub.lastMessage();
   ASSERT_TRUE(image.has_value());
   const std::size_t bytes_per_pixel = 4U;
-  assertSensorMsgsImageMeta(*image, 1920U, 1200U, bytes_per_pixel, "32FC1");
+  assertSensorMsgsImageMeta(*image, 1944U, 1200U, bytes_per_pixel, "32FC1");
 
   const auto point_cloud = captureViaSDKDefaultSettings();
   const auto expected_z = point_cloud.copyData<Zivid::PointZ>();
@@ -586,7 +583,7 @@ TEST_F(CaptureOutputTest, testCaptureSNRImage)
   const auto image = snr_image_sub.lastMessage();
   ASSERT_TRUE(image.has_value());
   const std::size_t bytes_per_pixel = 4U;
-  assertSensorMsgsImageMeta(*image, 1920U, 1200U, bytes_per_pixel, "32FC1");
+  assertSensorMsgsImageMeta(*image, 1944U, 1200U, bytes_per_pixel, "32FC1");
 
   const auto point_cloud = captureViaSDKDefaultSettings();
   const auto expected_snr = point_cloud.copyData<Zivid::SNR>();
@@ -608,7 +605,7 @@ TEST_F(CaptureOutputTest, testCaptureNormals)
 
   const auto& point_cloud = normals_sub.lastMessage();
   ASSERT_TRUE(point_cloud.has_value());
-  assertSensorMsgsPointCloud2Meta(*point_cloud, 1920U, 1200U,
+  assertSensorMsgsPointCloud2Meta(*point_cloud, 1944U, 1200U,
                                   3U * sizeof(float));  // 12 bytes total
   ASSERT_EQ(point_cloud->fields.size(), 3U);
   assertPointCloud2Field(point_cloud->fields[0], "normal_x", 0, sensor_msgs::PointField::FLOAT32, 1);
@@ -718,7 +715,7 @@ TEST_F(CaptureOutputTest, testCapture2D)
 
   auto verify_image_and_camera_info = [this](const auto& img, const auto& info) {
     assertCameraInfoForFileCamera(info);
-    assertSensorMsgsImageMeta(img, 1920U, 1200U, 4U, "rgba8");
+    assertSensorMsgsImageMeta(img, 1944U, 1200U, 4U, "rgba8");
     assertSensorMsgsImageContents(img, capture2DViaSDKDefaultSettings().imageRGBA());
   };
 

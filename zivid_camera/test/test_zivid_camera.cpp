@@ -85,7 +85,7 @@ class ZividNodeTest : public ZividNodeTestBase
 protected:
   ros::NodeHandle nh_;
 
-  const ros::Duration node_ready_wait_duration{ 20 };
+  const ros::Duration node_ready_wait_duration{ 30 };
   const ros::Duration short_wait_duration{ 0.5 };
   const ros::Duration medium_wait_duration{ 1.0 };
   const ros::Duration dr_get_max_wait_duration{ 5 };

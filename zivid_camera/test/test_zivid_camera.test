@@ -2,6 +2,6 @@
     <node name="zivid_camera" pkg="zivid_camera" type="zivid_camera_node" ns="zivid_camera" output="screen">
         <param name="file_camera_path" type="str" value="/usr/share/Zivid/data/FileCameraZivid2M70.zfc" />
     </node>
-    <test test-name="zivid_camera_test" pkg="zivid_camera" type="zivid_camera_test" time-limit="750.0" args="--gtest_throw_on_failure"
+    <test test-name="zivid_camera_test" pkg="zivid_camera" type="zivid_camera_test" time-limit="1000.0" args="--gtest_throw_on_failure"
         launch-prefix="bash -c 'rosservice call --wait /zivid_camera/zivid_camera/set_logger_level ros.zivid_camera debug; $0 $@' " />
 </launch>

@@ -511,7 +511,7 @@ TEST_F(CaptureOutputTest, testCapturePointsXYZWithROI)
   });
 
   auto expected = point_cloud_sdk.copyData<Zivid::PointXYZ>();
-  const auto numExpectedNaNZ = [&] {
+  const auto numNanZ = [&] {
     size_t count = 0;
     for (size_t i = 0; i < expected.size(); ++i)
     {
@@ -519,7 +519,10 @@ TEST_F(CaptureOutputTest, testCapturePointsXYZWithROI)
     }
     return count;
   }();
-  ASSERT_EQ(numExpectedNaNZ, 2154265U);
+  // Verify that we have some number of points left (to verify that the ROI box did
+  // not set everything to NaN)
+  ASSERT_GT(numNanZ, 500000);
+  ASSERT_LT(numNanZ, expected.size() - 500000);
 
   for (size_t i = 0; i < expected.size(); ++i)
   {

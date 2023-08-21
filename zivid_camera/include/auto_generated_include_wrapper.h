@@ -19,3 +19,5 @@
 #include <zivid_camera/IsConnected.h>
 #include <zivid_camera/LoadSettingsFromFile.h>
 #include <zivid_camera/LoadSettings2DFromFile.h>
+#include <zivid_camera/ProjectImageStart.h>
+#include <zivid_camera/ProjectImageStop.h>

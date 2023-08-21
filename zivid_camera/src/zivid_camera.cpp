@@ -81,6 +81,15 @@ std::string toString(zivid_camera::CameraStatus camera_status)
   return "N/A";
 }
 
+Zivid::Image<Zivid::ColorBGRA> createProjectorImage(const Zivid::Resolution& projectorResolution,
+                                                    const Zivid::ColorBGRA& ZividColor)
+{
+  const std::vector<Zivid::ColorBGRA> imageData(projectorResolution.size(), ZividColor);
+  Zivid::Image<Zivid::ColorBGRA> projectorImage{ projectorResolution, imageData.begin(), imageData.end() };
+
+  return projectorImage;
+}
+
 }  // namespace
 
 namespace zivid_camera
@@ -243,6 +252,10 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   capture_2d_service_ = nh_.advertiseService("capture_2d", &ZividCamera::capture2DServiceHandler, this);
   capture_assistant_suggest_settings_service_ = nh_.advertiseService(
       "capture_assistant/suggest_settings", &ZividCamera::captureAssistantSuggestSettingsServiceHandler, this);
+  project_image_start_service_ =
+      nh_.advertiseService("project_image_start", &ZividCamera::projectImageStartServiceHandler, this);
+  project_image_stop_service_ =
+      nh_.advertiseService("project_image_stop", &ZividCamera::projectImageStopServiceHandler, this);
   load_settings_from_file_service_ =
       nh_.advertiseService("load_settings_from_file", &ZividCamera::loadSettingsFromFileServiceHandler, this);
   load_settings_2d_from_file_service_ =
@@ -418,6 +431,34 @@ bool ZividCamera::captureAssistantSuggestSettingsServiceHandler(CaptureAssistant
   ROS_INFO_STREAM("CaptureAssistant::suggestSettings returned " << suggested_settings.acquisitions().size()
                                                                 << " acquisitions");
   capture_settings_controller_->setZividSettings(suggested_settings);
+
+  return true;
+}
+
+bool ZividCamera::projectImageStartServiceHandler(ProjectImageStart::Request&, ProjectImageStart::Response&)
+{
+  ROS_DEBUG_STREAM(__func__);
+
+  serviceHandlerHandleCameraConnectionLoss();
+
+  const auto projectorResolution = Zivid::Experimental::Projection::projectorResolution(camera_);
+
+  const auto redColor = Zivid::ColorBGRA(0, 0, 255, 255);
+
+  auto projectorImage = createProjectorImage(projectorResolution, redColor);
+
+  projectedImage_ = Zivid::Experimental::Projection::showImage(camera_, projectorImage);
+
+  return true;
+}
+
+bool ZividCamera::projectImageStopServiceHandler(ProjectImageStop::Request&, ProjectImageStop::Response&)
+{
+  ROS_DEBUG_STREAM(__func__);
+
+  serviceHandlerHandleCameraConnectionLoss();
+
+  projectedImage_.reset();
 
   return true;
 }

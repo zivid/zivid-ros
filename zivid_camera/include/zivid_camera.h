@@ -14,7 +14,10 @@
 
 #include <Zivid/Application.h>
 #include <Zivid/Camera.h>
+#include <Zivid/Experimental/Projection.h>
 #include <Zivid/Image.h>
+
+#include <optional>
 
 namespace Zivid
 {
@@ -46,6 +49,8 @@ private:
   bool capture2DServiceHandler(Capture2D::Request& req, Capture2D::Response& res);
   bool captureAssistantSuggestSettingsServiceHandler(CaptureAssistantSuggestSettings::Request& req,
                                                      CaptureAssistantSuggestSettings::Response& res);
+  bool projectImageStartServiceHandler(ProjectImageStart::Request&, ProjectImageStart::Response&);
+  bool projectImageStopServiceHandler(ProjectImageStop::Request&, ProjectImageStop::Response&);
   bool loadSettingsFromFileServiceHandler(LoadSettingsFromFile::Request& req, LoadSettingsFromFile::Response&);
   bool loadSettings2DFromFileServiceHandler(LoadSettings2DFromFile::Request& req, LoadSettings2DFromFile::Response&);
   void serviceHandlerHandleCameraConnectionLoss();
@@ -99,6 +104,8 @@ private:
   ros::ServiceServer capture_service_;
   ros::ServiceServer capture_2d_service_;
   ros::ServiceServer capture_assistant_suggest_settings_service_;
+  ros::ServiceServer project_image_start_service_;
+  ros::ServiceServer project_image_stop_service_;
   ros::ServiceServer load_settings_from_file_service_;
   ros::ServiceServer load_settings_2d_from_file_service_;
   ros::ServiceServer is_connected_service_;
@@ -108,5 +115,6 @@ private:
   Zivid::Camera camera_;
   std::string frame_id_;
   unsigned int header_seq_;
+  std::optional<Zivid::Experimental::ProjectedImage> projectedImage_;
 };
 }  // namespace zivid_camera

@@ -43,6 +43,7 @@ function(register_cpp_sample)
 endfunction()
 
 register_cpp_sample(NAME sample_capture_cpp SRC src/sample_capture.cpp)
+register_cpp_sample(NAME sample_2d_capture_with_periodic_3d_capture_cpp SRC src/sample_2d_capture_with_periodic_3d_capture.cpp)
 register_cpp_sample(NAME sample_capture_2d_cpp SRC src/sample_capture_2d.cpp)
 register_cpp_sample(NAME sample_capture_assistant_cpp SRC src/sample_capture_assistant.cpp)
 register_cpp_sample(NAME sample_capture_with_settings_from_yml_cpp SRC src/sample_capture_with_settings_from_yml.cpp)

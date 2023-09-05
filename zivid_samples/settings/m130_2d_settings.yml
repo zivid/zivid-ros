@@ -1,0 +1,17 @@
+__version__:
+  serializer: 1
+  data: 3
+Settings2D:
+  Acquisitions:
+    - Acquisition:
+        Aperture: 2.38
+        Brightness: 2
+        ExposureTime: 5000
+        Gain: 2
+  Processing:
+    Color:
+      Balance:
+        Blue: 1
+        Green: 1
+        Red: 1
+      Gamma: 0.6

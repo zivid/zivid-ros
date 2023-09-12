@@ -2,10 +2,10 @@
 <package format="2">
   <name>zivid_description</name>
   <version>0.1.0</version>
-  <description>Description of visual and collision geometry of Zivid One+ 3D Camera</description>
+  <description>Description of visual and collision geometry of Zivid One+ and Zivid Two 3D Camera</description>
   
   <maintainer email="support@zivid.com">Zivid</maintainer>
-  <author email="d.kroezen@tudelft.nl">Dave Kroezen - SAM|XL</author>
+  <author email="d.kroezen@tudelft.nl">Dave Kroezen - SAM XL</author>
 
   <license>BSD3</license>
 

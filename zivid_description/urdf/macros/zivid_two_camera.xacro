@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+    
+    <xacro:macro name="zivid_two_camera" params="prefix type">
+        <!-- Zivid Base Link -->
+        <link name="${prefix}base_link">
+            <!-- Visuals -->
+            <visual>
+                <origin xyz="-0.0395 -0.0845 0.0" rpy="${0.5*pi} 0 ${0.5*pi}"/>
+                <geometry>
+                    <mesh filename="package://zivid_description/meshes/visual/zivid-two.stl" scale="0.001 0.001 0.001"/>
+                </geometry>
+                <material name="zivid_gray"/>
+            </visual>
+
+            <!-- Collisions -->
+            <collision>
+                <origin xyz="-0.0395 -0.0845 0.0" rpy="${0.5*pi} 0 ${0.5*pi}"/>
+                <geometry>
+                    <mesh filename="package://zivid_description/meshes/collision/zivid-two.stl" scale="0.001 0.001 0.001"/>
+                </geometry>
+            </collision>
+        </link>
+
+        <!-- Zivid Optical Frame (Measurement Frame)-->
+        <link name="${prefix}optical_frame"/>
+
+        <!-- Zivid Optical (Measurement) Joint -->
+        <joint name="${prefix}optical_joint" type="fixed">
+            <origin xyz="0.04702 0.05584 0.0295" rpy="-${0.5*pi} 0 -${0.5*pi}"/>
+            <parent link="${prefix}base_link"/>
+            <child link="${prefix}optical_frame"/>
+        </joint>
+    </xacro:macro>
+</robot>

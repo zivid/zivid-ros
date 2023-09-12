@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<robot name="zivid_two_camera_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <!-- Specify the type of the Zivid two camera -->
+    <!--   Options: ZIVID_TWO_M70, ZIVID_TWO_M100, ZIVID_TWO_PLUS_L110, ZIVID_TWO_PLUS_M60, ZIVID_TWO_PLUS_M130 -->
+    <xacro:arg name="type" default="ZIVID_TWO_M70" />
+
+    <!-- Import Rviz colors -->
+    <xacro:include filename="$(find zivid_description)/urdf/zivid_materials.xacro" />
+
+    <!-- Import and load Zivid camera -->
+    <xacro:include filename="$(find zivid_description)/urdf/macros/zivid_two_camera.xacro"/>
+    <xacro:zivid_two_camera prefix="" type="$(arg type)"/>
+</robot>

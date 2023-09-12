@@ -1,0 +1,7 @@
+<launch>
+    <!-- Specify the type of the Zivid two camera -->
+    <!--   Options: ZIVID_TWO_M70, ZIVID_TWO_M100, ZIVID_TWO_PLUS_L110, ZIVID_TWO_PLUS_M60, ZIVID_TWO_PLUS_M130 -->
+    <arg name="type" default="ZIVID_TWO_M70" />
+    
+    <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find zivid_description)/urdf/zivid_two_camera.urdf.xacro' type:=$(arg type)"/>
+</launch>

@@ -2,20 +2,11 @@
 
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
 
-    <!-- Zivid One+ Types: Can be accessed globally and used as identifiers -->
-    <xacro:property name="Zivid_One_Plus_S" value="0" scope="global" />
-    <xacro:property name="Zivid_One_Plus_M" value="1" scope="global" />
-    <xacro:property name="Zivid_One_Plus_L" value="2" scope="global" />
-
     <!-- Zivid One+ Optical Frame Angles -->
     <xacro:property name="angle_type_s" value="15.0" />
     <xacro:property name="angle_type_m" value="8.5" />
     <xacro:property name="angle_type_l" value="6.0" />
 
-    <!-- Material Properties -->
-    <material name="zivid_gray">
-        <color rgba="0.25 0.25 0.25 1"/>
-    </material>
 
     <xacro:macro name="zivid_one_plus_camera" params="prefix type">
         <!-- Zivid Base Link -->
@@ -42,13 +33,13 @@
         <link name="${prefix}optical_frame"/>
 
         <!-- Set the angle of the optical frame based on the type -->
-        <xacro:if value="${type == Zivid_One_Plus_S}" >
+        <xacro:if value="${type == 'ZIVID_ONE_PLUS_S'}" >
             <xacro:property name="optical_frame_angle" value="${angle_type_s}" />
         </xacro:if>
-        <xacro:if value="${type == Zivid_One_Plus_M}" >
+        <xacro:if value="${type == 'ZIVID_ONE_PLUS_M'}" >
             <xacro:property name="optical_frame_angle" value="${angle_type_m}" />
         </xacro:if>
-        <xacro:if value="${type == Zivid_One_Plus_L}" >
+        <xacro:if value="${type == 'ZIVID_ONE_PLUS_L'}" >
             <xacro:property name="optical_frame_angle" value="${angle_type_l}" />
         </xacro:if>
 

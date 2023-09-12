@@ -1,0 +1,12 @@
+<launch>
+    <!-- Specify the type of the Zivid two camera -->
+    <!--   Options: ZIVID_ONE_PLUS_S, ZIVID_ONE_PLUS_M, ZIVID_ONE_PLUS_L -->
+    <arg name="type" default="ZIVID_ONE_PLUS_M" />
+
+    <include file="$(find zivid_description)/launch/load_zivid_one_plus_camera.launch">
+        <arg name="type" default="$(arg type)"/>
+    </include>
+
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find zivid_description)/config/config.rviz" required="true"/>
+</launch>

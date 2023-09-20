@@ -2,6 +2,9 @@
 
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
 
+    <!-- Import Rviz colors -->
+    <xacro:include filename="$(find zivid_description)/urdf/zivid_materials.xacro" />
+
     <!-- Zivid One+ Optical Frame Angles -->
     <xacro:property name="angle_type_s" value="15.0" />
     <xacro:property name="angle_type_m" value="8.5" />

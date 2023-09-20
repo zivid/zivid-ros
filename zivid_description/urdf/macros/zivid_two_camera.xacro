@@ -1,7 +1,10 @@
 <?xml version="1.0"?>
 
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
-    
+
+    <!-- Import Rviz colors -->
+    <xacro:include filename="$(find zivid_description)/urdf/zivid_materials.xacro" />
+
     <xacro:macro name="zivid_two_camera" params="prefix type">
         <!-- Zivid Base Link -->
         <link name="${prefix}base_link">

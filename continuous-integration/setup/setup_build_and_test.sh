@@ -36,7 +36,8 @@ function install_opencl_cpu_runtime {
     apt update || exit $?
 
     # Install the OpenCL runtime
-    apt --assume-yes install intel-oneapi-runtime-opencl intel-oneapi-runtime-compilers || exit $?
+    # TODO: remove libxml2 once Intel sorts out its package dependencies
+    apt --assume-yes install libxml2 intel-oneapi-runtime-opencl-2024 intel-oneapi-runtime-compilers-2024 || exit $?
 }
 
 install_opencl_cpu_runtime || exit $?

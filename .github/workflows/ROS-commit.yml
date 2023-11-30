@@ -8,7 +8,7 @@ on:
     - cron:  '0 22 * * *'
 
 env:
-  NEWEST_ZIVID_VERSION: '2.10.1+50b274e8-7'
+  NEWEST_ZIVID_VERSION: '2.11.0-rc-3+90dbe1e8-1'
 
 jobs:
   code-analysis:

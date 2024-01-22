@@ -240,6 +240,8 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
       nh_.advertiseService("camera_info/serial_number", &ZividCamera::cameraInfoSerialNumberServiceHandler, this);
   is_connected_service_ = nh_.advertiseService("is_connected", &ZividCamera::isConnectedServiceHandler, this);
   capture_service_ = nh_.advertiseService("capture", &ZividCamera::captureServiceHandler, this);
+  capture_and_save_service_ =
+      nh_.advertiseService("capture_and_save", &ZividCamera::captureAndSaveServiceHandler, this);
   capture_2d_service_ = nh_.advertiseService("capture_2d", &ZividCamera::capture2DServiceHandler, this);
   capture_assistant_suggest_settings_service_ = nh_.advertiseService(
       "capture_assistant/suggest_settings", &ZividCamera::captureAssistantSuggestSettingsServiceHandler, this);
@@ -339,18 +341,19 @@ bool ZividCamera::captureServiceHandler(Capture::Request&, Capture::Response&)
 {
   ROS_DEBUG_STREAM(__func__);
 
-  serviceHandlerHandleCameraConnectionLoss();
+  invokeCaptureAndPublishFrame();
 
-  const auto settings = capture_settings_controller_->zividSettings();
+  return true;
+}
 
-  if (settings.acquisitions().isEmpty())
-  {
-    throw std::runtime_error("capture called with 0 enabled acquisitions!");
-  }
+bool ZividCamera::captureAndSaveServiceHandler(CaptureAndSave::Request& req, CaptureAndSave::Response&)
+{
+  ROS_DEBUG_STREAM(__func__);
 
-  ROS_INFO("Capturing with %zd acquisition(s)", settings.acquisitions().size());
-  ROS_DEBUG_STREAM(settings);
-  publishFrame(camera_.capture(settings));
+  const auto frame = invokeCaptureAndPublishFrame();
+  ROS_INFO("Saving frame to '%s'", req.file_path.c_str());
+  frame.save(req.file_path);
+
   return true;
 }
 
@@ -454,7 +457,7 @@ bool ZividCamera::isConnectedServiceHandler(IsConnected::Request&, IsConnected::
   return true;
 }
 
-void ZividCamera::publishFrame(Zivid::Frame&& frame)
+void ZividCamera::publishFrame(const Zivid::Frame& frame)
 {
   const bool publish_points_xyz = shouldPublishPointsXYZ();
   const bool publish_points_xyzrgba = shouldPublishPointsXYZRGBA();
@@ -692,6 +695,26 @@ sensor_msgs::CameraInfoConstPtr ZividCamera::makeCameraInfo(const std_msgs::Head
   msg->P[10] = 1;
 
   return msg;
+}
+
+Zivid::Frame ZividCamera::invokeCaptureAndPublishFrame()
+{
+  ROS_DEBUG_STREAM(__func__);
+
+  serviceHandlerHandleCameraConnectionLoss();
+
+  const auto settings = capture_settings_controller_->zividSettings();
+
+  if (settings.acquisitions().isEmpty())
+  {
+    throw std::runtime_error("capture called with 0 enabled acquisitions!");
+  }
+
+  ROS_INFO("Capturing with %zd acquisition(s)", settings.acquisitions().size());
+  ROS_DEBUG_STREAM(settings);
+  const auto frame = camera_.capture(settings);
+  publishFrame(frame);
+  return frame;
 }
 
 }  // namespace zivid_camera

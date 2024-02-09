@@ -519,10 +519,10 @@ calling the [capture_2d](#capture_2d) service, otherwise the service will return
 | Name                                      | Type   |  Zivid API Setting             |  Note  |
 |-------------------------------------------|--------|--------------------------------|--------|
 | `settings_2d/acquisition_0/enabled`       | bool   |
-| `settings_2d/acquisition_0/aperture`      | double | [Settings2D::Acquisition::Aperture](https://www.zivid.com/software/releases/2.11.1+de9b5dae-1/doc/cpp/classZivid_1_1Settings2D_1_1Acquisition_1_1Aperture.html)
-| `settings_2d/acquisition_0/brightness`    | double | [Settings2D::Acquisition::Brightness](https://www.zivid.com/software/releases/2.11.1+de9b5dae-1/doc/cpp/classZivid_1_1Settings2D_1_1Acquisition_1_1Brightness.html)
-| `settings_2d/acquisition_0/exposure_time` | int    | [Settings2D::Acquisition::ExposureTime](https://www.zivid.com/software/releases/2.11.1+de9b5dae-1/doc/cpp/classZivid_1_1Settings2D_1_1Acquisition_1_1ExposureTime.html) | Microseconds
-| `settings_2d/acquisition_0/gain`          | double | [Settings2D::Acquisition::Gain](https://www.zivid.com/software/releases/2.11.1+de9b5dae-1/doc/cpp/classZivid_1_1Settings2D_1_1Acquisition_1_1Gain.html)
+| `settings_2d/acquisition_0/aperture`      | double | [Settings2D::Acquisition::Aperture](https://downloads.zivid.com/sdk/releases/2.11.1+de9b5dae-1/doc/cpp/classZivid_1_1Settings2D_1_1Acquisition_1_1Aperture.html)
+| `settings_2d/acquisition_0/brightness`    | double | [Settings2D::Acquisition::Brightness](https://downloads.zivid.com/sdk/releases/2.11.1+de9b5dae-1/doc/cpp/classZivid_1_1Settings2D_1_1Acquisition_1_1Brightness.html)
+| `settings_2d/acquisition_0/exposure_time` | int    | [Settings2D::Acquisition::ExposureTime](https://downloads.zivid.com/sdk/releases/2.11.1+de9b5dae-1/doc/cpp/classZivid_1_1Settings2D_1_1Acquisition_1_1ExposureTime.html) | Microseconds
+| `settings_2d/acquisition_0/gain`          | double | [Settings2D::Acquisition::Gain](https://downloads.zivid.com/sdk/releases/2.11.1+de9b5dae-1/doc/cpp/classZivid_1_1Settings2D_1_1Acquisition_1_1Gain.html)
 
 #### Processing settings
 

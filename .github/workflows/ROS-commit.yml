@@ -8,7 +8,7 @@ on:
     - cron:  '0 22 * * *'
 
 env:
-  NEWEST_ZIVID_VERSION: '2.11.0+95829246-1'
+  NEWEST_ZIVID_VERSION: '2.11.1+de9b5dae-1'
 
 jobs:
   code-analysis:
@@ -67,7 +67,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        zivid-version: ['2.9.0+4dbba385-1', '2.10.0+8ce7dae3-2', '2.10.1+50b274e8-7']
+        zivid-version: ['2.9.0+4dbba385-1', '2.10.0+8ce7dae3-2', '2.10.1+50b274e8-7', '2.11.0+95829246-1']
         ros-distro: ['ros:noetic-ros-base-focal']
     steps:
       - name: Check out code

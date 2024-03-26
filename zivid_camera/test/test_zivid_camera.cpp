@@ -676,8 +676,8 @@ TEST_F(TestWithFileCamera, testSettingsEngine)
   dynamic_reconfigure::Client<zivid_camera::SettingsConfig> settings_client("/zivid_camera/settings/");
   zivid_camera::SettingsConfig settings_cfg;
   ASSERT_TRUE(settings_client.getDefaultConfiguration(settings_cfg, dr_get_max_wait_duration));
-  ASSERT_EQ(settings_cfg.experimental_engine, zivid_camera::Settings_ExperimentalEnginePhase);
-  settings_cfg.experimental_engine = zivid_camera::Settings_ExperimentalEngineStripe;
+  ASSERT_EQ(settings_cfg.engine, zivid_camera::Settings_EnginePhase);
+  settings_cfg.engine = zivid_camera::Settings_EngineStripe;
   settings_cfg.processing_filters_reflection_removal_enabled = true;
   settings_cfg.processing_filters_experimental_contrast_distortion_correction_enabled = true;
   ASSERT_TRUE(settings_client.setConfiguration(settings_cfg));
@@ -687,7 +687,7 @@ TEST_F(TestWithFileCamera, testSettingsEngine)
   ASSERT_FALSE(ros::service::call(capture_service_name, capture));
   ASSERT_EQ(points_sub.numMessages(), 0U);
 
-  settings_cfg.experimental_engine = zivid_camera::Settings_ExperimentalEnginePhase;
+  settings_cfg.engine = zivid_camera::Settings_EnginePhase;
   ASSERT_TRUE(settings_client.setConfiguration(settings_cfg));
   ASSERT_TRUE(ros::service::call(capture_service_name, capture));
   short_wait_duration.sleep();

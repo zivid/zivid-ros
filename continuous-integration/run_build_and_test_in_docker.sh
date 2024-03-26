@@ -20,10 +20,10 @@ echo "CI_TEST_ZIVID_VERSION=$CI_TEST_ZIVID_VERSION"
 echo "CI_TEST_OS=$CI_TEST_OS"
 echo "CI_TEST_COMPILER=$CI_TEST_COMPILER"
 
-docker run \
+docker run -it \
     --volume $PWD:/host  \
     --workdir /host/continuous-integration  \
     --env CI_TEST_ZIVID_VERSION="$CI_TEST_ZIVID_VERSION" \
     --env CI_TEST_COMPILER="$CI_TEST_COMPILER" \
     $CI_TEST_OS  \
-    bash -c "./build_and_test.sh" || exit $?
+    bash -c "./build_and_test.sh" && bash || exit $?

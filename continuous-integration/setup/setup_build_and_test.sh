@@ -82,23 +82,19 @@ elif [[ "$CI_TEST_COMPILER" == "clang++"    ||
     apt-yes install ${CI_TEST_COMPILER//\+/} || exit $?
 
 else
-    echo "Unhandled CI_TEST_COMPILER $CI_TEST_COMPILER"
+    echo "Unhandled CI_TEST_COMPILER \"$CI_TEST_COMPILER\""
     exit 1
 fi
 
-echo "Install Zivid and Telicam debian packages"
+echo "Install Zivid debian packages"
 
 ZIVID_RELEASE_DIR="https://downloads.zivid.com/sdk/releases/$CI_TEST_ZIVID_VERSION"
-ZIVID_TELICAM_SDK_DEB="zivid-telicam-driver_3.0.1.1-3_amd64.deb"
 
-if [[ "$UBUNTU_VERSION" == "18.04" ]]; then
+if [[ "$UBUNTU_VERSION" == "20.04" ]]; then
 
-    install_www_deb "$ZIVID_RELEASE_DIR/u18/${ZIVID_TELICAM_SDK_DEB}" || exit $?
-    install_www_deb "$ZIVID_RELEASE_DIR/u18/zivid_${CI_TEST_ZIVID_VERSION}_amd64.deb" || exit $?
-
-elif [[ "$UBUNTU_VERSION" == "20.04" ]]; then
-
-    install_www_deb "$ZIVID_RELEASE_DIR/u20/${ZIVID_TELICAM_SDK_DEB}" || exit $?
+    if [[ "$CI_TEST_DOWNLOAD_TELICAM" == 1 ]]; then
+        install_www_deb "$ZIVID_RELEASE_DIR/u20/zivid-telicam-driver_3.0.1.1-3_amd64.deb" || exit $?
+    fi
     install_www_deb "$ZIVID_RELEASE_DIR/u20/zivid_${CI_TEST_ZIVID_VERSION}_amd64.deb" || exit $?
 
 else

@@ -10,6 +10,7 @@
 #include <Zivid/Settings2D.h>
 #include <Zivid/Version.h>
 #include <Zivid/CaptureAssistant.h>
+#include <Zivid/Detail/ToolchainDetector.h>
 #include <Zivid/Experimental/Calibration.h>
 
 #include <boost/algorithm/string.hpp>
@@ -96,6 +97,7 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   , use_latched_publisher_for_snr_image_(false)
   , use_latched_publisher_for_normals_xyz_(false)
   , image_transport_(nh_)
+  , zivid_(Zivid::Detail::createApplicationForWrapper(Zivid::Detail::EnvironmentInfo::Wrapper::ros1))
   , header_seq_(0)
 {
   ROS_INFO("Zivid ROS driver version %s", ZIVID_ROS_DRIVER_VERSION);

@@ -1,82 +1,34 @@
 cmake_minimum_required(VERSION 3.5)
 project(zivid_samples)
-set(CMAKE_CXX_STANDARD 11)
 
-find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  rospy
-  std_msgs
-  zivid_camera
-  dynamic_reconfigure
-)
+# Default to C++17
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+endif()
 
-catkin_package(
-  CATKIN_DEPENDS zivid_camera
-)
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
 
-#################
-## C++ Samples ##
-#################
+find_package(ament_cmake REQUIRED)
+find_package(ament_index_cpp REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(zivid_interfaces REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 
-function(register_cpp_sample)
-  cmake_parse_arguments(
-    ARG
-    ""
-    "NAME;SRC"
-    ""
-    ${ARGN}
-  )
-  add_executable(${ARG_NAME} ${ARG_SRC})
-  add_dependencies(${ARG_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-  target_include_directories(${ARG_NAME}
-    SYSTEM PRIVATE
-    ${catkin_INCLUDE_DIRS}
-  )
-  target_link_libraries(${ARG_NAME}
-    ${catkin_LIBRARIES}
-  )
-  install(TARGETS ${ARG_NAME}
-    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-  )
-endfunction()
+add_executable(sample_capture_cpp src/sample_capture.cpp)
+ament_target_dependencies(sample_capture_cpp rclcpp zivid_interfaces sensor_msgs std_srvs ament_index_cpp)
+install(TARGETS sample_capture_cpp DESTINATION lib/${PROJECT_NAME})
 
-register_cpp_sample(NAME sample_capture_cpp SRC src/sample_capture.cpp)
-register_cpp_sample(NAME sample_capture_and_save_cpp SRC src/sample_capture_and_save.cpp)
-register_cpp_sample(NAME sample_capture_2d_cpp SRC src/sample_capture_2d.cpp)
-register_cpp_sample(NAME sample_capture_assistant_cpp SRC src/sample_capture_assistant.cpp)
-register_cpp_sample(NAME sample_capture_with_settings_from_yml_cpp SRC src/sample_capture_with_settings_from_yml.cpp)
+if(BUILD_TESTING)
+  # TODO enable linting of the samples
+  #find_package(ament_lint_auto REQUIRED)
+  #ament_lint_auto_find_test_dependencies()
+endif()
 
-####################
-## Python Samples ##
-####################
+install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY settings DESTINATION share/${PROJECT_NAME})
 
-function(register_python_sample)
-  cmake_parse_arguments(
-    ARG
-    ""
-    "SRC"
-    ""
-    ${ARGN}
-    )
-  install(PROGRAMS
-    ${ARG_SRC}
-    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-  )
-endfunction()
-
-register_python_sample(SRC scripts/sample_capture.py)
-register_python_sample(SRC scripts/sample_capture_and_save.py)
-register_python_sample(SRC scripts/sample_capture_2d.py)
-register_python_sample(SRC scripts/sample_capture_assistant.py)
-register_python_sample(SRC scripts/sample_capture_with_settings_from_yml.py)
-
-####################
-## Launch scripts ##
-####################
-
-install(
-  DIRECTORY launch/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
-)
+ament_package()

@@ -2,6 +2,15 @@
 
 This project adheres to [Semantic Versioning](https://semver.org).
 
+# 3.0.0 - PREVIEW (SUBJECT TO CHANGES)
+
+* Driver is updated with support for ROS2. ROS1 is no longer supported.
+* Capture settings must be set via .yml files or YAML strings, which can be exported from
+  Zivid Studio or the Zivid SDK. Driver no longer supports changing individual Zivid capture
+  settings via dynamic_reconfigure. See the Configuration section of README.md.
+* Service descriptions have been moved to a separate ROS package named `zivid_interfaces`.
+* The `capture` and `capture_2d` services now use the standard std_srv/Trigger service type.
+
 ## 2.5.0
 
 * Fixed an issue where the driver when running as a nodelet could not attach to a manager

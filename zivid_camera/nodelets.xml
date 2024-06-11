@@ -1,7 +1,0 @@
-<library path="lib/libzivid_camera_nodelet">
-  <class name="zivid_camera/nodelet" type="zivid_camera::ZividNodelet" base_class_type="nodelet::Nodelet">
-    <description>
-      Nodelet for Zivid camera.
-    </description>
-  </class>
-</library>

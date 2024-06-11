@@ -16,7 +16,4 @@ echo Running shellcheck on:
 echo "$bashFiles"
 shellcheck -x -e SC1090,SC2086,SC2046 $bashFiles || exit $?
 
-echo Running code analysis on C++ code:
-$SCRIPT_DIR/lint_cpp.sh || exit $?
-
 echo Success! ["$(basename $0)"]

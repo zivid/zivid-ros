@@ -1,12 +1,11 @@
 #pragma once
 
-#include "auto_generated_include_wrapper.h"
-
 #include <Zivid/CameraInfo.h>
 #include <Zivid/Settings.h>
 #include <Zivid/Settings2D.h>
-
 #include <ros/node_handle.h>
+
+#include "auto_generated_include_wrapper.h"
 
 namespace Zivid
 {
@@ -28,37 +27,43 @@ class ConfigDRServer;
 /// on, handles callbacks and updates the internal config state. It also provides methods to convert
 /// from/to Zivid::Settings/Settings2D objects.
 /// </remarks>
-template <typename ZividSettingsType, typename SettingsConfigType, typename SettingsAcquisitionConfigType>
+template <
+  typename ZividSettingsType, typename SettingsConfigType, typename SettingsAcquisitionConfigType>
 class CaptureSettingsController
 {
-  static_assert(std::is_same_v<ZividSettingsType, Zivid::Settings> ||
-                std::is_same_v<ZividSettingsType, Zivid::Settings2D>);
-  static_assert(std::is_same_v<SettingsConfigType, SettingsConfig> ||
-                std::is_same_v<SettingsConfigType, Settings2DConfig>);
-  static_assert(std::is_same_v<SettingsAcquisitionConfigType, SettingsAcquisitionConfig> ||
-                std::is_same_v<SettingsAcquisitionConfigType, Settings2DAcquisitionConfig>);
+  static_assert(
+    std::is_same_v<ZividSettingsType, Zivid::Settings> ||
+    std::is_same_v<ZividSettingsType, Zivid::Settings2D>);
+  static_assert(
+    std::is_same_v<SettingsConfigType, SettingsConfig> ||
+    std::is_same_v<SettingsConfigType, Settings2DConfig>);
+  static_assert(
+    std::is_same_v<SettingsAcquisitionConfigType, SettingsAcquisitionConfig> ||
+    std::is_same_v<SettingsAcquisitionConfigType, Settings2DAcquisitionConfig>);
 
 public:
-  CaptureSettingsController(ros::NodeHandle& nh, Zivid::Camera& camera, const std::string& config_node_name,
-                            std::size_t num_acquisition_servers);
+  CaptureSettingsController(
+    ros::NodeHandle & nh, Zivid::Camera & camera, const std::string & config_node_name,
+    std::size_t num_acquisition_servers);
   ~CaptureSettingsController();
   ZividSettingsType zividSettings() const;
-  void setZividSettings(const ZividSettingsType& settings);
+  void setZividSettings(const ZividSettingsType & settings);
   std::size_t numAcquisitionConfigServers() const;
 
 private:
   using SettingsConfigTypeDRServer = ConfigDRServer<SettingsConfigType, ZividSettingsType>;
   using SettingsAcquisitionConfigTypeDRServer =
-      ConfigDRServer<SettingsAcquisitionConfigType, typename ZividSettingsType::Acquisition>;
+    ConfigDRServer<SettingsAcquisitionConfigType, typename ZividSettingsType::Acquisition>;
   std::string config_node_name_;
   Zivid::CameraInfo camera_info_;
   std::unique_ptr<SettingsConfigTypeDRServer> general_config_dr_server_;
-  std::vector<std::unique_ptr<SettingsAcquisitionConfigTypeDRServer>> acquisition_config_dr_servers_;
+  std::vector<std::unique_ptr<SettingsAcquisitionConfigTypeDRServer>>
+    acquisition_config_dr_servers_;
 };
 
-extern template class CaptureSettingsController<Zivid::Settings, zivid_camera::SettingsConfig,
-                                                zivid_camera::SettingsAcquisitionConfig>;
-extern template class CaptureSettingsController<Zivid::Settings2D, zivid_camera::Settings2DConfig,
-                                                zivid_camera::Settings2DAcquisitionConfig>;
+extern template class CaptureSettingsController<
+  Zivid::Settings, zivid_camera::SettingsConfig, zivid_camera::SettingsAcquisitionConfig>;
+extern template class CaptureSettingsController<
+  Zivid::Settings2D, zivid_camera::Settings2DConfig, zivid_camera::Settings2DAcquisitionConfig>;
 
 }  // namespace zivid_camera

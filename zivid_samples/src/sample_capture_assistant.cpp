@@ -1,32 +1,32 @@
-#include <zivid_camera/Capture.h>
-#include <zivid_camera/CaptureAssistantSuggestSettings.h>
+#include <ros/ros.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/PointCloud2.h>
-#include <ros/ros.h>
+#include <zivid_camera/Capture.h>
+#include <zivid_camera/CaptureAssistantSuggestSettings.h>
 
-#define CHECK(cmd)                                                                                                     \
-  do                                                                                                                   \
-  {                                                                                                                    \
-    if (!cmd)                                                                                                          \
-    {                                                                                                                  \
-      throw std::runtime_error{ "\"" #cmd "\" failed!" };                                                              \
-    }                                                                                                                  \
+#define CHECK(cmd)                                      \
+  do {                                                  \
+    if (!cmd) {                                         \
+      throw std::runtime_error{"\"" #cmd "\" failed!"}; \
+    }                                                   \
   } while (false)
 
 namespace
 {
-const ros::Duration default_wait_duration{ 30 };
-constexpr auto ca_suggest_settings_service_name = "/zivid_camera/capture_assistant/suggest_settings";
+const ros::Duration default_wait_duration{30};
+constexpr auto ca_suggest_settings_service_name =
+  "/zivid_camera/capture_assistant/suggest_settings";
 
 void capture_assistant_suggest_settings()
 {
   zivid_camera::CaptureAssistantSuggestSettings cass;
-  cass.request.max_capture_time = ros::Duration{ 1.20 };
+  cass.request.max_capture_time = ros::Duration{1.20};
   cass.request.ambient_light_frequency =
-      zivid_camera::CaptureAssistantSuggestSettings::Request::AMBIENT_LIGHT_FREQUENCY_NONE;
+    zivid_camera::CaptureAssistantSuggestSettings::Request::AMBIENT_LIGHT_FREQUENCY_NONE;
 
-  ROS_INFO_STREAM("Calling " << ca_suggest_settings_service_name
-                             << " with max capture time = " << cass.request.max_capture_time << " sec");
+  ROS_INFO_STREAM(
+    "Calling " << ca_suggest_settings_service_name
+               << " with max capture time = " << cass.request.max_capture_time << " sec");
   CHECK(ros::service::call(ca_suggest_settings_service_name, cass));
 }
 
@@ -37,19 +37,13 @@ void capture()
   CHECK(ros::service::call("/zivid_camera/capture", capture));
 }
 
-void on_points(const sensor_msgs::PointCloud2ConstPtr&)
-{
-  ROS_INFO("PointCloud received");
-}
+void on_points(const sensor_msgs::PointCloud2ConstPtr &) { ROS_INFO("PointCloud received"); }
 
-void on_image_color(const sensor_msgs::ImageConstPtr&)
-{
-  ROS_INFO("2D color image received");
-}
+void on_image_color(const sensor_msgs::ImageConstPtr &) { ROS_INFO("2D color image received"); }
 
 }  // namespace
 
-int main(int argc, char** argv)
+int main(int argc, char ** argv)
 {
   ros::init(argc, argv, "sample_capture_assistant_cpp");
   ros::NodeHandle n;

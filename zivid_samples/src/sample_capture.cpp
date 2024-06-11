@@ -1,23 +1,21 @@
-#include <zivid_camera/SettingsAcquisitionConfig.h>
-#include <zivid_camera/SettingsConfig.h>
-#include <zivid_camera/Capture.h>
 #include <dynamic_reconfigure/Reconfigure.h>
 #include <dynamic_reconfigure/client.h>
-#include <sensor_msgs/PointCloud2.h>
 #include <ros/ros.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <zivid_camera/Capture.h>
+#include <zivid_camera/SettingsAcquisitionConfig.h>
+#include <zivid_camera/SettingsConfig.h>
 
-#define CHECK(cmd)                                                                                                     \
-  do                                                                                                                   \
-  {                                                                                                                    \
-    if (!cmd)                                                                                                          \
-    {                                                                                                                  \
-      throw std::runtime_error{ "\"" #cmd "\" failed!" };                                                              \
-    }                                                                                                                  \
+#define CHECK(cmd)                                      \
+  do {                                                  \
+    if (!cmd) {                                         \
+      throw std::runtime_error{"\"" #cmd "\" failed!"}; \
+    }                                                   \
   } while (false)
 
 namespace
 {
-const ros::Duration default_wait_duration{ 30 };
+const ros::Duration default_wait_duration{30};
 
 void capture()
 {
@@ -26,7 +24,7 @@ void capture()
   CHECK(ros::service::call("/zivid_camera/capture", capture));
 }
 
-void on_points(const sensor_msgs::PointCloud2ConstPtr&)
+void on_points(const sensor_msgs::PointCloud2ConstPtr &)
 {
   ROS_INFO("PointCloud received");
   capture();
@@ -34,7 +32,7 @@ void on_points(const sensor_msgs::PointCloud2ConstPtr&)
 
 }  // namespace
 
-int main(int argc, char** argv)
+int main(int argc, char ** argv)
 {
   ros::init(argc, argv, "sample_capture_cpp");
   ros::NodeHandle n;
@@ -48,8 +46,9 @@ int main(int argc, char** argv)
 
   auto points_sub = n.subscribe("/zivid_camera/points/xyzrgba", 1, on_points);
 
-  dynamic_reconfigure::Client<zivid_camera::SettingsConfig> settings_client("/zivid_camera/"
-                                                                            "settings/");
+  dynamic_reconfigure::Client<zivid_camera::SettingsConfig> settings_client(
+    "/zivid_camera/"
+    "settings/");
 
   // To initialize the settings_config object we need to load the default configuration from the server.
   // The default values of settings depends on which Zivid camera model is connected.
@@ -60,8 +59,9 @@ int main(int argc, char** argv)
   settings_config.processing_filters_reflection_removal_enabled = true;
   CHECK(settings_client.setConfiguration(settings_config));
 
-  dynamic_reconfigure::Client<zivid_camera::SettingsAcquisitionConfig> acquisition_0_client("/zivid_camera/settings/"
-                                                                                            "acquisition_0/");
+  dynamic_reconfigure::Client<zivid_camera::SettingsAcquisitionConfig> acquisition_0_client(
+    "/zivid_camera/settings/"
+    "acquisition_0/");
 
   // To initialize the acquisition_0_config object we need to load the default configuration from the server.
   // The default values of settings depends on which Zivid camera model is connected.

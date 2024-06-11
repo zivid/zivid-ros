@@ -1,37 +1,38 @@
 <?xml version="1.0"?>
-<package format="2">
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
   <name>zivid_camera</name>
-  <version>2.5.0</version>
-  <description>Driver for using the Zivid 3D cameras in ROS.</description>
+  <version>3.0.0</version>
+  <description>Driver for using the Zivid 3D cameras in ROS 2.</description>
   <maintainer email="customersuccess@zivid.com">Zivid</maintainer>
   <license>BSD3</license>
   <url type="website">https://zivid.com</url>
   <url type="repository">https://github.com/zivid/zivid-ros</url>
   <url type="bugtracker">https://github.com/zivid/zivid-ros/issues</url>
-  <author email="customersuccess@zivid.com">Zivid</author>
-  <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>roscpp</build_depend>
-  <build_depend>sensor_msgs</build_depend>
-  <build_depend>std_msgs</build_depend>
-  <build_depend>dynamic_reconfigure</build_depend>
-  <build_depend>message_generation</build_depend>
-  <build_depend>rostest</build_depend>
-  <build_depend>image_transport</build_depend>
-  <build_depend>nodelet</build_depend>
-  <build_export_depend>roscpp</build_export_depend>
-  <build_export_depend>sensor_msgs</build_export_depend>
-  <build_export_depend>std_msgs</build_export_depend>
-  <build_export_depend>dynamic_reconfigure</build_export_depend>
-  <build_export_depend>image_transport</build_export_depend>
-  <exec_depend>roscpp</exec_depend>
-  <exec_depend>sensor_msgs</exec_depend>
-  <exec_depend>std_msgs</exec_depend>
-  <exec_depend>dynamic_reconfigure</exec_depend>
-  <exec_depend>message_runtime</exec_depend>
-  <exec_depend>image_transport</exec_depend>
-  <exec_depend>nodelet</exec_depend>
-  <test_depend>rosunit</test_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>image_transport</depend>
+  <depend>builtin_interfaces</depend>
+  <depend>rosidl_default_generators</depend>
+  <depend>zivid_interfaces</depend>
+  <exec_depend>ros2launch</exec_depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_cmake_clang_format</test_depend>
+  <test_depend>ament_cmake_clang_tidy</test_depend>
+  <test_depend>ament_cmake_copyright</test_depend>
+  <test_depend>ament_cmake_cppcheck</test_depend>
+  <test_depend>ament_cmake_flake8</test_depend>
+  <test_depend>ament_cmake_lint_cmake</test_depend>
+  <test_depend>ament_cmake_pep257</test_depend>
+  <test_depend>ament_cmake_xmllint</test_depend>
+
   <export>
-    <nodelet plugin="${prefix}/nodelets.xml"/>
+    <build_type>ament_cmake</build_type>
   </export>
 </package>

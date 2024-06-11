@@ -1,70 +1,91 @@
-#include <dynamic_reconfigure/Reconfigure.h>
-#include <dynamic_reconfigure/client.h>
-#include <ros/ros.h>
-#include <sensor_msgs/Image.h>
-#include <zivid_camera/Capture2D.h>
-#include <zivid_camera/Settings2DAcquisitionConfig.h>
+#include <exception>
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/image.hpp>
+#include <std_srvs/srv/trigger.hpp>
 
-#define CHECK(cmd)                                      \
-  do {                                                  \
-    if (!cmd) {                                         \
-      throw std::runtime_error{"\"" #cmd "\" failed!"}; \
-    }                                                   \
-  } while (false)
+/*
+ * This sample shows how to set the settings_2d_yaml parameter of the zivid node, subscribe for the
+ * color/image_color topic, and invoke the capture_2d service. When an image is received, a new
+ * capture is triggered.
+ */
 
-namespace
+void set_settings_2d(const std::shared_ptr<rclcpp::Node> & node)
 {
-const ros::Duration default_wait_duration{30};
+  RCLCPP_INFO_STREAM(node->get_logger(), "Setting parameter `settings_2d_yaml`");
+  const std::string settings_2d_yaml =
+    R"(
+__version__:
+  serializer: 1
+  data: 3
+Settings2D:
+  Acquisitions:
+    - Acquisition:
+        Aperture: 2.83
+        Brightness: 1.0
+        ExposureTime: 10000
+        Gain: 2.5
+)";
 
-void capture()
-{
-  ROS_INFO("Calling capture_2d service");
-  zivid_camera::Capture2D capture_2d;
-  CHECK(ros::service::call("/zivid_camera/capture_2d", capture_2d));
+  auto param_client = std::make_shared<rclcpp::AsyncParametersClient>(node, "zivid_camera");
+  while (!param_client->wait_for_service(std::chrono::seconds(3))) {
+    if (!rclcpp::ok()) {
+      RCLCPP_ERROR(node->get_logger(), "Client interrupted while waiting for service to appear.");
+      std::terminate();
+    }
+    RCLCPP_INFO(node->get_logger(), "Waiting for the parameters client to appear...");
+  }
+
+  auto result =
+    param_client->set_parameters({rclcpp::Parameter("settings_2d_yaml", settings_2d_yaml)});
+  if (
+    rclcpp::spin_until_future_complete(node, result, std::chrono::seconds(30)) !=
+    rclcpp::FutureReturnCode::SUCCESS) {
+    RCLCPP_ERROR(node->get_logger(), "Failed to set `settings_2d_yaml` parameter");
+    std::terminate();
+  }
 }
 
-void on_image_color(const sensor_msgs::ImageConstPtr &)
+auto create_capture_2d_client(std::shared_ptr<rclcpp::Node> & node)
 {
-  ROS_INFO("2D color image received");
-  capture();
+  auto client = node->create_client<std_srvs::srv::Trigger>("capture_2d");
+  while (!client->wait_for_service(std::chrono::seconds(3))) {
+    if (!rclcpp::ok()) {
+      RCLCPP_ERROR(node->get_logger(), "Client interrupted while waiting for service to appear.");
+      std::terminate();
+    }
+    RCLCPP_INFO(node->get_logger(), "Waiting for the capture_2d service to appear...");
+  }
+
+  RCLCPP_INFO(node->get_logger(), "capture_2d service is available");
+  return client;
 }
 
-}  // namespace
-
-int main(int argc, char ** argv)
+int main(int argc, char * argv[])
 {
-  ros::init(argc, argv, "sample_capture_2d");
-  ros::NodeHandle n;
+  rclcpp::init(argc, argv);
+  auto node = rclcpp::Node::make_shared("sample_capture_2d");
+  RCLCPP_INFO(node->get_logger(), "Started the sample_capture_2d node");
 
-  ROS_INFO("Starting sample_capture_2d.cpp");
+  set_settings_2d(node);
 
-  CHECK(ros::service::waitForService("/zivid_camera/capture_2d", default_wait_duration));
+  auto capture_2d_client = create_capture_2d_client(node);
+  auto trigger_capture = [&]() {
+    RCLCPP_INFO(node->get_logger(), "Triggering 2d capture");
+    capture_2d_client->async_send_request(std::make_shared<std_srvs::srv::Trigger::Request>());
+  };
 
-  ros::AsyncSpinner spinner(1);
-  spinner.start();
+  auto color_image_color_subscription = node->create_subscription<sensor_msgs::msg::Image>(
+    "color/image_color", 10, [&](sensor_msgs::msg::Image::ConstSharedPtr msg) -> void {
+      RCLCPP_INFO(node->get_logger(), "Received image of size %d x %d", msg->width, msg->height);
+      trigger_capture();
+    });
 
-  auto image_color_sub = n.subscribe("/zivid_camera/color/image_color", 1, on_image_color);
+  trigger_capture();
 
-  ROS_INFO("Configuring image settings");
-  dynamic_reconfigure::Client<zivid_camera::Settings2DAcquisitionConfig> acquisition_0_client(
-    "/zivid_camera/"
-    "settings_2d/"
-    "acquisition_0/");
+  RCLCPP_INFO(node->get_logger(), "Spinning node.. Press Ctrl+C to abort.");
+  rclcpp::spin(node);
 
-  // To initialize the cfg object we need to load the default configuration from the server.
-  // The default values of settings depends on which Zivid camera model is connected.
-  zivid_camera::Settings2DAcquisitionConfig acquisition_0_config;
-  CHECK(acquisition_0_client.getDefaultConfiguration(acquisition_0_config, default_wait_duration));
+  rclcpp::shutdown();
 
-  acquisition_0_config.enabled = true;
-  acquisition_0_config.aperture = 5.66;
-  acquisition_0_config.exposure_time = 10000;
-  acquisition_0_config.brightness = 1.0;
-  CHECK(acquisition_0_client.setConfiguration(acquisition_0_config));
-
-  capture();
-
-  ros::waitForShutdown();
-
-  return 0;
+  return EXIT_SUCCESS;
 }

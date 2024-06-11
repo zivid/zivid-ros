@@ -1,8 +1,5 @@
 <launch>
-    <arg name="type"/>
-    <arg name="name" default=""/>
-    <node name="zivid_camera" pkg="zivid_camera" type="zivid_camera_node" ns="zivid_camera" output="screen"/>
-    <node name="$(arg name)" pkg="zivid_samples" type="$(arg type)" output="screen"/>
-    <node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure"/>
-    <include ns="zivid_camera" file="$(find zivid_camera)/launch/visualize.launch"/>
+  <arg name="sample" default=""/>
+  <node pkg="zivid_camera" exec="zivid_camera" name="zivid_camera" />
+  <node pkg="zivid_samples" exec="$(var sample)" name="zivid_sample" />
 </launch>

@@ -1,82 +1,105 @@
-#include <Zivid/Version.h>
-#include <dynamic_reconfigure/Reconfigure.h>
-#include <dynamic_reconfigure/client.h>
-#include <ros/ros.h>
-#include <zivid_camera/CaptureAndSave.h>
-#include <zivid_camera/SettingsAcquisitionConfig.h>
-#include <zivid_camera/SettingsConfig.h>
+#include <exception>
+#include <filesystem>
+#include <rclcpp/rclcpp.hpp>
+#include <zivid_interfaces/srv/capture_and_save.hpp>
 
-#define CHECK(cmd)                                      \
-  do {                                                  \
-    if (!cmd) {                                         \
-      throw std::runtime_error{"\"" #cmd "\" failed!"}; \
-    }                                                   \
-  } while (false)
+/*
+ * This sample shows how to set the settings_yaml parameter of the zivid node, then invoke the
+ * capture_and_save service, and read the response from the service call. If successful, the
+ * captured frame is stored in a temporary directory.
+ */
 
-namespace
+void set_settings(const std::shared_ptr<rclcpp::Node> & node)
 {
-const ros::Duration default_wait_duration{30};
+  RCLCPP_INFO(node->get_logger(), "Setting parameter 'settings_yaml'");
+  const std::string settings_yml =
+    R"(
+__version__:
+  serializer: 1
+  data: 22
+Settings:
+  Acquisitions:
+    - Acquisition:
+        Aperture: 5.66
+        ExposureTime: 8333
+  Processing:
+    Filters:
+      Outlier:
+        Removal:
+          Enabled: yes
+          Threshold: 5
+)";
 
-void capture_and_save()
-{
-  ROS_INFO("Calling capture_and_save service");
-  zivid_camera::CaptureAndSave capture_and_save;
-  std::string file_path = "/tmp/capture_cpp.zdf";
-  capture_and_save.request.file_path = file_path;
-  CHECK(ros::service::call("/zivid_camera/capture_and_save", capture_and_save));
-  ROS_INFO("Your .zdf file is now available here: %s", file_path.c_str());
+  auto param_client = std::make_shared<rclcpp::AsyncParametersClient>(node, "zivid_camera");
+  while (!param_client->wait_for_service(std::chrono::seconds(3))) {
+    if (!rclcpp::ok()) {
+      RCLCPP_ERROR(node->get_logger(), "Client interrupted while waiting for service to appear.");
+      std::terminate();
+    }
+    RCLCPP_INFO(node->get_logger(), "Waiting for the parameters client to appear...");
+  }
+
+  auto result = param_client->set_parameters({rclcpp::Parameter("settings_yaml", settings_yml)});
+  if (
+    rclcpp::spin_until_future_complete(node, result, std::chrono::seconds(30)) !=
+    rclcpp::FutureReturnCode::SUCCESS) {
+    RCLCPP_ERROR(node->get_logger(), "Failed to set `settings_yaml` parameter");
+    std::terminate();
+  }
 }
 
-void enable_first_acquisition()
+void capture_and_save(const std::shared_ptr<rclcpp::Node> & node)
 {
-  dynamic_reconfigure::Client<zivid_camera::SettingsAcquisitionConfig> acquisition_0_client(
-    "/zivid_camera/settings/"
-    "acquisition_0/");
+  using zivid_interfaces::srv::CaptureAndSave;
 
-  // To initialize the acquisition_0_config object we need to load the default configuration from the server.
-  // The default values of settings depends on which Zivid camera model is connected.
-  zivid_camera::SettingsAcquisitionConfig acquisition_0_config;
-  CHECK(acquisition_0_client.getDefaultConfiguration(acquisition_0_config, default_wait_duration));
+  auto client = node->create_client<CaptureAndSave>("capture_and_save");
+  while (!client->wait_for_service(std::chrono::seconds(3))) {
+    if (!rclcpp::ok()) {
+      RCLCPP_ERROR(node->get_logger(), "Client interrupted while waiting for service to appear.");
+      std::terminate();
+    }
+    RCLCPP_INFO(node->get_logger(), "Waiting for the capture_and_save service to appear...");
+  }
 
-  ROS_INFO("Enabling the first acquisition");
-  acquisition_0_config.enabled = true;
-  CHECK(acquisition_0_client.setConfiguration(acquisition_0_config));
+  const std::string filename = "zivid_sample_capture_and_save.zdf";
+
+  auto request = std::make_shared<CaptureAndSave::Request>();
+  request->file_path = (std::filesystem::temp_directory_path() / filename).string();
+  RCLCPP_INFO(
+    node->get_logger(), "Sending capture and save request with file path: %s",
+    request->file_path.c_str());
+
+  auto result = client->async_send_request(request);
+  if (rclcpp::spin_until_future_complete(node, result) != rclcpp::FutureReturnCode::SUCCESS) {
+    RCLCPP_ERROR(node->get_logger(), "Failed to call the capture_and_save service");
+    std::terminate();
+  }
+
+  auto capture_response = result.get();
+  if (!capture_response->success) {
+    RCLCPP_ERROR(
+      node->get_logger(), "Capture and save operation was unsuccessful: %s",
+      capture_response->message.c_str());
+    std::terminate();
+  }
+
+  RCLCPP_INFO(node->get_logger(), "Capture and save operation successful");
 }
 
-void enable_diagnostics()
+int main(int argc, char * argv[])
 {
-  dynamic_reconfigure::Client<zivid_camera::SettingsConfig> settings_client(
-    "/zivid_camera/"
-    "settings/");
-  zivid_camera::SettingsConfig settings_config;
-  CHECK(settings_client.getDefaultConfiguration(settings_config, default_wait_duration));
+  rclcpp::init(argc, argv);
+  auto node = rclcpp::Node::make_shared("sample_capture_and_save");
+  RCLCPP_INFO(node->get_logger(), "Started the sample_capture_and_save node");
 
-  ROS_INFO("Enabling diagnostics mode");
-  settings_config.diagnostics_enabled = true;
-  CHECK(settings_client.setConfiguration(settings_config));
-}
+  set_settings(node);
 
-}  // namespace
+  capture_and_save(node);
 
-int main(int argc, char ** argv)
-{
-  ros::init(argc, argv, "sample_capture_and_save_cpp");
-  ros::NodeHandle n;
+  RCLCPP_INFO(node->get_logger(), "Spinning node.. Press Ctrl+C to abort.");
+  rclcpp::spin(node);
 
-  ROS_INFO("Starting sample_capture_and_save.cpp");
+  rclcpp::shutdown();
 
-  CHECK(ros::service::waitForService("/zivid_camera/capture_and_save", default_wait_duration));
-
-  ros::AsyncSpinner spinner(1);
-  spinner.start();
-
-  enable_first_acquisition();
-
-  enable_diagnostics();
-
-  capture_and_save();
-
-  ros::waitForShutdown();
-
-  return 0;
+  return EXIT_SUCCESS;
 }

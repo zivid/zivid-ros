@@ -1,25 +1,23 @@
-#include <zivid_camera/SettingsAcquisitionConfig.h>
-#include <zivid_camera/SettingsConfig.h>
-#include <zivid_camera/Capture.h>
-#include <zivid_camera/LoadSettingsFromFile.h>
 #include <dynamic_reconfigure/Reconfigure.h>
 #include <dynamic_reconfigure/client.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <ros/ros.h>
 #include <ros/package.h>
+#include <ros/ros.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <zivid_camera/Capture.h>
+#include <zivid_camera/LoadSettingsFromFile.h>
+#include <zivid_camera/SettingsAcquisitionConfig.h>
+#include <zivid_camera/SettingsConfig.h>
 
-#define CHECK(cmd)                                                                                                     \
-  do                                                                                                                   \
-  {                                                                                                                    \
-    if (!cmd)                                                                                                          \
-    {                                                                                                                  \
-      throw std::runtime_error{ "\"" #cmd "\" failed!" };                                                              \
-    }                                                                                                                  \
+#define CHECK(cmd)                                      \
+  do {                                                  \
+    if (!cmd) {                                         \
+      throw std::runtime_error{"\"" #cmd "\" failed!"}; \
+    }                                                   \
   } while (false)
 
 namespace
 {
-const ros::Duration default_wait_duration{ 30 };
+const ros::Duration default_wait_duration{30};
 
 void capture()
 {
@@ -30,7 +28,7 @@ void capture()
 
 }  // namespace
 
-int main(int argc, char** argv)
+int main(int argc, char ** argv)
 {
   ros::init(argc, argv, "sample_capture_with_settings_from_yml_cpp");
   ros::NodeHandle n;

@@ -1,20 +1,16 @@
 #pragma once
 
-#include "auto_generated_include_wrapper.h"
-#include "capture_settings_controller.h"
-
-#include <sensor_msgs/PointCloud2.h>
-#include <sensor_msgs/Image.h>
-
-#include <image_transport/image_transport.h>
-
-#include <dynamic_reconfigure/server.h>
-
-#include <ros/ros.h>
-
 #include <Zivid/Application.h>
 #include <Zivid/Camera.h>
 #include <Zivid/Image.h>
+#include <dynamic_reconfigure/server.h>
+#include <image_transport/image_transport.h>
+#include <ros/ros.h>
+#include <sensor_msgs/Image.h>
+#include <sensor_msgs/PointCloud2.h>
+
+#include "auto_generated_include_wrapper.h"
+#include "capture_settings_controller.h"
 
 namespace Zivid
 {
@@ -33,25 +29,29 @@ enum class CameraStatus
 class ZividCamera
 {
 public:
-  ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv);
+  ZividCamera(ros::NodeHandle & nh, ros::NodeHandle & priv);
 
 private:
-  void onCameraConnectionKeepAliveTimeout(const ros::TimerEvent& event);
+  void onCameraConnectionKeepAliveTimeout(const ros::TimerEvent & event);
   void reconnectToCameraIfNecessary();
   void setCameraStatus(CameraStatus camera_status);
-  bool cameraInfoModelNameServiceHandler(CameraInfoModelName::Request& req, CameraInfoModelName::Response& res);
-  bool cameraInfoSerialNumberServiceHandler(CameraInfoSerialNumber::Request& req,
-                                            CameraInfoSerialNumber::Response& res);
-  bool captureServiceHandler(Capture::Request& req, Capture::Response& res);
-  bool captureAndSaveServiceHandler(CaptureAndSave::Request& req, CaptureAndSave::Response& res);
-  bool capture2DServiceHandler(Capture2D::Request& req, Capture2D::Response& res);
-  bool captureAssistantSuggestSettingsServiceHandler(CaptureAssistantSuggestSettings::Request& req,
-                                                     CaptureAssistantSuggestSettings::Response& res);
-  bool loadSettingsFromFileServiceHandler(LoadSettingsFromFile::Request& req, LoadSettingsFromFile::Response&);
-  bool loadSettings2DFromFileServiceHandler(LoadSettings2DFromFile::Request& req, LoadSettings2DFromFile::Response&);
+  bool cameraInfoModelNameServiceHandler(
+    CameraInfoModelName::Request & req, CameraInfoModelName::Response & res);
+  bool cameraInfoSerialNumberServiceHandler(
+    CameraInfoSerialNumber::Request & req, CameraInfoSerialNumber::Response & res);
+  bool captureServiceHandler(Capture::Request & req, Capture::Response & res);
+  bool captureAndSaveServiceHandler(CaptureAndSave::Request & req, CaptureAndSave::Response & res);
+  bool capture2DServiceHandler(Capture2D::Request & req, Capture2D::Response & res);
+  bool captureAssistantSuggestSettingsServiceHandler(
+    CaptureAssistantSuggestSettings::Request & req,
+    CaptureAssistantSuggestSettings::Response & res);
+  bool loadSettingsFromFileServiceHandler(
+    LoadSettingsFromFile::Request & req, LoadSettingsFromFile::Response &);
+  bool loadSettings2DFromFileServiceHandler(
+    LoadSettings2DFromFile::Request & req, LoadSettings2DFromFile::Response &);
   void serviceHandlerHandleCameraConnectionLoss();
-  bool isConnectedServiceHandler(IsConnected::Request& req, IsConnected::Response& res);
-  void publishFrame(const Zivid::Frame& frame);
+  bool isConnectedServiceHandler(IsConnected::Request & req, IsConnected::Response & res);
+  void publishFrame(const Zivid::Frame & frame);
   Zivid::Frame invokeCaptureAndPublishFrame();
   bool shouldPublishPointsXYZ() const;
   bool shouldPublishPointsXYZRGBA() const;
@@ -60,24 +60,30 @@ private:
   bool shouldPublishSnrImg() const;
   bool shouldPublishNormalsXYZ() const;
   std_msgs::Header makeHeader();
-  void publishPointCloudXYZ(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud);
-  void publishPointCloudXYZRGBA(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud);
-  void publishColorImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
-                         const Zivid::PointCloud& point_cloud);
-  void publishColorImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
-                         const Zivid::Image<Zivid::ColorRGBA>& image);
-  void publishDepthImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
-                         const Zivid::PointCloud& point_cloud);
-  void publishSnrImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
-                       const Zivid::PointCloud& point_cloud);
-  void publishNormalsXYZ(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud);
-  sensor_msgs::CameraInfoConstPtr makeCameraInfo(const std_msgs::Header& header, std::size_t width, std::size_t height,
-                                                 const Zivid::CameraIntrinsics& intrinsics);
+  void publishPointCloudXYZ(const std_msgs::Header & header, const Zivid::PointCloud & point_cloud);
+  void publishPointCloudXYZRGBA(
+    const std_msgs::Header & header, const Zivid::PointCloud & point_cloud);
+  void publishColorImage(
+    const std_msgs::Header & header, const sensor_msgs::CameraInfoConstPtr & camera_info,
+    const Zivid::PointCloud & point_cloud);
+  void publishColorImage(
+    const std_msgs::Header & header, const sensor_msgs::CameraInfoConstPtr & camera_info,
+    const Zivid::Image<Zivid::ColorRGBA> & image);
+  void publishDepthImage(
+    const std_msgs::Header & header, const sensor_msgs::CameraInfoConstPtr & camera_info,
+    const Zivid::PointCloud & point_cloud);
+  void publishSnrImage(
+    const std_msgs::Header & header, const sensor_msgs::CameraInfoConstPtr & camera_info,
+    const Zivid::PointCloud & point_cloud);
+  void publishNormalsXYZ(const std_msgs::Header & header, const Zivid::PointCloud & point_cloud);
+  sensor_msgs::CameraInfoConstPtr makeCameraInfo(
+    const std_msgs::Header & header, std::size_t width, std::size_t height,
+    const Zivid::CameraIntrinsics & intrinsics);
 
   using Capture3DSettingsController =
-      CaptureSettingsController<Zivid::Settings, SettingsConfig, SettingsAcquisitionConfig>;
+    CaptureSettingsController<Zivid::Settings, SettingsConfig, SettingsAcquisitionConfig>;
   using Capture2DSettingsController =
-      CaptureSettingsController<Zivid::Settings2D, Settings2DConfig, Settings2DAcquisitionConfig>;
+    CaptureSettingsController<Zivid::Settings2D, Settings2DConfig, Settings2DAcquisitionConfig>;
 
   ros::NodeHandle nh_;
   ros::NodeHandle priv_;

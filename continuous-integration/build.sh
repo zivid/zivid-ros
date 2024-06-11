@@ -5,28 +5,34 @@ echo Start ["$(basename $0)"]
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" || exit $?
 ROOT_DIR=$(realpath "$SCRIPT_DIR/..") || exit $?
 
-echo "Creating catkin workspace"
-mkdir -p ~/catkin_ws/src || exit $?
-cd ~/catkin_ws || exit $?
-catkin build || exit $?
+echo "Creating workspace"
+mkdir -p ~/ros2_ws/src || exit $?
+cd ~/ros2_ws || exit $?
 
 echo "Adding link to the source folder"
-ln -s "$ROOT_DIR" ~/catkin_ws/src || exit $?
+ln -s "$ROOT_DIR" ~/ros2_ws/src || exit $?
 
-for package in zivid_camera zivid_samples
-do
-    echo "Verify that $package is found by catkin list"
-    catkin list --unformatted | grep -q $package || exit $?
-done
+if [ "$ROS_DISTRO" != "humble" ]; then
+  echo "Initializing rosdep"
+  rosdep init || exit $?
+fi
 
 echo "Updating rosdep"
-rosdep update --rosdistro=$ROS_DISTRO || exit $?
+rosdep update || exit $?
 
 echo "Installing dependencies"
-rosdep install --from-paths src --ignore-src -r -y || exit $?
+rosdep install -i --from-path src -y || exit $?
 
 echo "Building with compiler=$CI_TEST_COMPILER"
 
-catkin build -DCOMPILER_WARNINGS=ON -DCMAKE_CXX_COMPILER=/usr/bin/$CI_TEST_COMPILER || exit $?
+colcon build --symlink --cmake-args "-DCOMPILER_WARNINGS=ON -DCMAKE_CXX_COMPILER=/usr/bin/$CI_TEST_COMPILER" || exit $?
+
+echo "Check that the expected packages are found"
+source ~/ros2_ws/install/setup.bash
+for package in zivid_camera zivid_interfaces zivid_samples
+do
+    echo "Check that $package is found by ros2 pkg list"
+    ros2 pkg list | grep -q $package || exit $?
+done
 
 echo Success! ["$(basename $0)"]

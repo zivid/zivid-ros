@@ -17,14 +17,10 @@ apt-yes install \
     clinfo \
     wget \
     python3-pip \
+    python3-rosdep \
+    python3-colcon-common-extensions \
     unzip \
     || exit $?
-
-if [[ "$UBUNTU_VERSION" == "20.04" ]]; then
-    apt-yes install python3-catkin-tools python3-osrf-pycommon || exit $?
-else
-    apt-yes install python-catkin-tools || exit $?
-fi
 
 function install_opencl_cpu_runtime {
     # Download the key to system keyring
@@ -59,11 +55,9 @@ function install_www_deb {
 echo "Installing compiler $CI_TEST_COMPILER"
 
 if [[ "$CI_TEST_COMPILER" == "g++"    ||
-      "$CI_TEST_COMPILER" == "g++-7"  ||
-      "$CI_TEST_COMPILER" == "g++-8"  ||
-      "$CI_TEST_COMPILER" == "g++-9"  ||
-      "$CI_TEST_COMPILER" == "g++-10" ||
-      "$CI_TEST_COMPILER" == "g++-11"
+      "$CI_TEST_COMPILER" == "g++-12"  ||
+      "$CI_TEST_COMPILER" == "g++-13"  ||
+      "$CI_TEST_COMPILER" == "g++-14"
       ]]; then
 
     apt-yes install software-properties-common || exit $?
@@ -72,12 +66,11 @@ if [[ "$CI_TEST_COMPILER" == "g++"    ||
     apt-yes install $CI_TEST_COMPILER || exit $?
 
 elif [[ "$CI_TEST_COMPILER" == "clang++"    ||
-        "$CI_TEST_COMPILER" == "clang++-7"  ||
-        "$CI_TEST_COMPILER" == "clang++-8"  ||
-        "$CI_TEST_COMPILER" == "clang++-9"  ||
-        "$CI_TEST_COMPILER" == "clang++-10" ||
-        "$CI_TEST_COMPILER" == "clang++-11" ||
-        "$CI_TEST_COMPILER" == "clang++-12" ]]; then
+        "$CI_TEST_COMPILER" == "clang++-14"  ||
+        "$CI_TEST_COMPILER" == "clang++-15"  ||
+        "$CI_TEST_COMPILER" == "clang++-16"  ||
+        "$CI_TEST_COMPILER" == "clang++-17" ||
+        "$CI_TEST_COMPILER" == "clang++-18" ]]; then
 
     apt-yes install ${CI_TEST_COMPILER//\+/} || exit $?
 
@@ -90,7 +83,7 @@ echo "Install Zivid debian packages"
 
 ZIVID_RELEASE_DIR="https://downloads.zivid.com/sdk/releases/$CI_TEST_ZIVID_VERSION"
 
-if [[ "$UBUNTU_VERSION" == "20.04" ]]; then
+if [[ "$UBUNTU_VERSION" == "20.04" || "$UBUNTU_VERSION" == "22.04" || "$UBUNTU_VERSION" == "24.04" ]]; then
 
     if [[ "$CI_TEST_DOWNLOAD_TELICAM" == 1 ]]; then
         install_www_deb "$ZIVID_RELEASE_DIR/u20/zivid-telicam-driver_3.0.1.1-3_amd64.deb" || exit $?
@@ -99,7 +92,7 @@ if [[ "$UBUNTU_VERSION" == "20.04" ]]; then
 
 else
 
-    echo "Unhandled OS $UBUNTU_VERSION"
+    echo "Unhandled Ubuntu OS $UBUNTU_VERSION"
     exit 1
 
 fi

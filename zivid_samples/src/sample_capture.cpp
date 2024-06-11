@@ -1,84 +1,122 @@
-#include <dynamic_reconfigure/Reconfigure.h>
-#include <dynamic_reconfigure/client.h>
-#include <ros/ros.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <zivid_camera/Capture.h>
-#include <zivid_camera/SettingsAcquisitionConfig.h>
-#include <zivid_camera/SettingsConfig.h>
+// Copyright 2024 Zivid AS
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+//    * Redistributions of source code must retain the above copyright
+//      notice, this list of conditions and the following disclaimer.
+//
+//    * Redistributions in binary form must reproduce the above copyright
+//      notice, this list of conditions and the following disclaimer in the
+//      documentation and/or other materials provided with the distribution.
+//
+//    * Neither the name of the Zivid AS nor the names of its
+//      contributors may be used to endorse or promote products derived from
+//      this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
 
-#define CHECK(cmd)                                      \
-  do {                                                  \
-    if (!cmd) {                                         \
-      throw std::runtime_error{"\"" #cmd "\" failed!"}; \
-    }                                                   \
-  } while (false)
+#include <rclcpp/rclcpp.hpp>
 
-namespace
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <sensor_msgs/msg/image.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <std_srvs/srv/trigger.hpp>
+
+/*
+ * This sample shows how to set the settings_file_path parameter of the zivid
+ * node, subscribe for the points/xyzrgba topic, and invoke the capture service.
+ * When a point cloud is received, a new capture is triggered.
+ */
+
+int main(int argc, char * argv[])
 {
-const ros::Duration default_wait_duration{30};
+  rclcpp::init(argc, argv);
+  auto node = rclcpp::Node::make_shared("sample_capture");
+  RCLCPP_INFO(node->get_logger(), "Started the sample_capture node");
 
-void capture()
-{
-  ROS_INFO("Calling capture service");
-  zivid_camera::Capture capture;
-  CHECK(ros::service::call("/zivid_camera/capture", capture));
-}
+  auto client = node->create_client<std_srvs::srv::Trigger>("capture");
+  while (!client->wait_for_service(std::chrono::seconds(3))) {
+    if (!rclcpp::ok()) {
+      RCLCPP_ERROR(
+        node->get_logger(),
+        "Client interrupted while waiting for service to appear.");
+      return EXIT_FAILURE;
+    }
+    RCLCPP_INFO(
+      node->get_logger(),
+      "Waiting for the capture service to appear...");
+  }
 
-void on_points(const sensor_msgs::PointCloud2ConstPtr &)
-{
-  ROS_INFO("PointCloud received");
-  capture();
-}
+  RCLCPP_INFO(node->get_logger(), "Service is available");
 
-}  // namespace
+  auto param_client =
+    std::make_shared<rclcpp::AsyncParametersClient>(node, "zivid_camera");
+  if (!param_client->service_is_ready()) {
+    RCLCPP_ERROR(node->get_logger(), "Param client is not ready");
+    return EXIT_FAILURE;
+  }
+  const auto share_directory =
+    ament_index_cpp::get_package_share_directory("zivid_samples");
+  const auto path_to_settings_yml =
+    share_directory + "/settings/camera_settings.yml";
 
-int main(int argc, char ** argv)
-{
-  ros::init(argc, argv, "sample_capture_cpp");
-  ros::NodeHandle n;
+  RCLCPP_INFO_STREAM(
+    node->get_logger(), "Setting settings path to '"
+      << path_to_settings_yml << "'");
 
-  ROS_INFO("Starting sample_capture.cpp");
+  param_client->set_parameters(
+    {rclcpp::Parameter("settings_file_path", path_to_settings_yml)},
+    [&node](auto future) {
+      auto results = future.get();
+      if (results.size() != 1) {
+        RCLCPP_ERROR_STREAM(
+          node->get_logger(),
+          "Expected 1 result, got " << results.size());
+      } else {
+        if (results[0].successful) {
+          RCLCPP_INFO(node->get_logger(), "Successfully set settings path");
+        } else {
+          RCLCPP_ERROR(node->get_logger(), "Failed to set settings path");
+        }
+      }
+    });
 
-  CHECK(ros::service::waitForService("/zivid_camera/capture", default_wait_duration));
+  auto trigger_capture = [&]() {
+      RCLCPP_INFO(node->get_logger(), "Triggering capture");
+      client->async_send_request(std::make_shared<std_srvs::srv::Trigger::Request>());
+    };
 
-  ros::AsyncSpinner spinner(1);
-  spinner.start();
+  auto points_xyzrgba_subscription =
+    node->create_subscription<sensor_msgs::msg::PointCloud2>(
+    "points/xyzrgba", 10,
+    [&](sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) -> void {
+      RCLCPP_INFO(
+        node->get_logger(),
+        "Received point cloud of width %d and height %d",
+        msg->width, msg->height);
+      RCLCPP_INFO(
+        node->get_logger(),
+        "Re-trigger capture");
+      trigger_capture();
+    });
 
-  auto points_sub = n.subscribe("/zivid_camera/points/xyzrgba", 1, on_points);
+  trigger_capture();
 
-  dynamic_reconfigure::Client<zivid_camera::SettingsConfig> settings_client(
-    "/zivid_camera/"
-    "settings/");
+  RCLCPP_INFO(node->get_logger(), "Spinning node.. Press Ctrl+C to abort.");
+  rclcpp::spin(node);
 
-  // To initialize the settings_config object we need to load the default configuration from the server.
-  // The default values of settings depends on which Zivid camera model is connected.
-  zivid_camera::SettingsConfig settings_config;
-  CHECK(settings_client.getDefaultConfiguration(settings_config, default_wait_duration));
+  rclcpp::shutdown();
 
-  ROS_INFO("Enabling the reflection removal filter");
-  settings_config.processing_filters_reflection_removal_enabled = true;
-  CHECK(settings_client.setConfiguration(settings_config));
-
-  dynamic_reconfigure::Client<zivid_camera::SettingsAcquisitionConfig> acquisition_0_client(
-    "/zivid_camera/settings/"
-    "acquisition_0/");
-
-  // To initialize the acquisition_0_config object we need to load the default configuration from the server.
-  // The default values of settings depends on which Zivid camera model is connected.
-  zivid_camera::SettingsAcquisitionConfig acquisition_0_config;
-  CHECK(acquisition_0_client.getDefaultConfiguration(acquisition_0_config, default_wait_duration));
-
-  ROS_INFO("Enabling and configuring the first acquisition");
-  acquisition_0_config.enabled = true;
-  acquisition_0_config.aperture = 5.66;
-  acquisition_0_config.exposure_time = 20000;
-  CHECK(acquisition_0_client.setConfiguration(acquisition_0_config));
-
-  ROS_INFO("Calling capture");
-
-  capture();
-
-  ros::waitForShutdown();
-
-  return 0;
+  return EXIT_SUCCESS;
 }

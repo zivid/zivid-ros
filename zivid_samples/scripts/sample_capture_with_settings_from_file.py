@@ -1,52 +1,45 @@
 #!/usr/bin/env python
 
 import sys
-import tempfile
 
+from ament_index_python.packages import get_package_share_directory
 from rcl_interfaces.srv import SetParameters
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.parameter import Parameter
-from zivid_interfaces.srv import CaptureAndSave
+from sensor_msgs.msg import PointCloud2
+from std_srvs.srv import Trigger
 
 
 class Sample(Node):
 
     def __init__(self):
-        super().__init__('sample_capture_and_save_py')
+        super().__init__('sample_capture_with_settings_from_file_py')
 
-        self.capture_and_save_service = self.create_client(
-            CaptureAndSave, 'capture_and_save'
-        )
-        while not self.capture_and_save_service.wait_for_service(timeout_sec=3.0):
-            self.get_logger().info(
-                'capture_and_save service not available, waiting again...'
-            )
+        self.capture_service = self.create_client(Trigger, 'capture')
+        while not self.capture_service.wait_for_service(timeout_sec=3.0):
+            self.get_logger().info('capture service not available, waiting again...')
 
         self._set_settings()
 
+        self.subscription = self.create_subscription(
+            PointCloud2, 'points/xyzrgba', self.on_points, 10
+        )
+
     def _set_settings(self):
-        self.get_logger().info('Setting parameter `settings_yaml`')
+        path_to_settings_yml = (
+            get_package_share_directory('zivid_samples')
+            + '/settings/camera_settings.yml'
+        )
+        self.get_logger().info(
+            'Setting parameter `settings_file_path` to: ' + path_to_settings_yml
+        )
+
         settings_parameter = Parameter(
-            'settings_yaml',
+            'settings_file_path',
             Parameter.Type.STRING,
-            """
-__version__:
-  serializer: 1
-  data: 22
-Settings:
-  Acquisitions:
-    - Acquisition:
-        Aperture: 5.66
-        ExposureTime: 8333
-  Processing:
-    Filters:
-      Outlier:
-        Removal:
-          Enabled: yes
-          Threshold: 5
-""",
+            path_to_settings_yml,
         ).to_parameter_msg()
 
         param_client = self.create_client(SetParameters, 'zivid_camera/set_parameters')
@@ -61,12 +54,13 @@ Settings:
             raise RuntimeError('Failed to set parameters')
 
     def capture(self):
-        file_path = tempfile.gettempdir() + '/zivid_sample_capture_and_save.zdf'
+        self.get_logger().info('Calling capture service')
+        return self.capture_service.call_async(Trigger.Request())
+
+    def on_points(self, msg):
         self.get_logger().info(
-            f'Calling capture_and_save service with file path: {file_path}'
+            f'Received point cloud of size {msg.width} x {msg.height}'
         )
-        request = CaptureAndSave.Request(file_path=file_path)
-        return self.capture_and_save_service.call_async(request)
 
 
 def main(args=None):
@@ -74,15 +68,10 @@ def main(args=None):
 
     try:
         sample = Sample()
+
         future = sample.capture()
-
         rclpy.spin_until_future_complete(sample, future)
-
-        response: CaptureAndSave.Response = future.result()
-        if not response.success:
-            sample.get_logger().error(f'Failed capture and save: {response.message}')
-
-        sample.get_logger().info('Capture and save complete')
+        sample.get_logger().info('Capture complete')
 
         sample.get_logger().info('Spinning node.. Press Ctrl+C to abort.')
         rclpy.spin(sample)

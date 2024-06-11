@@ -1,68 +1,92 @@
-#include <ros/ros.h>
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <zivid_camera/Capture.h>
-#include <zivid_camera/CaptureAssistantSuggestSettings.h>
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/image.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <std_srvs/srv/trigger.hpp>
+#include <stdexcept>
+#include <zivid_interfaces/srv/capture_assistant_suggest_settings.hpp>
 
-#define CHECK(cmd)                                      \
-  do {                                                  \
-    if (!cmd) {                                         \
-      throw std::runtime_error{"\"" #cmd "\" failed!"}; \
-    }                                                   \
-  } while (false)
+/*
+ * This sample shows how to use the capture assistant service to suggest and set the capture
+ * settings parameter of the zivid node. Then, it shows how to subscribe to the points/xyzrgba and
+ * color/image_color topics, and finally how to invoke the capture service.
+ */
 
-namespace
+void fatal_error(const rclcpp::Logger & logger, const std::string & message)
 {
-const ros::Duration default_wait_duration{30};
-constexpr auto ca_suggest_settings_service_name =
-  "/zivid_camera/capture_assistant/suggest_settings";
-
-void capture_assistant_suggest_settings()
-{
-  zivid_camera::CaptureAssistantSuggestSettings cass;
-  cass.request.max_capture_time = ros::Duration{1.20};
-  cass.request.ambient_light_frequency =
-    zivid_camera::CaptureAssistantSuggestSettings::Request::AMBIENT_LIGHT_FREQUENCY_NONE;
-
-  ROS_INFO_STREAM(
-    "Calling " << ca_suggest_settings_service_name
-               << " with max capture time = " << cass.request.max_capture_time << " sec");
-  CHECK(ros::service::call(ca_suggest_settings_service_name, cass));
+  RCLCPP_ERROR_STREAM(logger, message);
+  throw std::runtime_error(message);
 }
 
-void capture()
+void capture_assistant_suggest_settings(const std::shared_ptr<rclcpp::Node> & node)
 {
-  ROS_INFO("Calling capture service");
-  zivid_camera::Capture capture;
-  CHECK(ros::service::call("/zivid_camera/capture", capture));
+  using zivid_interfaces::srv::CaptureAssistantSuggestSettings;
+
+  auto client =
+    node->create_client<CaptureAssistantSuggestSettings>("capture_assistant/suggest_settings");
+  while (!client->wait_for_service(std::chrono::seconds(3))) {
+    if (!rclcpp::ok()) {
+      fatal_error(node->get_logger(), "Client interrupted while waiting for service to appear.");
+    }
+    RCLCPP_INFO(node->get_logger(), "Waiting for the capture assistant service to appear...");
+  }
+
+  auto request = std::make_shared<CaptureAssistantSuggestSettings::Request>();
+  request->max_capture_time = rclcpp::Duration::from_seconds(2.0);
+  request->ambient_light_frequency =
+    CaptureAssistantSuggestSettings::Request::AMBIENT_LIGHT_FREQUENCY_NONE;
+
+  auto result = client->async_send_request(request);
+  if (
+    rclcpp::spin_until_future_complete(node, result, std::chrono::seconds(30)) !=
+    rclcpp::FutureReturnCode::SUCCESS) {
+    fatal_error(node->get_logger(), "Failed to call capture assistant service");
+  }
 }
 
-void on_points(const sensor_msgs::PointCloud2ConstPtr &) { ROS_INFO("PointCloud received"); }
-
-void on_image_color(const sensor_msgs::ImageConstPtr &) { ROS_INFO("2D color image received"); }
-
-}  // namespace
-
-int main(int argc, char ** argv)
+void capture(const std::shared_ptr<rclcpp::Node> & node)
 {
-  ros::init(argc, argv, "sample_capture_assistant_cpp");
-  ros::NodeHandle n;
+  auto capture_client = node->create_client<std_srvs::srv::Trigger>("capture");
+  while (!capture_client->wait_for_service(std::chrono::seconds(3))) {
+    if (!rclcpp::ok()) {
+      fatal_error(node->get_logger(), "Client interrupted while waiting for service to appear.");
+    }
+    RCLCPP_INFO(node->get_logger(), "Waiting for the capture service to appear...");
+  }
 
-  ROS_INFO("Starting sample_capture_assistant.cpp");
+  RCLCPP_INFO(node->get_logger(), "Triggering capture");
+  auto result =
+    capture_client->async_send_request(std::make_shared<std_srvs::srv::Trigger::Request>());
 
-  CHECK(ros::service::waitForService(ca_suggest_settings_service_name, default_wait_duration));
+  if (rclcpp::spin_until_future_complete(node, result) != rclcpp::FutureReturnCode::SUCCESS) {
+    fatal_error(node->get_logger(), "Failed to trigger capture");
+  }
+}
 
-  ros::AsyncSpinner spinner(1);
-  spinner.start();
+int main(int argc, char * argv[])
+{
+  rclcpp::init(argc, argv);
+  auto node = rclcpp::Node::make_shared("sample_capture_assistant");
+  RCLCPP_INFO(node->get_logger(), "Started the sample_capture_assistant node");
 
-  auto points_sub = n.subscribe("/zivid_camera/points/xyzrgba", 1, on_points);
-  auto image_color_sub = n.subscribe("/zivid_camera/color/image_color", 1, on_image_color);
+  auto points_xyzrgba_subscription = node->create_subscription<sensor_msgs::msg::PointCloud2>(
+    "points/xyzrgba", 10, [&](sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) -> void {
+      RCLCPP_INFO(
+        node->get_logger(), "Received point cloud of size %d x %d", msg->width, msg->height);
+    });
 
-  capture_assistant_suggest_settings();
+  auto color_image_color_subscription = node->create_subscription<sensor_msgs::msg::Image>(
+    "color/image_color", 10, [&](sensor_msgs::msg::Image::ConstSharedPtr msg) -> void {
+      RCLCPP_INFO(node->get_logger(), "Received image of size %d x %d", msg->width, msg->height);
+    });
 
-  capture();
+  capture_assistant_suggest_settings(node);
 
-  ros::waitForShutdown();
+  capture(node);
 
-  return 0;
+  RCLCPP_INFO(node->get_logger(), "Spinning node.. Press Ctrl+C to abort.");
+  rclcpp::spin(node);
+
+  rclcpp::shutdown();
+
+  return EXIT_SUCCESS;
 }

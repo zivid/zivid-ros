@@ -1,0 +1,2 @@
+[tool.black]
+skip-string-normalization = true  # Black prefers double quotes, however, this is incompatible with the `ament_flake8` configuration.

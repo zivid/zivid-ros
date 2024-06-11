@@ -1,0 +1,6 @@
+<launch>
+  <arg name="serial_number" description="Serial number of camera to connect to"/>
+  <node pkg="zivid_camera" exec="zivid_camera" name="zivid_camera">
+    <param name="serial_number" value="$(var serial_number)"/>
+  </node>
+</launch>

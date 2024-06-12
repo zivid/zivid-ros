@@ -151,7 +151,7 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
     ROS_INFO_STREAM(cameras.size() << " cameras found");
     if (cameras.empty())
     {
-      throw std::runtime_error("No cameras found. Ensure that the camera is connected to the USB3 port on your PC.");
+      throw std::runtime_error("No cameras found. Ensure that the camera is connected to your PC.");
     }
     else if (serial_number.empty())
     {

@@ -298,7 +298,7 @@ Returns if the camera is currently in `Connected` state (from the perspective of
 The connection status is updated by the driver every 10 seconds and before each [capture](#capture)
 service call. If the camera is not in `Connected` state the driver will attempt to re-connect to
 the camera when it detects that the camera is available. This can happen if the camera is
-power-cycled or the USB cable is unplugged and then replugged.
+power-cycled or the ethernet/USB cable is unplugged and then replugged.
 
 ## Topics
 

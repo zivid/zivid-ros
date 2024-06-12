@@ -471,6 +471,7 @@ Settings related to processing, like color balance and filter settings.
 | `settings/processing_filters_reflection_removal_mode`               | enum   | [Settings::Processing::Filters::Reflection::Removal::Mode](https://downloads.zivid.com/sdk/releases/2.12.0+6afd4961-1/doc/cpp/classZivid_1_1Settings_1_1Processing_1_1Filters_1_1Reflection_1_1Removal_1_1Mode.html)
 | `settings/processing_filters_smoothing_gaussian_enabled`            | bool   | [Settings::Processing::Filters::Smoothing::Gaussian::Enabled](https://downloads.zivid.com/sdk/releases/2.12.0+6afd4961-1/doc/cpp/classZivid_1_1Settings_1_1Processing_1_1Filters_1_1Smoothing_1_1Gaussian_1_1Enabled.html)
 | `settings/processing_filters_smoothing_gaussian_sigma`              | double | [Settings::Processing::Filters::Smoothing::Gaussian::Sigma](https://downloads.zivid.com/sdk/releases/2.12.0+6afd4961-1/doc/cpp/classZivid_1_1Settings_1_1Processing_1_1Filters_1_1Smoothing_1_1Gaussian_1_1Sigma.html)
+| `settings/processing_resampling`                                    | enum | [Settings::Processing::Resampling](https://downloads.zivid.com/sdk/releases/2.12.0+6afd4961-1/doc/cpp/classZivid_1_1Settings_1_1Processing_1_1Resampling.html)
 
 #### Other settings
 
@@ -534,6 +535,14 @@ calling the [capture_2d](#capture_2d) service, otherwise the service will return
 | `settings_2d/processing_color_balance_green` | double | [Settings2D::Processing::Color::Balance::Green](https://downloads.zivid.com/sdk/releases/2.12.0+6afd4961-1/doc/cpp/classZivid_1_1Settings2D_1_1Processing_1_1Color_1_1Balance_1_1Green.html)
 | `settings_2d/processing_color_balance_red`   | double | [Settings2D::Processing::Color::Balance::Red](https://downloads.zivid.com/sdk/releases/2.12.0+6afd4961-1/doc/cpp/classZivid_1_1Settings2D_1_1Processing_1_1Color_1_1Balance_1_1Red.html)
 | `settings_2d/processing_color_gamma`         | double | [Settings2D::Processing::Color::Gamma](https://downloads.zivid.com/sdk/releases/2.12.0+6afd4961-1/doc/cpp/classZivid_1_1Settings2D_1_1Processing_1_1Color_1_1Gamma.html)
+
+
+#### Other settings
+
+| Name                                         | Type   |  Zivid API Setting                     |
+|----------------------------------------------|--------|----------------------------------------|
+| `settings_2d/sampling_pixel`                 | enum   | [Settings2D::Sampling::Pixel](https://downloads.zivid.com/sdk/releases/2.12.0+6afd4961-1/doc/cpp/classZivid_1_1Settings2D_1_1Sampling_1_1Pixel.html)
+
 
 ## Samples
 

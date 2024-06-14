@@ -2,6 +2,14 @@
 
 This project adheres to [Semantic Versioning](https://semver.org).
 
+## 2.5.0
+
+* Fixed an issue where the driver when running as a nodelet could not attach to a manager
+  in the global namespace (https://github.com/zivid/zivid-ros/issues/84).
+* Added `capture_and_save` service that captures a frame and saves it to a file.
+* Adjusted some error messages that were assuming all Zivid cameras are connected via USB3.
+* Added CI testing for Zivid SDK versions 2.9 to 2.12.
+
 ## 2.4.0
 
 * Added support for PointXYZ and Range settings that are required for Zivid SDK 2.9.0 and newer

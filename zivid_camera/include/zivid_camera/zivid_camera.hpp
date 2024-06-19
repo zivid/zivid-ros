@@ -50,7 +50,7 @@ namespace Zivid
 class Application;
 class Camera;
 class CameraIntrinsics;
-class ColorRGBA;
+struct ColorRGBA;
 class Frame;
 template<typename T>
 class Image;
@@ -70,7 +70,7 @@ class ZividCamera : public rclcpp::Node
 public:
   ZIVID_CAMERA_ROS_PUBLIC ZividCamera(const rclcpp::NodeOptions & options);
   ~ZividCamera();
-  Zivid::Application & zividApplication();
+  ZIVID_CAMERA_ROS_PUBLIC Zivid::Application & zividApplication();
 
 private:
   void onCameraConnectionKeepAliveTimeout();

@@ -141,6 +141,8 @@ private:
     const std_msgs::msg::Header & header, std::size_t width, std::size_t height,
     const Zivid::CameraIntrinsics & intrinsics);
 
+  [[noreturn]] void logErrorAndThrowRuntimeException(const std::string & message);
+
   rclcpp::TimerBase::SharedPtr camera_connection_keepalive_timer_;
   bool use_latched_publisher_for_points_xyz_{false};
   bool use_latched_publisher_for_points_xyzrgba_{false};

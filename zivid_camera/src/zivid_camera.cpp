@@ -311,7 +311,7 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
         return zivid_->createFileCamera(file_camera_path);
       }
       auto cameras = zivid_->cameras();
-      RCLCPP_INFO_STREAM(get_logger(), cameras.size() << " cameras found");
+      RCLCPP_INFO_STREAM(get_logger(), cameras.size() << " camera(s) found");
 
       if (cameras.empty()) {
         logErrorAndThrowRuntimeException(

@@ -30,6 +30,10 @@ add_executable(sample_capture_assistant_cpp src/sample_capture_assistant.cpp)
 ament_target_dependencies(sample_capture_assistant_cpp rclcpp zivid_interfaces sensor_msgs std_srvs ament_index_cpp)
 install(TARGETS sample_capture_assistant_cpp DESTINATION lib/${PROJECT_NAME})
 
+add_executable(sample_capture_and_save_cpp src/sample_capture_and_save.cpp)
+ament_target_dependencies(sample_capture_and_save_cpp rclcpp zivid_interfaces)
+install(TARGETS sample_capture_and_save_cpp DESTINATION lib/${PROJECT_NAME})
+
 if(BUILD_TESTING)
   # TODO enable linting of the samples
   #find_package(ament_lint_auto REQUIRED)

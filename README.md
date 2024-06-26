@@ -205,9 +205,9 @@ The service `capture_assistant/suggest_settings` will modify the settings parame
 [std_srvs/srv/Trigger](https://docs.ros2.org/latest/api/std_srvs/srv/Trigger.html)
 
 Invoke this service to trigger a 3D capture. See section [Configuration](#configuration) for how to
-configure the 3D capture settings. The resulting point cloud is published on topics [points/xyz](#points/xyz) and
-[points/xyzrgba](#points/xyzrgba), color image is published on topic [color/image_color](#colorimage_color),
-and depth image is published on topic [depth/image](depthimage). Camera calibration is published on
+configure the 3D capture settings. The resulting point cloud is published on topics [points/xyz](#pointsxyz) and
+[points/xyzrgba](#pointsxyzrgba), color image is published on topic [color/image_color](#colorimage_color),
+and depth image is published on topic [depth/image](#depthimage). Camera calibration is published on
 topics [color/camera_info](#colorcamera_info) and [depth/camera_info](#depthcamera_info).
 
 See [Sample Capture](#sample-capture) for code example.
@@ -315,7 +315,7 @@ The included point fields are x, y, z (in meters) and rgba (color).
 ### points/xyz
 [sensor_msgs/msg/PointCloud2](https://docs.ros2.org/latest/api/sensor_msgs/msg/PointCloud2.html)
 
-Point cloud data. This topic is similar to topic [points/xyzrgba](#points/xyzrgba), except
+Point cloud data. This topic is similar to topic [points/xyzrgba](#pointsxyzrgba), except
 that only the XYZ 3D coordinates are included. This topic is recommended if you don't need
 the RGBA values.
 

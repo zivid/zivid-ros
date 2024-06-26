@@ -54,6 +54,11 @@ function(set_target_warning_compile_options TARGET)
     set(TARGET_FLAGS -Wall -Wextra -Werror -pedantic)
     target_compile_options(${TARGET} PRIVATE ${TARGET_FLAGS})
 
+  elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+
+      set(TARGET_FLAGS /W4 /WX /permissive-)
+      target_compile_options(${TARGET} PRIVATE ${TARGET_FLAGS})
+
   else()
     message(FATAL_ERROR "Unhandled compiler vendor ${CMAKE_CXX_COMPILER_ID}")
   endif()

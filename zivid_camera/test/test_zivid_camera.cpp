@@ -434,12 +434,11 @@ public:
     }
   };
 
-  template<class A, class B>
-  void assertArrayFloatEq(const A & actual, const B & expected) const
+  template<std::size_t N>
+  void assertArrayDoubleEq(const std::array<double, N> & actual, const std::array<double, N> & expected) const
   {
-    ASSERT_EQ(actual.size(), expected.size());
-    for (std::size_t i = 0; i < actual.size(); i++) {
-      ASSERT_FLOAT_EQ(actual[i], expected[i]);
+    for (std::size_t i = 0; i < N; i++) {
+      ASSERT_DOUBLE_EQ(actual[i], expected[i]);
     }
   }
 
@@ -504,16 +503,16 @@ public:
     //     [fx  0 cx]
     // K = [ 0 fy cy]
     //     [ 0  0  1]
-    assertArrayFloatEq(
+    assertArrayDoubleEq(
       ci.k, std::array<double, 9>{1781.448, 0, 990.49268, 0, 1781.5297, 585.81781, 0, 0, 1});
 
     // R = I
-    assertArrayFloatEq(ci.r, std::array<double, 9>{1, 0, 0, 0, 1, 0, 0, 0, 1});
+    assertArrayDoubleEq(ci.r, std::array<double, 9>{1, 0, 0, 0, 1, 0, 0, 0, 1});
 
     //     [fx'  0  cx' Tx]
     // P = [ 0  fy' cy' Ty]
     //     [ 0   0   1   0]
-    assertArrayFloatEq(
+    assertArrayDoubleEq(
       ci.p,
       std::array<double, 12>{1781.448, 0, 990.49268, 0, 0, 1781.5297, 585.81781, 0, 0, 0, 1, 0});
   }

@@ -377,7 +377,25 @@ Using ros2 run (when `zivid_camera` node is already running):
 ros2 run zivid_samples sample_capture_2d_cpp
 ```
 
-### Suggest Settings with Capture Assistant
+### Sample Capture and Save
+
+This sample performs a capture, and stores the resulting frame to file. This sample shows how to
+[configure](#configuration) the capture settings with a YAML string, how to invoke the
+[capture_and_save](#capture_and_save) service, and how to read the response from the service call.
+
+Source code: [C++](./zivid_samples/src/sample_capture_and_save.cpp)
+
+```bash
+ros2 launch zivid_samples sample.launch sample:=sample_capture_and_save_cpp
+```
+
+Using ros2 run (when `zivid_camera` node is already running):
+
+```bash
+ros2 run zivid_samples sample_capture_and_save_cpp
+```
+
+### Sample Capture Assistant
 
 This sample shows how to invoke the [capture_assistant/suggest_settings](#capture_assistantsuggest_settings) service to
 suggest and set capture settings. Then, it shows how to subscribe to the [points/xyzrgba](#pointsxyzrgba) and

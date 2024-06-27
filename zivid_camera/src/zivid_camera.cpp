@@ -81,6 +81,14 @@ std::string toString(zivid_camera::CameraStatus camera_status)
   return "N/A";
 }
 
+Zivid::Application makeZividApplication()
+{
+#if ZIVID_CORE_VERSION_MAJOR >= 3 || (ZIVID_CORE_VERSION_MAJOR == 2 && ZIVID_CORE_VERSION_MINOR >= 13)
+  return Zivid::Detail::createApplicationForWrapper(Zivid::Detail::EnvironmentInfo::Wrapper::ros1);
+#else
+  return Zivid::Application();
+#endif
+}
 }  // namespace
 
 namespace zivid_camera
@@ -96,6 +104,7 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   , use_latched_publisher_for_snr_image_(false)
   , use_latched_publisher_for_normals_xyz_(false)
   , image_transport_(nh_)
+  , zivid_(makeZividApplication())
   , header_seq_(0)
 {
   ROS_INFO("Zivid ROS driver version %s", ZIVID_ROS_DRIVER_VERSION);

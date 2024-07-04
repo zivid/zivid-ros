@@ -1,9 +1,9 @@
 #include <zivid_camera/Settings2DAcquisitionConfig.h>
-#include <zivid_camera/Capture2D.h>
 #include <dynamic_reconfigure/Reconfigure.h>
 #include <dynamic_reconfigure/client.h>
 #include <sensor_msgs/Image.h>
 #include <ros/ros.h>
+#include <std_srvs/Empty.h>
 
 #define CHECK(cmd)                                                                                                     \
   do                                                                                                                   \
@@ -21,8 +21,8 @@ const ros::Duration default_wait_duration{ 30 };
 void capture()
 {
   ROS_INFO("Calling capture_2d service");
-  zivid_camera::Capture2D capture_2d;
-  CHECK(ros::service::call("/zivid_camera/capture_2d", capture_2d));
+  std_srvs::Empty empty_srv;
+  CHECK(ros::service::call("/zivid_camera/capture_2d", empty_srv));
 }
 
 void on_image_color(const sensor_msgs::ImageConstPtr&)

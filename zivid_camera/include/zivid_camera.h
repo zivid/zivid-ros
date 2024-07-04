@@ -11,6 +11,7 @@
 #include <dynamic_reconfigure/server.h>
 
 #include <ros/ros.h>
+#include <std_srvs/Empty.h>
 
 #include <Zivid/Application.h>
 #include <Zivid/Camera.h>
@@ -42,11 +43,12 @@ private:
   bool cameraInfoModelNameServiceHandler(CameraInfoModelName::Request& req, CameraInfoModelName::Response& res);
   bool cameraInfoSerialNumberServiceHandler(CameraInfoSerialNumber::Request& req,
                                             CameraInfoSerialNumber::Response& res);
-  bool captureServiceHandler(Capture::Request& req, Capture::Response& res);
+  bool captureServiceHandler(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
   bool captureAndSaveServiceHandler(CaptureAndSave::Request& req, CaptureAndSave::Response& res);
-  bool capture2DServiceHandler(Capture2D::Request& req, Capture2D::Response& res);
+  bool capture2DServiceHandler(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
   bool captureAssistantSuggestSettingsServiceHandler(CaptureAssistantSuggestSettings::Request& req,
                                                      CaptureAssistantSuggestSettings::Response& res);
+  bool captureAssistantSuggestSettingsDefaultServiceHandler(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
   bool loadSettingsFromFileServiceHandler(LoadSettingsFromFile::Request& req, LoadSettingsFromFile::Response&);
   bool loadSettings2DFromFileServiceHandler(LoadSettings2DFromFile::Request& req, LoadSettings2DFromFile::Response&);
   void serviceHandlerHandleCameraConnectionLoss();
@@ -102,6 +104,7 @@ private:
   ros::ServiceServer capture_and_save_service_;
   ros::ServiceServer capture_2d_service_;
   ros::ServiceServer capture_assistant_suggest_settings_service_;
+  ros::ServiceServer capture_assistant_suggest_settings_default_service_;
   ros::ServiceServer load_settings_from_file_service_;
   ros::ServiceServer load_settings_2d_from_file_service_;
   ros::ServiceServer is_connected_service_;

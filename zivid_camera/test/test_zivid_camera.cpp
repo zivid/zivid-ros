@@ -6,9 +6,7 @@
 
 #include <zivid_camera/CameraInfoSerialNumber.h>
 #include <zivid_camera/CameraInfoModelName.h>
-#include <zivid_camera/Capture.h>
 #include <zivid_camera/CaptureAndSave.h>
-#include <zivid_camera/Capture2D.h>
 #include <zivid_camera/CaptureAssistantSuggestSettings.h>
 #include <zivid_camera/LoadSettingsFromFile.h>
 #include <zivid_camera/LoadSettings2DFromFile.h>
@@ -35,6 +33,7 @@
 #include <boost/filesystem.hpp>
 
 #include <ros/ros.h>
+#include <std_srvs/Empty.h>
 
 using SecondsD = std::chrono::duration<double>;
 
@@ -176,8 +175,8 @@ protected:
   void enableFirst3DAcquisitionAndCapture()
   {
     enableFirst3DAcquisition();
-    zivid_camera::Capture capture;
-    ASSERT_TRUE(ros::service::call(capture_service_name, capture));
+    std_srvs::Empty empty_srv;
+    ASSERT_TRUE(ros::service::call(capture_service_name, empty_srv));
     short_wait_duration.sleep();
   }
 
@@ -352,15 +351,15 @@ TEST_F(ZividNodeTest, testCapturePublishesTopics)
   medium_wait_duration.sleep();
   all_capture_topics_subscriber.assert_num_topics_received(0);
 
-  zivid_camera::Capture capture;
+  std_srvs::Empty empty_srv;
   // Capture fails when no acquisitions are enabled
-  ASSERT_FALSE(ros::service::call(capture_service_name, capture));
+  ASSERT_FALSE(ros::service::call(capture_service_name, empty_srv));
   short_wait_duration.sleep();
   all_capture_topics_subscriber.assert_num_topics_received(0);
 
   enableFirst3DAcquisition();
 
-  ASSERT_TRUE(ros::service::call(capture_service_name, capture));
+  ASSERT_TRUE(ros::service::call(capture_service_name, empty_srv));
   short_wait_duration.sleep();
   all_capture_topics_subscriber.assert_num_topics_received(1);
 
@@ -689,9 +688,9 @@ TEST_F(TestWithFileCamera, testSettingsEngine)
   settings_cfg.processing_filters_experimental_contrast_distortion_correction_enabled = true;
   ASSERT_TRUE(settings_client.setConfiguration(settings_cfg));
 
-  zivid_camera::Capture capture;
+  std_srvs::Empty empty_srv;
   // Capture fails here because file camera does not support Stripe engine
-  ASSERT_FALSE(ros::service::call(capture_service_name, capture));
+  ASSERT_FALSE(ros::service::call(capture_service_name, sempty_srv));
   ASSERT_EQ(points_sub.numMessages(), 0U);
 
 #if ZIVID_CORE_VERSION_MAJOR >= 3 || (ZIVID_CORE_VERSION_MAJOR == 2 && ZIVID_CORE_VERSION_MINOR >= 12)
@@ -700,7 +699,7 @@ TEST_F(TestWithFileCamera, testSettingsEngine)
   settings_cfg.experimental_engine = zivid_camera::Settings_ExperimentalEnginePhase;
 #endif
   ASSERT_TRUE(settings_client.setConfiguration(settings_cfg));
-  ASSERT_TRUE(ros::service::call(capture_service_name, capture));
+  ASSERT_TRUE(ros::service::call(capture_service_name, empty_srv));
   short_wait_duration.sleep();
   ASSERT_EQ(points_sub.numMessages(), 1U);
 }
@@ -736,13 +735,13 @@ TEST_F(CaptureOutputTest, testCapture2D)
   assert_num_topics_received(0);
 
   // Capture fails when no acquisitions are enabled
-  zivid_camera::Capture2D capture;
-  ASSERT_FALSE(ros::service::call(capture_2d_service_name, capture));
+  std_srvs::Empty empty_srv;
+  ASSERT_FALSE(ros::service::call(capture_2d_service_name, empty_srv));
   short_wait_duration.sleep();
   assert_num_topics_received(0);
 
   enableFirst2DAcquisition();
-  ASSERT_TRUE(ros::service::call(capture_2d_service_name, capture));
+  ASSERT_TRUE(ros::service::call(capture_2d_service_name, empty_srv));
   short_wait_duration.sleep();
   assert_num_topics_received(1);
 
@@ -757,7 +756,7 @@ TEST_F(CaptureOutputTest, testCapture2D)
   short_wait_duration.sleep();
   assert_num_topics_received(1);
 
-  ASSERT_TRUE(ros::service::call(capture_2d_service_name, capture));
+  ASSERT_TRUE(ros::service::call(capture_2d_service_name, empty_srv));
   short_wait_duration.sleep();
   assert_num_topics_received(2);
   verify_image_and_camera_info(*color_image_color_sub.lastMessage(), *color_camera_info_sub.lastMessage());

@@ -23,6 +23,7 @@ endfunction()
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
+  std_srvs
   std_msgs
   dynamic_reconfigure
   message_generation
@@ -83,9 +84,7 @@ add_service_files(
   DIRECTORY
   srv
   FILES
-  Capture.srv
   CaptureAndSave.srv
-  Capture2D.srv
   CaptureAssistantSuggestSettings.srv
   LoadSettingsFromFile.srv
   LoadSettings2DFromFile.srv
@@ -96,11 +95,12 @@ add_service_files(
 generate_messages(
   DEPENDENCIES
   sensor_msgs
+  std_srvs
 )
 catkin_package(
   INCLUDE_DIRS include ${catkin_INCLUDE_DIRS}
   LIBRARIES ${LIBRARY_NAME}
-  CATKIN_DEPENDS message_runtime sensor_msgs std_msgs nodelet
+  CATKIN_DEPENDS message_runtime sensor_msgs std_srvs std_msgs nodelet
 )
 
 # The catkin functions above sets directory-level include directories for the current

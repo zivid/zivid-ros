@@ -234,6 +234,7 @@ This service has two parameters:
 
 See [Sample Capture Assistant](#sample-capture-assistant) for code example.
 
+> TODO: update README for the following two services, and add the default service
 ### capture
 [zivid_camera/Capture.srv](./zivid_camera/srv/Capture.srv)
 

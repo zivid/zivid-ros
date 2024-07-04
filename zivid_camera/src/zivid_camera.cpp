@@ -254,6 +254,8 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   capture_2d_service_ = nh_.advertiseService("capture_2d", &ZividCamera::capture2DServiceHandler, this);
   capture_assistant_suggest_settings_service_ = nh_.advertiseService(
       "capture_assistant/suggest_settings", &ZividCamera::captureAssistantSuggestSettingsServiceHandler, this);
+  capture_assistant_suggest_settings_default_service_ = nh_.advertiseService(
+      "capture_assistant/suggest_settings_default", &ZividCamera::captureAssistantSuggestSettingsDefaultServiceHandler, this);
   load_settings_from_file_service_ =
       nh_.advertiseService("load_settings_from_file", &ZividCamera::loadSettingsFromFileServiceHandler, this);
   load_settings_2d_from_file_service_ =
@@ -346,7 +348,7 @@ bool ZividCamera::cameraInfoSerialNumberServiceHandler(zivid_camera::CameraInfoS
   return true;
 }
 
-bool ZividCamera::captureServiceHandler(Capture::Request&, Capture::Response&)
+bool ZividCamera::captureServiceHandler(std_srvs::Empty::Request &, std_srvs::Empty::Response &)
 {
   ROS_DEBUG_STREAM(__func__);
 
@@ -366,7 +368,7 @@ bool ZividCamera::captureAndSaveServiceHandler(CaptureAndSave::Request& req, Cap
   return true;
 }
 
-bool ZividCamera::capture2DServiceHandler(Capture2D::Request&, Capture2D::Response&)
+bool ZividCamera::capture2DServiceHandler(std_srvs::Empty::Request &, std_srvs::Empty::Response &)
 {
   ROS_DEBUG_STREAM(__func__);
 
@@ -433,6 +435,34 @@ bool ZividCamera::captureAssistantSuggestSettingsServiceHandler(CaptureAssistant
 
   return true;
 }
+
+bool ZividCamera::captureAssistantSuggestSettingsDefaultServiceHandler(std_srvs::Empty::Request& , std_srvs::Empty::Response&){
+  ROS_DEBUG_STREAM(__func__);
+  serviceHandlerHandleCameraConnectionLoss();
+
+  if (capture_settings_controller_->numAcquisitionConfigServers() < 10)
+  {
+    throw std::runtime_error("To use the CaptureAssistant the launch parameter 'max_capture_acquisitions' "
+                             "must be at least 10, since the Capture Assistant may suggest up to 10 acquisitions. "
+                             "See README.md for more information.");
+  }
+
+  using SuggestSettingsParameters = Zivid::CaptureAssistant::SuggestSettingsParameters;
+  const long int capture_time_sec = 2;
+  const auto max_capture_time = std::chrono::round<std::chrono::milliseconds>(std::chrono::seconds{capture_time_sec});
+  const auto ambient_light_frequency = SuggestSettingsParameters::AmbientLightFrequency::none;
+
+  SuggestSettingsParameters suggest_settings_parameters{ SuggestSettingsParameters::MaxCaptureTime{ max_capture_time },
+                                                         ambient_light_frequency };
+  ROS_INFO_STREAM("Getting suggested settings using parameters: " << suggest_settings_parameters);
+  const auto suggested_settings = Zivid::CaptureAssistant::suggestSettings(camera_, suggest_settings_parameters);
+  ROS_INFO_STREAM("CaptureAssistant::suggestSettings returned " << suggested_settings.acquisitions().size()
+                                                                << " acquisitions");
+  capture_settings_controller_->setZividSettings(suggested_settings);
+
+  return true;
+}
+
 
 bool ZividCamera::loadSettingsFromFileServiceHandler(LoadSettingsFromFile::Request& req,
                                                      LoadSettingsFromFile::Response&)

@@ -6,7 +6,7 @@ import dynamic_reconfigure.client
 from zivid_camera.srv import *
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
-
+from std_srvs.srv import Empty
 
 class Sample:
     def __init__(self):
@@ -19,7 +19,7 @@ class Sample:
         rospy.Subscriber("/zivid_camera/color/image_color", Image, self.on_image_color)
 
         self.capture_2d_service = rospy.ServiceProxy(
-            "/zivid_camera/capture_2d", Capture2D
+            "/zivid_camera/capture_2d", Empty
         )
 
         rospy.loginfo("Configuring 2D settings")

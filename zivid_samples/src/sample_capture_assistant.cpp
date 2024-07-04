@@ -1,8 +1,8 @@
-#include <zivid_camera/Capture.h>
 #include <zivid_camera/CaptureAssistantSuggestSettings.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <ros/ros.h>
+#include <std_srvs/Empty.h>
 
 #define CHECK(cmd)                                                                                                     \
   do                                                                                                                   \
@@ -33,8 +33,8 @@ void capture_assistant_suggest_settings()
 void capture()
 {
   ROS_INFO("Calling capture service");
-  zivid_camera::Capture capture;
-  CHECK(ros::service::call("/zivid_camera/capture", capture));
+  std_srvs::Empty empty_srv;
+  CHECK(ros::service::call("/zivid_camera/capture", empty_srv));
 }
 
 void on_points(const sensor_msgs::PointCloud2ConstPtr&)

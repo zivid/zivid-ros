@@ -777,7 +777,7 @@ TEST_F(CaptureOutputTest, testCapturePointsXYZGBA)
   assertPointCloud2Field(last_pc2->fields[0], "x", 0, sensor_msgs::msg::PointField::FLOAT32, 1);
   assertPointCloud2Field(last_pc2->fields[1], "y", 4, sensor_msgs::msg::PointField::FLOAT32, 1);
   assertPointCloud2Field(last_pc2->fields[2], "z", 8, sensor_msgs::msg::PointField::FLOAT32, 1);
-  assertPointCloud2Field(last_pc2->fields[3], "rgba", 12, sensor_msgs::msg::PointField::FLOAT32, 1);
+  assertPointCloud2Field(last_pc2->fields[3], "rgba", 12, sensor_msgs::msg::PointField::UINT32, 1);
 
   const auto point_cloud = captureViaSDKDefaultSettings();
   const auto expected_xyzrgba = point_cloud.copyData<Zivid::PointXYZColorRGBA>();

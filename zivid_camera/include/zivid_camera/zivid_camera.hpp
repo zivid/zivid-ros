@@ -40,6 +40,8 @@
 #include <zivid_interfaces/srv/capture_and_save.hpp>
 #include <zivid_interfaces/srv/capture_assistant_suggest_settings.hpp>
 #include <zivid_interfaces/srv/is_connected.hpp>
+#include <zivid_interfaces/srv/load_settings2_d_from_file.hpp>
+#include <zivid_interfaces/srv/load_settings_from_file.hpp>
 
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -106,6 +108,15 @@ private:
     const std::shared_ptr<rmw_request_id_t> request_header,
     const std::shared_ptr<zivid_interfaces::srv::IsConnected::Request> request,
     std::shared_ptr<zivid_interfaces::srv::IsConnected::Response> response);
+  void loadSettings2DFromFileServiceHandler(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<zivid_interfaces::srv::LoadSettings2DFromFile::Request> request,
+    std::shared_ptr<zivid_interfaces::srv::LoadSettings2DFromFile::Response> response);
+  void loadSettingsFromFileServiceHandler(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<zivid_interfaces::srv::LoadSettingsFromFile::Request> request,
+    std::shared_ptr<zivid_interfaces::srv::LoadSettingsFromFile::Response> response);
+
   void publishFrame(const Zivid::Frame & frame);
   Zivid::Frame invokeCaptureAndPublishFrame(const Zivid::Settings & settings);
   bool shouldPublishPointsXYZ() const;
@@ -166,6 +177,9 @@ private:
   rclcpp::Service<zivid_interfaces::srv::CaptureAssistantSuggestSettings>::SharedPtr
     capture_assistant_suggest_settings_service_;
   rclcpp::Service<zivid_interfaces::srv::IsConnected>::SharedPtr is_connected_service_;
+  rclcpp::Service<zivid_interfaces::srv::LoadSettings2DFromFile>::SharedPtr
+    load_settings_2d_from_file_;
+  rclcpp::Service<zivid_interfaces::srv::LoadSettingsFromFile>::SharedPtr load_settings_from_file_;
 
   std::unique_ptr<Zivid::Application> zivid_;
   CameraStatus camera_status_{CameraStatus::Idle};

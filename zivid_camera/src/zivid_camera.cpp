@@ -407,6 +407,14 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
   is_connected_service_ = create_service<zivid_interfaces::srv::IsConnected>(
     "is_connected", std::bind(&ZividCamera::isConnectedServiceHandler, this, _1, _2, _3));
 
+  load_settings_2d_from_file_ = create_service<zivid_interfaces::srv::LoadSettings2DFromFile>(
+    "load_settings_2d_from_file",
+    std::bind(&ZividCamera::loadSettings2DFromFileServiceHandler, this, _1, _2, _3));
+
+  load_settings_from_file_ =
+    create_service<zivid_interfaces::srv::LoadSettingsFromFile>("load_settings_from_file",
+      std::bind(&ZividCamera::loadSettingsFromFileServiceHandler, this, _1, _2, _3));
+
   capture_service_ = create_service<std_srvs::srv::Trigger>(
     "capture", std::bind(&ZividCamera::captureServiceHandler, this, _1, _2, _3));
 
@@ -612,6 +620,23 @@ void ZividCamera::isConnectedServiceHandler(
   std::shared_ptr<zivid_interfaces::srv::IsConnected::Response> response)
 {
   response->is_connected = camera_status_ == CameraStatus::Connected;
+}
+
+void ZividCamera::loadSettings2DFromFileServiceHandler(
+  const std::shared_ptr<rmw_request_id_t> request_header,
+  const std::shared_ptr<zivid_interfaces::srv::LoadSettings2DFromFile::Request> request,
+  std::shared_ptr<zivid_interfaces::srv::LoadSettings2DFromFile::Response> response)
+{
+
+  settings_2d_controller_->setSettings(Zivid::Settings2D{request->file_path});
+}
+
+void ZividCamera::loadSettingsFromFileServiceHandler(
+  const std::shared_ptr<rmw_request_id_t> request_header,
+  const std::shared_ptr<zivid_interfaces::srv::LoadSettingsFromFile::Request> request,
+  std::shared_ptr<zivid_interfaces::srv::LoadSettingsFromFile::Response> response)
+{
+  settings_controller_->setSettings(Zivid::Settings{request->file_path});
 }
 
 void ZividCamera::publishFrame(const Zivid::Frame & frame)

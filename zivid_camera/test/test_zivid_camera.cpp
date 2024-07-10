@@ -435,7 +435,9 @@ public:
   };
 
   template<std::size_t N>
-  void assertArrayDoubleEq(const std::array<double, N> & actual, const std::array<double, N> & expected) const
+  void assertArrayDoubleEq(
+    const std::array<double, N> & actual,
+    const std::array<double, N> & expected) const
   {
     for (std::size_t i = 0; i < N; i++) {
       ASSERT_DOUBLE_EQ(actual[i], expected[i]);

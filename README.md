@@ -351,14 +351,16 @@ This sample performs single-acquisition 3D captures in a loop. This sample shows
 the capture settings, how to subscribe to the [points/xyzrgba](#pointsxyzrgba) topic, and how to invoke the
 [capture](#capture) service.
 
-Source code: [C++](./zivid_samples/src/sample_capture.cpp)
+Source code: [C++](./zivid_samples/src/sample_capture.cpp) [Python](./zivid_samples/scripts/sample_capture.py)
 
 ```bash
 ros2 launch zivid_samples sample.launch sample:=sample_capture_cpp
+ros2 launch zivid_samples sample.launch sample:=sample_capture_py
 ```
 Using ros2 run (when `zivid_camera` node is already running):
 ```bash
 ros2 run zivid_samples sample_capture_cpp
+ros2 run zivid_samples sample_capture_py
 ```
 
 ### Sample Capture 2D

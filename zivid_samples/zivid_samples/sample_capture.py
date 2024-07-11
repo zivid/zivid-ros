@@ -15,6 +15,8 @@ class Sample(Node):
     def __init__(self):
         super().__init__("sample_capture_py")
 
+        self.get_logger().info("Starting sample_capture_py")
+
         self.capture_service = self.create_client(Trigger, "capture")
         while not self.capture_service.wait_for_service(timeout_sec=3.0):
             self.get_logger().info("Capture service not available, waiting again...")

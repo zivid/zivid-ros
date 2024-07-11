@@ -12,6 +12,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
 find_package(ament_index_cpp REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(zivid_interfaces REQUIRED)
@@ -34,7 +35,9 @@ add_executable(sample_capture_and_save_cpp src/sample_capture_and_save.cpp)
 ament_target_dependencies(sample_capture_and_save_cpp rclcpp zivid_interfaces)
 install(TARGETS sample_capture_and_save_cpp DESTINATION lib/${PROJECT_NAME})
 
-install(PROGRAMS scripts/sample_capture.py DESTINATION lib/${PROJECT_NAME})
+ament_python_install_package(${PROJECT_NAME} SCRIPTS_DESTINATION lib/${PROJECT_NAME})
+#install(PROGRAMS scripts/zivid_samples DESTINATION bin)
+#install(PROGRAMS scripts/zivid_samples DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   # TODO enable linting of the samples

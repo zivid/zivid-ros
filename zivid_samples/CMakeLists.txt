@@ -34,6 +34,8 @@ add_executable(sample_capture_and_save_cpp src/sample_capture_and_save.cpp)
 ament_target_dependencies(sample_capture_and_save_cpp rclcpp zivid_interfaces)
 install(TARGETS sample_capture_and_save_cpp DESTINATION lib/${PROJECT_NAME})
 
+install(PROGRAMS scripts/sample_capture.py DESTINATION lib/${PROJECT_NAME})
+
 if(BUILD_TESTING)
   # TODO enable linting of the samples
   #find_package(ament_lint_auto REQUIRED)

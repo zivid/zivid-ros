@@ -62,11 +62,12 @@ def main(args=None):
     try:
         sample = Sample()
 
-        future = sample.capture()
-        rclpy.spin_until_future_complete(sample, future)
-        sample.get_logger().info("Capture complete")
+        sample.get_logger().info("Spinning node.. Press Ctrl+C to abort.")
 
-        rclpy.spin(sample)
+        while rclpy.ok():
+            future = sample.capture()
+            rclpy.spin_until_future_complete(sample, future)
+            sample.get_logger().info("Capture complete")
 
     except KeyboardInterrupt:
         pass

@@ -19,23 +19,23 @@ find_package(sensor_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 
 add_executable(sample_capture_cpp src/sample_capture.cpp)
-ament_target_dependencies(sample_capture_cpp rclcpp zivid_interfaces sensor_msgs std_srvs ament_index_cpp)
+ament_target_dependencies(sample_capture_cpp rclcpp sensor_msgs std_srvs)
 install(TARGETS sample_capture_cpp DESTINATION lib/${PROJECT_NAME})
 
 add_executable(sample_capture_2d_cpp src/sample_capture_2d.cpp)
-ament_target_dependencies(sample_capture_2d_cpp rclcpp zivid_interfaces sensor_msgs std_srvs ament_index_cpp)
+ament_target_dependencies(sample_capture_2d_cpp rclcpp sensor_msgs std_srvs)
 install(TARGETS sample_capture_2d_cpp DESTINATION lib/${PROJECT_NAME})
-
-add_executable(sample_capture_assistant_cpp src/sample_capture_assistant.cpp)
-ament_target_dependencies(sample_capture_assistant_cpp rclcpp zivid_interfaces sensor_msgs std_srvs ament_index_cpp)
-install(TARGETS sample_capture_assistant_cpp DESTINATION lib/${PROJECT_NAME})
 
 add_executable(sample_capture_and_save_cpp src/sample_capture_and_save.cpp)
 ament_target_dependencies(sample_capture_and_save_cpp rclcpp zivid_interfaces)
 install(TARGETS sample_capture_and_save_cpp DESTINATION lib/${PROJECT_NAME})
 
+add_executable(sample_capture_assistant_cpp src/sample_capture_assistant.cpp)
+ament_target_dependencies(sample_capture_assistant_cpp rclcpp zivid_interfaces sensor_msgs std_srvs)
+install(TARGETS sample_capture_assistant_cpp DESTINATION lib/${PROJECT_NAME})
+
 add_executable(sample_capture_with_settings_from_file_cpp src/sample_capture_with_settings_from_file.cpp)
-ament_target_dependencies(sample_capture_with_settings_from_file_cpp rclcpp zivid_interfaces sensor_msgs std_srvs ament_index_cpp)
+ament_target_dependencies(sample_capture_with_settings_from_file_cpp rclcpp sensor_msgs std_srvs ament_index_cpp)
 install(TARGETS sample_capture_with_settings_from_file_cpp DESTINATION lib/${PROJECT_NAME})
 
 install(PROGRAMS scripts/sample_capture.py DESTINATION lib/${PROJECT_NAME})

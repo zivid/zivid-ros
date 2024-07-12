@@ -39,8 +39,6 @@ Settings:
     - Acquisition:
         Aperture: 5.66
         ExposureTime: 8333
-  Diagnostics:
-    Enabled: yes
   Processing:
     Filters:
       Outlier:
@@ -60,7 +58,7 @@ Settings:
 
     def on_points(self, msg):
         self.get_logger().info(
-            f"Received point cloud of width {msg.width} and height {msg.height}"
+            f"Received point cloud of size {msg.width} x {msg.height}"
         )
 
 
@@ -70,11 +68,12 @@ def main(args=None):
     try:
         sample = Sample()
 
-        future = sample.capture()
-        rclpy.spin_until_future_complete(sample, future)
-        sample.get_logger().info("Capture complete")
+        sample.get_logger().info("Spinning node.. Press Ctrl+C to abort.")
 
-        rclpy.spin(sample)
+        while rclpy.ok():
+            future = sample.capture()
+            rclpy.spin_until_future_complete(sample, future)
+            sample.get_logger().info("Capture complete")
 
     except KeyboardInterrupt:
         pass

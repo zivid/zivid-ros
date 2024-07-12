@@ -169,6 +169,18 @@ void runFunctionAndCatchExceptions(
   }
 }
 
+template<typename Function, typename Logger>
+auto runFunctionAndCatchExceptionsAndRethrow(Function && function, const Logger & logger)
+{
+  try {
+    return function();
+  } catch (const Zivid::Exception & exception) {
+    const auto exception_message = Zivid::toString(exception);
+    RCLCPP_ERROR_STREAM(logger, exception_message);
+    throw;
+  }
+}
+
 template<typename Logger>
 [[noreturn]] void logErrorToLoggerAndThrowRuntimeException(
   const Logger & logger,
@@ -219,6 +231,11 @@ public:
         node_.get_logger(),
         "Both '" + file_path_param_ + "' and '" + yaml_string_param_ +
         "' parameters are non-empty! Please set only one of these parameters.");
+    } else if (settings_file_path.empty() && settings_yaml.empty()) {
+      logErrorToLoggerAndThrowRuntimeException(
+        node_.get_logger(),
+        "Both '" + file_path_param_ + "' and '" + yaml_string_param_ +
+        "' parameters are empty! Please set one of these parameters.");
     } else if (!settings_yaml.empty()) {
       RCLCPP_DEBUG_STREAM(node_.get_logger(), "Using settings from yml string");
       return deserializeZividDataModel<SettingsType>(settings_yaml);
@@ -505,7 +522,8 @@ void ZividCamera::captureServiceHandler(
 {
   RCLCPP_INFO_STREAM(get_logger(), __func__);
 
-  const auto settings = settings_controller_->currentSettings();
+  const auto settings = runFunctionAndCatchExceptionsAndRethrow(
+    [&] {return settings_controller_->currentSettings();}, get_logger());
 
   runFunctionAndCatchExceptions(
     [&]() {invokeCaptureAndPublishFrame(settings);}, response, get_logger(), "Capture");
@@ -517,7 +535,8 @@ void ZividCamera::captureAndSaveServiceHandler(
   std::shared_ptr<zivid_interfaces::srv::CaptureAndSave::Response> response)
 {
   RCLCPP_INFO_STREAM(get_logger(), __func__);
-  const auto settings = settings_controller_->currentSettings();
+  const auto settings = runFunctionAndCatchExceptionsAndRethrow(
+    [&] {return settings_controller_->currentSettings();}, get_logger());
 
   runFunctionAndCatchExceptions(
     [&]() {
@@ -537,7 +556,8 @@ void ZividCamera::capture2DServiceHandler(
 
   serviceHandlerHandleCameraConnectionLoss();
 
-  const auto settings2D = settings_2d_controller_->currentSettings();
+  const auto settings2D = runFunctionAndCatchExceptionsAndRethrow(
+    [&] {return settings_2d_controller_->currentSettings();}, get_logger());
 
   runFunctionAndCatchExceptions(
     [&]() {
@@ -584,9 +604,12 @@ void ZividCamera::captureAssistantSuggestSettingsServiceHandler(
   SuggestSettingsParameters suggest_settings_parameters{
     SuggestSettingsParameters::MaxCaptureTime{max_capture_time}, ambient_light_frequency};
   RCLCPP_INFO_STREAM(
-    get_logger(), "Getting suggested settings using parameters: " << suggest_settings_parameters);
-  const auto suggested_settings =
-    Zivid::CaptureAssistant::suggestSettings(*camera_, suggest_settings_parameters);
+    get_logger(),
+    "Getting suggested settings using parameters: " << suggest_settings_parameters);
+  const auto suggested_settings = runFunctionAndCatchExceptionsAndRethrow(
+    [&]() {
+      return Zivid::CaptureAssistant::suggestSettings(*camera_, suggest_settings_parameters);
+    }, get_logger());
 
   RCLCPP_INFO_STREAM(
     get_logger(), "CaptureAssistant::suggestSettings returned "

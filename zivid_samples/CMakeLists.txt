@@ -39,6 +39,10 @@ ament_target_dependencies(sample_capture_with_settings_from_file_cpp rclcpp zivi
 install(TARGETS sample_capture_with_settings_from_file_cpp DESTINATION lib/${PROJECT_NAME})
 
 install(PROGRAMS scripts/sample_capture.py DESTINATION lib/${PROJECT_NAME})
+install(PROGRAMS scripts/sample_capture_2d.py DESTINATION lib/${PROJECT_NAME})
+install(PROGRAMS scripts/sample_capture_and_save.py DESTINATION lib/${PROJECT_NAME})
+install(PROGRAMS scripts/sample_capture_assistant.py DESTINATION lib/${PROJECT_NAME})
+install(PROGRAMS scripts/sample_capture_with_settings_from_file.py DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   # TODO enable linting of the samples

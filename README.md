@@ -413,7 +413,25 @@ Using ros2 run (when `zivid_camera` node is already running):
 ros2 run zivid_samples sample_capture_assistant
 ```
 
-_More samples will soon be provided_.
+### Sample Capture With Settings From File
+
+This sample performs single-acquisition 3D captures in a loop. This sample shows how to [configure](#configuration) the
+capture settings from a yaml file, how to subscribe to the [points/xyzrgba](#pointsxyzrgba) topic, and how to invoke the
+[capture](#capture) service.
+
+Source code: [C++](./zivid_samples/src/sample_capture_with_settings_from_file.cpp) [Python](./zivid_samples/scripts/sample_capture_with_settings_from_file.py)
+
+```bash
+ros2 launch zivid_samples sample.launch sample:=sample_capture_with_settings_from_file_cpp
+ros2 launch zivid_samples sample.launch sample:=sample_capture_with_settings_from_file.py
+```
+
+Using ros2 run (when `zivid_camera` node is already running):
+
+```bash
+ros2 run zivid_samples sample_capture_with_settings_from_file_cpp
+ros2 run zivid_samples sample_capture_with_settings_from_file.py
+```
 
 ## Frequently Asked Questions
 

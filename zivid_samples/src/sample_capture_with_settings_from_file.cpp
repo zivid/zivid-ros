@@ -39,66 +39,11 @@
  * When a point cloud is received, a new capture is triggered.
  */
 
-void set_settings(const std::shared_ptr<rclcpp::Node> & node)
-{
-  const std::string settings_yml =
-    R"(
-__version__:
-  serializer: 1
-  data: 22
-Settings:
-  Acquisitions:
-    - Acquisition:
-        Aperture: 5.66
-        ExposureTime: 8333
-  Processing:
-    Filters:
-      Outlier:
-        Removal:
-          Enabled: yes
-          Threshold: 5
-)";
-
-  auto param_client =
-    std::make_shared<rclcpp::AsyncParametersClient>(node, "zivid_camera");
-  while (!param_client->wait_for_service(std::chrono::seconds(3))) {
-    if (!rclcpp::ok()) {
-      RCLCPP_ERROR(node->get_logger(),
-                   "Client interrupted while waiting for service to appear.");
-      terminate();
-    }
-    RCLCPP_INFO(node->get_logger(),
-                "Waiting for the param client to appear...");
-  }
-
-  auto result = param_client->set_parameters(
-    {rclcpp::Parameter("settings_yaml", settings_yml)}, [&node](auto future) {
-      auto results = future.get();
-      if (results.size() != 1) {
-        RCLCPP_ERROR_STREAM(node->get_logger(),
-                              "Expected 1 result, got " << results.size());
-      } else {
-        if (results[0].successful) {
-          RCLCPP_INFO(node->get_logger(), "Successfully set settings_yaml");
-        } else {
-          RCLCPP_ERROR(node->get_logger(), "Failed to set settings_yaml");
-        }
-      }
-      });
-
-  if (rclcpp::spin_until_future_complete(node, result) !=
-    rclcpp::FutureReturnCode::SUCCESS)
-  {
-    RCLCPP_ERROR(node->get_logger(), "Failed to set settings_yaml parameter");
-    std::terminate();
-  }
-}
-
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  auto node = rclcpp::Node::make_shared("sample_capture");
-  RCLCPP_INFO(node->get_logger(), "Started the sample_capture node");
+  auto node = rclcpp::Node::make_shared("sample_capture_with_settings_from_file");
+  RCLCPP_INFO(node->get_logger(), "Started the sample node");
 
   auto client = node->create_client<std_srvs::srv::Trigger>("capture");
   while (!client->wait_for_service(std::chrono::seconds(3))) {
@@ -115,7 +60,37 @@ int main(int argc, char * argv[])
 
   RCLCPP_INFO(node->get_logger(), "Service is available");
 
-  set_settings(node);
+  auto param_client =
+    std::make_shared<rclcpp::AsyncParametersClient>(node, "zivid_camera");
+  if (!param_client->service_is_ready()) {
+    RCLCPP_ERROR(node->get_logger(), "Param client is not ready");
+    return EXIT_FAILURE;
+  }
+  const auto share_directory =
+    ament_index_cpp::get_package_share_directory("zivid_samples");
+  const auto path_to_settings_yml =
+    share_directory + "/settings/camera_settings.yml";
+
+  RCLCPP_INFO_STREAM(
+    node->get_logger(), "Setting settings path to '"
+      << path_to_settings_yml << "'");
+
+  param_client->set_parameters(
+    {rclcpp::Parameter("settings_file_path", path_to_settings_yml)},
+    [&node](auto future) {
+      auto results = future.get();
+      if (results.size() != 1) {
+        RCLCPP_ERROR_STREAM(
+          node->get_logger(),
+          "Expected 1 result, got " << results.size());
+      } else {
+        if (results[0].successful) {
+          RCLCPP_INFO(node->get_logger(), "Successfully set settings path");
+        } else {
+          RCLCPP_ERROR(node->get_logger(), "Failed to set settings path");
+        }
+      }
+    });
 
   auto trigger_capture = [&]() {
       RCLCPP_INFO(node->get_logger(), "Triggering capture");

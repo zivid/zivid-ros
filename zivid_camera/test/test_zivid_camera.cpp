@@ -36,18 +36,17 @@
 
 #include <filesystem>
 #include <fstream>
-
-#include <rclcpp/rclcpp.hpp>
 #include <image_transport/image_transport.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/image.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <std_srvs/srv/trigger.hpp>
+#include <zivid_camera/zivid_camera.hpp>
 #include <zivid_interfaces/srv/camera_info_model_name.hpp>
 #include <zivid_interfaces/srv/camera_info_serial_number.hpp>
 #include <zivid_interfaces/srv/capture_and_save.hpp>
 #include <zivid_interfaces/srv/capture_assistant_suggest_settings.hpp>
 #include <zivid_interfaces/srv/is_connected.hpp>
-#include <zivid_camera/zivid_camera.hpp>
-#include <sensor_msgs/msg/image.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <std_srvs/srv/trigger.hpp>
 
 namespace
 {
@@ -72,20 +71,11 @@ public:
   TmpFile & operator=(const TmpFile &) = delete;
   TmpFile & operator=(TmpFile &&) = delete;
 
-  ~TmpFile()
-  {
-    std::filesystem::remove(m_path);
-  }
+  ~TmpFile() { std::filesystem::remove(m_path); }
 
-  const std::filesystem::path & path() const
-  {
-    return m_path;
-  }
+  const std::filesystem::path & path() const { return m_path; }
 
-  std::string string() const
-  {
-    return m_path.string();
-  }
+  std::string string() const { return m_path.string(); }
 
 private:
   std::filesystem::path m_path;
@@ -110,10 +100,7 @@ protected:
     std::cerr << "End of test " << test_name << "\n";
   }
 
-  void printLine()
-  {
-    std::cerr << std::string(80, '-') << "\n";
-  }
+  void printLine() { std::cerr << std::string(80, '-') << "\n"; }
 };
 
 class ZividNodeTest : public ZividNodeTestBase
@@ -148,8 +135,7 @@ protected:
   static constexpr auto parameter_settings_2d_file_path = "settings_2d_file_path";
   static constexpr auto parameter_settings_2d_yaml = "settings_2d_yaml";
 
-  ZividNodeTest()
-  : test_node_(rclcpp::Node::make_shared("test_node"))
+  ZividNodeTest() : test_node_(rclcpp::Node::make_shared("test_node"))
   {
     executor_.add_node(test_node_);
     executor_.add_node(zivid_ros_node);
@@ -161,7 +147,7 @@ protected:
     setNodeParameter(parameter_settings_2d_yaml, "");
   }
 
-  template<typename SrvType>
+  template <typename SrvType>
   decltype(auto) doSrvRequest(
     const std::string & service, std::shared_ptr<typename SrvType::Request> request,
     std::chrono::milliseconds timeout = default_service_timeout)
@@ -174,17 +160,16 @@ protected:
     auto future = client->async_send_request(request);
 
     if (
-      executor_.spin_until_future_complete(future, timeout) != rclcpp::FutureReturnCode::SUCCESS)
-    {
+      executor_.spin_until_future_complete(future, timeout) != rclcpp::FutureReturnCode::SUCCESS) {
       RCLCPP_ERROR_STREAM(rclcpp::get_logger("rclcpp"), "Failed to call service " << service);
       throw std::runtime_error(
-              "Failed to invoke service '" + service + "'. No response within timeout.");
+        "Failed to invoke service '" + service + "'. No response within timeout.");
     }
 
     return future.get();
   }
 
-  template<typename SrvType>
+  template <typename SrvType>
   decltype(auto) doEmptySrvRequest(
     const std::string & service, std::chrono::milliseconds timeout = default_service_timeout)
   {
@@ -198,34 +183,27 @@ protected:
     return doEmptySrvRequest<std_srvs::srv::Trigger>(service, timeout);
   }
 
-  template<typename Type>
+  template <typename Type>
   class SubscriptionWrapper
   {
-public:
+  public:
     static SubscriptionWrapper<Type> make(rclcpp::Node::SharedPtr node, const std::string & topic)
     {
       auto w = SubscriptionWrapper<Type>();
       std::function<void(const std::shared_ptr<const Type> &)> cb = [&](auto msg) {
-          w.impl_->num_messages_++;
-          w.impl_->last_message_ = msg;
-        };
+        w.impl_->num_messages_++;
+        w.impl_->last_message_ = msg;
+      };
       w.impl_->subscription_ = node->create_subscription<Type>(topic, 10, cb);
       return w;
     }
 
-    decltype(auto) lastMessage() const
-    {
-      return impl_->last_message_;
-    }
+    decltype(auto) lastMessage() const { return impl_->last_message_; }
 
-    std::size_t numMessages() const
-    {
-      return impl_->num_messages_;
-    }
+    std::size_t numMessages() const { return impl_->num_messages_; }
 
-private:
-    SubscriptionWrapper()
-    : impl_{std::make_unique<Impl>()} {}
+  private:
+    SubscriptionWrapper() : impl_{std::make_unique<Impl>()} {}
 
     struct Impl
     {
@@ -315,7 +293,7 @@ Settings2D:
     return doCapture2DUsingFilePath(defaultSingleAcquisitionSettings2DYml());
   }
 
-  template<typename ZividDataModel>
+  template <typename ZividDataModel>
   auto serializeZividDataModel(const ZividDataModel & dm)
   {
 #if (ZIVID_CORE_VERSION_MAJOR == 2 && ZIVID_CORE_VERSION_MINOR <= 12)
@@ -327,7 +305,7 @@ Settings2D:
 #endif
   }
 
-  template<typename ZividDataModel>
+  template <typename ZividDataModel>
   auto deserializeZividDataModel(const std::string & serialized)
   {
 #if (ZIVID_CORE_VERSION_MAJOR == 2 && ZIVID_CORE_VERSION_MINOR <= 12)
@@ -341,28 +319,28 @@ Settings2D:
 #endif
   }
 
-  template<typename ResponseSharedPtr>
+  template <typename ResponseSharedPtr>
   auto verifyTriggerResponseSuccess(const ResponseSharedPtr & response)
   {
     ASSERT_TRUE(response->success);
     ASSERT_EQ(response->message, "");
   }
 
-  template<typename ResponseSharedPtr>
+  template <typename ResponseSharedPtr>
   auto verifyTriggerResponseError(const ResponseSharedPtr & response)
   {
     ASSERT_FALSE(response->success);
     ASSERT_NE(response->message, "");
   }
 
-  template<typename ResponseSharedPtr>
+  template <typename ResponseSharedPtr>
   auto verifyTriggerResponseError(const ResponseSharedPtr & response, const std::string & message)
   {
     verifyTriggerResponseError(response);
     ASSERT_EQ(response->message, message);
   }
 
-  template<class Type>
+  template <class Type>
   SubscriptionWrapper<Type> subscribe(const std::string & topic)
   {
     return SubscriptionWrapper<Type>::make(test_node_, topic);
@@ -370,7 +348,7 @@ Settings2D:
 
   class AllCaptureTopicsSubscriber
   {
-public:
+  public:
     explicit AllCaptureTopicsSubscriber(ZividNodeTest & nodeTest)
     : color_camera_info_sub_(
         nodeTest.subscribe<sensor_msgs::msg::CameraInfo>(color_camera_info_topic_name)),
@@ -415,7 +393,7 @@ public:
 
   class AllCapture2DTopicsSubscriber
   {
-public:
+  public:
     explicit AllCapture2DTopicsSubscriber(ZividNodeTest & node_test)
     : color_camera_info_sub_(
         node_test.subscribe<sensor_msgs::msg::CameraInfo>(color_camera_info_topic_name)),
@@ -434,10 +412,9 @@ public:
     }
   };
 
-  template<std::size_t N>
+  template <std::size_t N>
   void assertArrayDoubleEq(
-    const std::array<double, N> & actual,
-    const std::array<double, N> & expected) const
+    const std::array<double, N> & actual, const std::array<double, N> & expected) const
   {
     for (std::size_t i = 0; i < N; i++) {
       EXPECT_DOUBLE_EQ(actual[i], expected[i]);
@@ -485,7 +462,7 @@ public:
     }
   }
 
-  template<typename FieldType>
+  template <typename FieldType>
   void assertPointCloud2Field(
     const FieldType & field, const std::string & name, uint32_t offset, uint32_t datatype,
     uint32_t count)
@@ -507,8 +484,8 @@ public:
     //     [ 0  0  1]
     assertArrayDoubleEq(
       ci.k,
-      std::array<double, 9>{1781.447998046875, 0, 990.49267578125, 0, 1781.5296630859375,
-        585.81781005859375, 0, 0, 1});
+      std::array<double, 9>{
+        1781.447998046875, 0, 990.49267578125, 0, 1781.5296630859375, 585.81781005859375, 0, 0, 1});
 
     // R = I
     assertArrayDoubleEq(ci.r, std::array<double, 9>{1, 0, 0, 0, 1, 0, 0, 0, 1});
@@ -517,9 +494,9 @@ public:
     // P = [ 0  fy' cy' Ty]
     //     [ 0   0   1   0]
     assertArrayDoubleEq(
-      ci.p,
-      std::array<double, 12>{1781.447998046875, 0, 990.49267578125, 0, 0, 1781.5296630859375,
-        585.81781005859375, 0, 0, 0, 1, 0});
+      ci.p, std::array<double, 12>{
+              1781.447998046875, 0, 990.49267578125, 0, 0, 1781.5296630859375, 585.81781005859375,
+              0, 0, 0, 1, 0});
   }
 };
 
@@ -562,42 +539,42 @@ TEST_F(ZividNodeTest, testServiceIsConnected)
 TEST_F(ZividNodeTest, testCaptureConfigurationThrowsIfBothPathAndYmlSet)
 {
   auto run_test = [&](
-    const auto & service_name, const auto & path_param, const auto & yml_param,
-    const auto & yml_content) {
-      auto color_image_sub = subscribe<sensor_msgs::msg::Image>(color_image_color_topic_name);
-      auto assert_num_topics_received = [&](auto num_topics) {
-          ASSERT_EQ(color_image_sub.numMessages(), num_topics);
-        };
-      auto tmp_file = TmpFile("settings.yml", yml_content);
-      setNodeParameter(path_param, tmp_file.string());
-      setNodeParameter(yml_param, yml_content);
-      ASSERT_THROW(doStdSrvsTriggerRequest(service_name), std::exception);
-      assert_num_topics_received(0);
-
-      setNodeParameter(path_param, "");
-      ASSERT_TRUE(doStdSrvsTriggerRequest(service_name));
-      executor_.spin_some();
-      assert_num_topics_received(1);
-
-      setNodeParameter(path_param, tmp_file.string());
-      setNodeParameter(yml_param, "");
-      ASSERT_TRUE(doStdSrvsTriggerRequest(service_name));
-      executor_.spin_some();
-      assert_num_topics_received(2);
-
-      setNodeParameter(path_param, tmp_file.string());
-      setNodeParameter(yml_param, yml_content);
-      ASSERT_THROW(doStdSrvsTriggerRequest(service_name), std::exception);
-      executor_.spin_some();
-      assert_num_topics_received(2);
-
-      // Reset for next test
-      setNodeParameter(path_param, "");
-      setNodeParameter(yml_param, "");
-      ASSERT_THROW(doStdSrvsTriggerRequest(service_name), std::exception);
-      executor_.spin_some();
-      assert_num_topics_received(2);
+                    const auto & service_name, const auto & path_param, const auto & yml_param,
+                    const auto & yml_content) {
+    auto color_image_sub = subscribe<sensor_msgs::msg::Image>(color_image_color_topic_name);
+    auto assert_num_topics_received = [&](auto num_topics) {
+      ASSERT_EQ(color_image_sub.numMessages(), num_topics);
     };
+    auto tmp_file = TmpFile("settings.yml", yml_content);
+    setNodeParameter(path_param, tmp_file.string());
+    setNodeParameter(yml_param, yml_content);
+    ASSERT_THROW(doStdSrvsTriggerRequest(service_name), std::exception);
+    assert_num_topics_received(0);
+
+    setNodeParameter(path_param, "");
+    ASSERT_TRUE(doStdSrvsTriggerRequest(service_name));
+    executor_.spin_some();
+    assert_num_topics_received(1);
+
+    setNodeParameter(path_param, tmp_file.string());
+    setNodeParameter(yml_param, "");
+    ASSERT_TRUE(doStdSrvsTriggerRequest(service_name));
+    executor_.spin_some();
+    assert_num_topics_received(2);
+
+    setNodeParameter(path_param, tmp_file.string());
+    setNodeParameter(yml_param, yml_content);
+    ASSERT_THROW(doStdSrvsTriggerRequest(service_name), std::exception);
+    executor_.spin_some();
+    assert_num_topics_received(2);
+
+    // Reset for next test
+    setNodeParameter(path_param, "");
+    setNodeParameter(yml_param, "");
+    ASSERT_THROW(doStdSrvsTriggerRequest(service_name), std::exception);
+    executor_.spin_some();
+    assert_num_topics_received(2);
+  };
 
   run_test(
     capture_service_name, parameter_settings_file_path, parameter_settings_yaml,
@@ -737,8 +714,8 @@ protected:
   Zivid::PointCloud captureViaSDKDefaultSettings()
   {
     return camera_
-           .capture(Zivid::Settings{Zivid::Settings::Acquisitions{Zivid::Settings::Acquisition{}}})
-           .pointCloud();
+      .capture(Zivid::Settings{Zivid::Settings::Acquisitions{Zivid::Settings::Acquisition{}}})
+      .pointCloud();
   }
 
   Zivid::PointCloud captureViaSDK(const Zivid::Settings & settings)
@@ -799,9 +776,9 @@ TEST_F(CaptureOutputTest, testCapturePointsXYZGBA)
     comparePointCoordinate(y, expected.point.y);
     comparePointCoordinate(z, expected.point.z);
     const auto expected_argb = static_cast<uint32_t>(expected.color.a << 24) |
-      static_cast<uint32_t>(expected.color.r << 16) |
-      static_cast<uint32_t>(expected.color.g << 8) |
-      static_cast<uint32_t>(expected.color.b);
+                               static_cast<uint32_t>(expected.color.r << 16) |
+                               static_cast<uint32_t>(expected.color.g << 8) |
+                               static_cast<uint32_t>(expected.color.b);
     ASSERT_EQ(argb, expected_argb);
   }
 }
@@ -868,8 +845,7 @@ Settings:
   const auto & point_cloud = points_sub.lastMessage();
   ASSERT_TRUE(point_cloud);
 
-  const auto point_cloud_sdk = captureViaSDK(
-    Zivid::Settings{
+  const auto point_cloud_sdk = captureViaSDK(Zivid::Settings{
     Zivid::Settings::Acquisitions{Zivid::Settings::Acquisition{}},
     Zivid::Settings::RegionOfInterest::Box{
       Zivid::Settings::RegionOfInterest::Box::Enabled::yes,
@@ -882,12 +858,12 @@ Settings:
 
   auto expected = point_cloud_sdk.copyData<Zivid::PointXYZ>();
   const auto num_z_nan = [&] {
-      size_t count = 0;
-      for (size_t i = 0; i < expected.size(); ++i) {
-        count += std::isnan(expected(i).z);
-      }
-      return count;
-    }();
+    size_t count = 0;
+    for (size_t i = 0; i < expected.size(); ++i) {
+      count += std::isnan(expected(i).z);
+    }
+    return count;
+  }();
   // Verify that we have some number of points left (to verify that the ROI box did
   // not set everything to NaN)
   ASSERT_GT(num_z_nan, 500000);
@@ -1054,10 +1030,10 @@ public:
       camera_.capture(deserializeZividDataModel<Zivid::Settings2D>(settings_yaml));
 
     auto verify_image_and_camera_info = [&](const auto & img, const auto & info) {
-        assertCameraInfoForFileCamera(info);
-        assertSensorMsgsImageMeta(img, 1944U, 1200U, 4U, "rgba8");
-        assertSensorMsgsImageContents(img, frame_2d_from_sdk.imageRGBA());
-      };
+      assertCameraInfoForFileCamera(info);
+      assertSensorMsgsImageMeta(img, 1944U, 1200U, 4U, "rgba8");
+      assertSensorMsgsImageContents(img, frame_2d_from_sdk.imageRGBA());
+    };
 
     verify_image_and_camera_info(
       *all_capture_2d_topics_subscriber.color_image_color_sub_.lastMessage(),
@@ -1144,10 +1120,7 @@ protected:
   }
 };
 
-TEST_F(CaptureAndSaveTest, testCaptureAndSaveEmptyPathProvided)
-{
-  captureAndSaveToPath("", false);
-}
+TEST_F(CaptureAndSaveTest, testCaptureAndSaveEmptyPathProvided) { captureAndSaveToPath("", false); }
 
 TEST_F(CaptureAndSaveTest, testCaptureAndSaveInvalidPath)
 {
@@ -1159,20 +1132,11 @@ TEST_F(CaptureAndSaveTest, testCaptureAndSaveInvalidExtension)
   captureAndSaveToPath("/tmp/invalid_extension.wrong", false);
 }
 
-TEST_F(CaptureAndSaveTest, testCaptureAndSaveZDF)
-{
-  captureAndSaveToPath("/tmp/valid.zdf", true);
-}
+TEST_F(CaptureAndSaveTest, testCaptureAndSaveZDF) { captureAndSaveToPath("/tmp/valid.zdf", true); }
 
-TEST_F(CaptureAndSaveTest, testCaptureAndSavePLY)
-{
-  captureAndSaveToPath("/tmp/valid.ply", true);
-}
+TEST_F(CaptureAndSaveTest, testCaptureAndSavePLY) { captureAndSaveToPath("/tmp/valid.ply", true); }
 
-TEST_F(CaptureAndSaveTest, testCaptureAndSavePCD)
-{
-  captureAndSaveToPath("/tmp/valid.pcd", true);
-}
+TEST_F(CaptureAndSaveTest, testCaptureAndSavePCD) { captureAndSaveToPath("/tmp/valid.pcd", true); }
 
 class ZividCATest : public CaptureOutputTest
 {
@@ -1192,8 +1156,7 @@ protected:
         return AmbientLightFrequency::hz60;
     }
     throw std::runtime_error(
-            "Could not convert value " + std::to_string(
-              ambient_light_frequency) + " to Zivid API enum.");
+      "Could not convert value " + std::to_string(ambient_light_frequency) + " to Zivid API enum.");
   }
 
   decltype(auto) doCaptureAssistantRequest(
@@ -1252,13 +1215,11 @@ TEST_F(ZividCATest, testDifferentMaxCaptureTimeAndAmbientLightFrequency)
 {
   using Request = zivid_interfaces::srv::CaptureAssistantSuggestSettings::Request;
   for (std::chrono::milliseconds max_capture_time :
-    {std::chrono::milliseconds{200}, std::chrono::milliseconds{1'200},
-      std::chrono::milliseconds{10'000}})
-  {
+       {std::chrono::milliseconds{200}, std::chrono::milliseconds{1'200},
+        std::chrono::milliseconds{10'000}}) {
     for (auto ambient_light_frequency :
-      {Request::AMBIENT_LIGHT_FREQUENCY_NONE, Request::AMBIENT_LIGHT_FREQUENCY_50HZ,
-        Request::AMBIENT_LIGHT_FREQUENCY_60HZ})
-    {
+         {Request::AMBIENT_LIGHT_FREQUENCY_NONE, Request::AMBIENT_LIGHT_FREQUENCY_50HZ,
+          Request::AMBIENT_LIGHT_FREQUENCY_60HZ}) {
       performSuggestSettingsAndCompareWithCppAPI(max_capture_time, ambient_light_frequency);
     }
   }
@@ -1299,9 +1260,8 @@ TEST_F(ZividCATest, testCaptureAssistantDefaultAmbientLightFrequencyWorks)
   using Request = zivid_interfaces::srv::CaptureAssistantSuggestSettings::Request;
   auto request = std::make_shared<Request>();
   request->max_capture_time = rclcpp::Duration{std::chrono::seconds{1}};
-  ASSERT_TRUE(
-    doSrvRequest<zivid_interfaces::srv::CaptureAssistantSuggestSettings>(
-      capture_assistant_suggest_settings_service_name, request));
+  ASSERT_TRUE(doSrvRequest<zivid_interfaces::srv::CaptureAssistantSuggestSettings>(
+    capture_assistant_suggest_settings_service_name, request));
 }
 
 TEST_F(ZividCATest, testCaptureAssistantInvalidAmbientLightFrequencyFails)

@@ -1,7 +1,5 @@
 #include <exception>
-
 #include <rclcpp/rclcpp.hpp>
-
 #include <sensor_msgs/msg/image.hpp>
 #include <std_srvs/srv/trigger.hpp>
 
@@ -37,8 +35,8 @@ Settings2D:
     RCLCPP_INFO(node->get_logger(), "Waiting for the parameters client to appear...");
   }
 
-  auto result = param_client->set_parameters(
-    {rclcpp::Parameter("settings_2d_yaml", settings_2d_yaml)});
+  auto result =
+    param_client->set_parameters({rclcpp::Parameter("settings_2d_yaml", settings_2d_yaml)});
   if (rclcpp::spin_until_future_complete(node, result) != rclcpp::FutureReturnCode::SUCCESS) {
     RCLCPP_ERROR(node->get_logger(), "Failed to set `settings_2d_yaml` parameter");
     std::terminate();
@@ -70,9 +68,9 @@ int main(int argc, char * argv[])
 
   auto capture_2d_client = create_capture_2d_client(node);
   auto trigger_capture = [&]() {
-      RCLCPP_INFO(node->get_logger(), "Triggering 2d capture");
-      capture_2d_client->async_send_request(std::make_shared<std_srvs::srv::Trigger::Request>());
-    };
+    RCLCPP_INFO(node->get_logger(), "Triggering 2d capture");
+    capture_2d_client->async_send_request(std::make_shared<std_srvs::srv::Trigger::Request>());
+  };
 
   auto color_image_color_subscription = node->create_subscription<sensor_msgs::msg::Image>(
     "color/image_color", 10, [&](sensor_msgs::msg::Image::ConstSharedPtr msg) -> void {

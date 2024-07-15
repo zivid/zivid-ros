@@ -1,8 +1,6 @@
 #include <exception>
 #include <filesystem>
-
 #include <rclcpp/rclcpp.hpp>
-
 #include <zivid_interfaces/srv/capture_and_save.hpp>
 
 /*

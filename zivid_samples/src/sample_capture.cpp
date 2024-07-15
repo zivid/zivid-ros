@@ -1,7 +1,5 @@
 #include <exception>
-
 #include <rclcpp/rclcpp.hpp>
-
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_srvs/srv/trigger.hpp>
@@ -74,17 +72,14 @@ int main(int argc, char * argv[])
 
   auto capture_client = create_capture_client(node);
   auto trigger_capture = [&]() {
-      RCLCPP_INFO(node->get_logger(), "Triggering capture");
-      capture_client->async_send_request(std::make_shared<std_srvs::srv::Trigger::Request>());
-    };
+    RCLCPP_INFO(node->get_logger(), "Triggering capture");
+    capture_client->async_send_request(std::make_shared<std_srvs::srv::Trigger::Request>());
+  };
 
-  auto points_xyzrgba_subscription =
-    node->create_subscription<sensor_msgs::msg::PointCloud2>(
-    "points/xyzrgba", 10, [&](
-      sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) -> void {
+  auto points_xyzrgba_subscription = node->create_subscription<sensor_msgs::msg::PointCloud2>(
+    "points/xyzrgba", 10, [&](sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) -> void {
       RCLCPP_INFO(
-        node->get_logger(), "Received point cloud of size %d x %d",
-        msg->width, msg->height);
+        node->get_logger(), "Received point cloud of size %d x %d", msg->width, msg->height);
       trigger_capture();
     });
 

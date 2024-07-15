@@ -28,22 +28,19 @@
 
 #pragma once
 
-#include <memory>
-#include <string>
-
-#include <zivid_camera/visibility.hpp>
-
 #include <image_transport/image_transport.hpp>
+#include <memory>
 #include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/image.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <std_srvs/srv/trigger.hpp>
+#include <string>
+#include <zivid_camera/visibility.hpp>
 #include <zivid_interfaces/srv/camera_info_model_name.hpp>
 #include <zivid_interfaces/srv/camera_info_serial_number.hpp>
 #include <zivid_interfaces/srv/capture_and_save.hpp>
 #include <zivid_interfaces/srv/capture_assistant_suggest_settings.hpp>
 #include <zivid_interfaces/srv/is_connected.hpp>
-
-#include <sensor_msgs/msg/image.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <std_srvs/srv/trigger.hpp>
 
 namespace Zivid
 {
@@ -52,7 +49,7 @@ class Camera;
 class CameraIntrinsics;
 struct ColorRGBA;
 class Frame;
-template<typename T>
+template <typename T>
 class Image;
 class PointCloud;
 class Settings2D;
@@ -61,8 +58,13 @@ class Settings;
 
 namespace zivid_camera
 {
-enum class CameraStatus { Idle, Connected, Disconnected };
-template<typename SettingsType>
+enum class CameraStatus
+{
+  Idle,
+  Connected,
+  Disconnected
+};
+template <typename SettingsType>
 class CaptureSettingsController;
 
 class ZividCamera : public rclcpp::Node

@@ -1,8 +1,6 @@
-#include <exception>
-
-#include <rclcpp/rclcpp.hpp>
-
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#include <exception>
+#include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_srvs/srv/trigger.hpp>
@@ -30,8 +28,8 @@ void set_settings(const std::shared_ptr<rclcpp::Node> & node)
     RCLCPP_INFO(node->get_logger(), "Waiting for the parameters client to appear...");
   }
 
-  auto result = param_client->set_parameters(
-    {rclcpp::Parameter("settings_file_path", path_to_settings_yml)});
+  auto result =
+    param_client->set_parameters({rclcpp::Parameter("settings_file_path", path_to_settings_yml)});
   if (rclcpp::spin_until_future_complete(node, result) != rclcpp::FutureReturnCode::SUCCESS) {
     RCLCPP_ERROR(node->get_logger(), "Failed to set `settings_file_path` parameter");
     std::terminate();
@@ -62,8 +60,7 @@ int main(int argc, char * argv[])
   auto points_xyzrgba_subscription = node->create_subscription<sensor_msgs::msg::PointCloud2>(
     "points/xyzrgba", 10, [&](sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) -> void {
       RCLCPP_INFO(
-        node->get_logger(), "Received point cloud of size %d x %d", msg->width,
-        msg->height);
+        node->get_logger(), "Received point cloud of size %d x %d", msg->width, msg->height);
     });
 
   set_settings(node);

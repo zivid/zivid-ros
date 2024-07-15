@@ -16,8 +16,12 @@ unzip ./FileCameraZivid2M70.zip -d /usr/share/Zivid/data/ || exit $?
 rm ./FileCameraZivid2M70.zip || exit $?
 
 echo "Running tests"
+
+# We exclude `clang_format` here since it has variations between versions, instead we check it during code analysis.
+excludeTests="clang_format"
+
 export GTEST_BREAK_ON_FAILURE=1;
-colcon test --event-handlers console_direct+ --ctest-args tests --output-on-failure --ros-args --log-level debug || exit $?
+colcon test --event-handlers console_direct+ --ctest-args tests --exclude-regex $excludeTests --output-on-failure --ros-args --log-level debug || exit $?
 
 echo "Check for test errors"
 colcon test-result --all || exit $?

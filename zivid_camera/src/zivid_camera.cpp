@@ -26,8 +26,6 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#include <zivid_camera/zivid_camera.hpp>
-
 #include <Zivid/Application.h>
 #include <Zivid/Camera.h>
 #include <Zivid/CaptureAssistant.h>
@@ -40,12 +38,12 @@
 #include <Zivid/Version.h>
 
 #include <cstdint>
-#include <sstream>
-#include <thread>
-
 #include <sensor_msgs/distortion_models.hpp>
 #include <sensor_msgs/image_encodings.hpp>
+#include <sstream>
 #include <std_srvs/srv/trigger.hpp>
+#include <thread>
+#include <zivid_camera/zivid_camera.hpp>
 
 namespace
 {
@@ -69,7 +67,7 @@ bool big_endian()
   return b.c[0] == 1;
 }
 
-template<class T>
+template <class T>
 void fillCommonMsgFields(
   T & msg, const std_msgs::msg::Header & header, std::size_t width, std::size_t height)
 {
@@ -93,7 +91,7 @@ sensor_msgs::msg::Image::SharedPtr makeImage(
   return image;
 }
 
-template<typename ZividDataType>
+template <typename ZividDataType>
 sensor_msgs::msg::Image::SharedPtr makePointCloudImage(
   const Zivid::PointCloud & point_cloud, const std_msgs::msg::Header & header,
   const std::string & encoding)
@@ -126,7 +124,7 @@ std::string toString(zivid_camera::CameraStatus camera_status)
   return "N/A";
 }
 
-template<typename ZividDataModel>
+template <typename ZividDataModel>
 auto serializeZividDataModel(const ZividDataModel & dm)
 {
 #if (ZIVID_CORE_VERSION_MAJOR == 2 && ZIVID_CORE_VERSION_MINOR <= 12)
@@ -138,7 +136,7 @@ auto serializeZividDataModel(const ZividDataModel & dm)
 #endif
 }
 
-template<typename ZividDataModel>
+template <typename ZividDataModel>
 auto deserializeZividDataModel(const std::string & serialized)
 {
 #if (ZIVID_CORE_VERSION_MAJOR == 2 && ZIVID_CORE_VERSION_MINOR <= 12)
@@ -152,7 +150,7 @@ auto deserializeZividDataModel(const std::string & serialized)
 #endif
 }
 
-template<typename Function, typename ResponseSharedPtr, typename Logger>
+template <typename Function, typename ResponseSharedPtr, typename Logger>
 void runFunctionAndCatchExceptions(
   Function && function, ResponseSharedPtr & response, const Logger & logger,
   const std::string & operation)
@@ -169,7 +167,7 @@ void runFunctionAndCatchExceptions(
   }
 }
 
-template<typename Function, typename Logger>
+template <typename Function, typename Logger>
 auto runFunctionAndCatchExceptionsAndRethrow(Function && function, const Logger & logger)
 {
   try {
@@ -181,10 +179,9 @@ auto runFunctionAndCatchExceptionsAndRethrow(Function && function, const Logger 
   }
 }
 
-template<typename Logger>
+template <typename Logger>
 [[noreturn]] void logErrorToLoggerAndThrowRuntimeException(
-  const Logger & logger,
-  const std::string & message)
+  const Logger & logger, const std::string & message)
 {
   RCLCPP_ERROR(logger, message.c_str());
   throw std::runtime_error(message);
@@ -202,7 +199,7 @@ constexpr auto file_camera_path = "file_camera_path";
 constexpr auto frame_id = "frame_id";
 }  // namespace ParamNames
 
-template<typename SettingsType>
+template <typename SettingsType>
 class CaptureSettingsController
 {
 public:
@@ -215,9 +212,8 @@ public:
     using namespace std::placeholders;
     for (const auto & param : {yaml_string_param_, file_path_param_}) {
       node_.declare_parameter<std::string>(param, "");
-      cb_handles_.push_back(
-        param_subscriber_->add_parameter_callback(
-          param, std::bind(&CaptureSettingsController::parameterCallback, this, _1)));
+      cb_handles_.push_back(param_subscriber_->add_parameter_callback(
+        param, std::bind(&CaptureSettingsController::parameterCallback, this, _1)));
     }
   }
 
@@ -230,12 +226,11 @@ public:
       logErrorToLoggerAndThrowRuntimeException(
         node_.get_logger(),
         "Both '" + file_path_param_ + "' and '" + yaml_string_param_ +
-        "' parameters are non-empty! Please set only one of these parameters.");
+          "' parameters are non-empty! Please set only one of these parameters.");
     } else if (settings_file_path.empty() && settings_yaml.empty()) {
       logErrorToLoggerAndThrowRuntimeException(
-        node_.get_logger(),
-        "Both '" + file_path_param_ + "' and '" + yaml_string_param_ +
-        "' parameters are empty! Please set one of these parameters.");
+        node_.get_logger(), "Both '" + file_path_param_ + "' and '" + yaml_string_param_ +
+                              "' parameters are empty! Please set one of these parameters.");
     } else if (!settings_yaml.empty()) {
       RCLCPP_DEBUG_STREAM(node_.get_logger(), "Using settings from yml string");
       return deserializeZividDataModel<SettingsType>(settings_yaml);
@@ -321,39 +316,38 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
   const bool update_firmware_automatically =
     declare_parameter<bool>("update_firmware_automatically", true);
 
-  camera_ = std::make_unique<Zivid::Camera>(
-    [&]() {
-      if (file_camera_mode) {
-        RCLCPP_INFO(get_logger(), "Creating file camera from file '%s'", file_camera_path.c_str());
-        return zivid_->createFileCamera(file_camera_path);
-      }
-      auto cameras = zivid_->cameras();
-      RCLCPP_INFO_STREAM(get_logger(), cameras.size() << " camera(s) found");
+  camera_ = std::make_unique<Zivid::Camera>([&]() {
+    if (file_camera_mode) {
+      RCLCPP_INFO(get_logger(), "Creating file camera from file '%s'", file_camera_path.c_str());
+      return zivid_->createFileCamera(file_camera_path);
+    }
+    auto cameras = zivid_->cameras();
+    RCLCPP_INFO_STREAM(get_logger(), cameras.size() << " camera(s) found");
 
-      if (cameras.empty()) {
-        logErrorAndThrowRuntimeException(
-          "No cameras found. Ensure that the camera is connected to your PC.");
-      } else if (!serial_number.empty()) {
-        RCLCPP_INFO(
-          get_logger(), "Searching for camera with serial number '%s' ...", serial_number.c_str());
-        for (auto & c : cameras) {
-          if (c.info().serialNumber() == Zivid::CameraInfo::SerialNumber(serial_number)) {
-            return c;
-          }
-        }
-        logErrorAndThrowRuntimeException(
-          "No camera found with serial number '" + serial_number + "'");
-      }
-      RCLCPP_INFO(get_logger(), "Selecting first available camera");
+    if (cameras.empty()) {
+      logErrorAndThrowRuntimeException(
+        "No cameras found. Ensure that the camera is connected to your PC.");
+    } else if (!serial_number.empty()) {
+      RCLCPP_INFO(
+        get_logger(), "Searching for camera with serial number '%s' ...", serial_number.c_str());
       for (auto & c : cameras) {
-        if (c.state().isAvailable()) {
+        if (c.info().serialNumber() == Zivid::CameraInfo::SerialNumber(serial_number)) {
           return c;
         }
       }
       logErrorAndThrowRuntimeException(
-        "No available cameras found! Use ZividListCameras or ZividStudio to see all connected "
-        "cameras and their status.");
-    }());
+        "No camera found with serial number '" + serial_number + "'");
+    }
+    RCLCPP_INFO(get_logger(), "Selecting first available camera");
+    for (auto & c : cameras) {
+      if (c.state().isAvailable()) {
+        return c;
+      }
+    }
+    logErrorAndThrowRuntimeException(
+      "No available cameras found! Use ZividListCameras or ZividStudio to see all connected "
+      "cameras and their status.");
+  }());
 
   if (!Zivid::Firmware::isUpToDate(*camera_)) {
     if (update_firmware_automatically) {
@@ -418,8 +412,8 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
 
   camera_info_serial_number_service_ =
     create_service<zivid_interfaces::srv::CameraInfoSerialNumber>(
-    "camera_info/serial_number",
-    std::bind(&ZividCamera::cameraInfoSerialNumberServiceHandler, this, _1, _2, _3));
+      "camera_info/serial_number",
+      std::bind(&ZividCamera::cameraInfoSerialNumberServiceHandler, this, _1, _2, _3));
 
   is_connected_service_ = create_service<zivid_interfaces::srv::IsConnected>(
     "is_connected", std::bind(&ZividCamera::isConnectedServiceHandler, this, _1, _2, _3));
@@ -435,18 +429,15 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
 
   capture_assistant_suggest_settings_service_ =
     create_service<zivid_interfaces::srv::CaptureAssistantSuggestSettings>(
-    "capture_assistant/suggest_settings",
-    std::bind(&ZividCamera::captureAssistantSuggestSettingsServiceHandler, this, _1, _2, _3));
+      "capture_assistant/suggest_settings",
+      std::bind(&ZividCamera::captureAssistantSuggestSettingsServiceHandler, this, _1, _2, _3));
 
   RCLCPP_INFO(get_logger(), "Zivid camera driver is now ready!");
 }
 
 ZividCamera::~ZividCamera() = default;
 
-Zivid::Application & ZividCamera::zividApplication()
-{
-  return *zivid_;
-}
+Zivid::Application & ZividCamera::zividApplication() { return *zivid_; }
 
 void ZividCamera::onCameraConnectionKeepAliveTimeout()
 {
@@ -523,10 +514,10 @@ void ZividCamera::captureServiceHandler(
   RCLCPP_INFO_STREAM(get_logger(), __func__);
 
   const auto settings = runFunctionAndCatchExceptionsAndRethrow(
-    [&] {return settings_controller_->currentSettings();}, get_logger());
+    [&] {  return settings_controller_->currentSettings(); }, get_logger());
 
   runFunctionAndCatchExceptions(
-    [&]() {invokeCaptureAndPublishFrame(settings);}, response, get_logger(), "Capture");
+    [&]() {  invokeCaptureAndPublishFrame(settings); }, response, get_logger(), "Capture");
 }
 
 void ZividCamera::captureAndSaveServiceHandler(
@@ -536,7 +527,7 @@ void ZividCamera::captureAndSaveServiceHandler(
 {
   RCLCPP_INFO_STREAM(get_logger(), __func__);
   const auto settings = runFunctionAndCatchExceptionsAndRethrow(
-    [&] {return settings_controller_->currentSettings();}, get_logger());
+    [&] {  return settings_controller_->currentSettings(); }, get_logger());
 
   runFunctionAndCatchExceptions(
     [&]() {
@@ -557,7 +548,7 @@ void ZividCamera::capture2DServiceHandler(
   serviceHandlerHandleCameraConnectionLoss();
 
   const auto settings2D = runFunctionAndCatchExceptionsAndRethrow(
-    [&] {return settings_2d_controller_->currentSettings();}, get_logger());
+    [&] {  return settings_2d_controller_->currentSettings(); }, get_logger());
 
   runFunctionAndCatchExceptions(
     [&]() {
@@ -587,33 +578,33 @@ void ZividCamera::captureAssistantSuggestSettingsServiceHandler(
   const auto max_capture_time =
     rclcpp::Duration{request->max_capture_time}.to_chrono<std::chrono::milliseconds>();
   const auto ambient_light_frequency = [this, &request]() {
-      using RosRequestTypes = zivid_interfaces::srv::CaptureAssistantSuggestSettings::Request;
-      switch (request->ambient_light_frequency) {
-        case RosRequestTypes::AMBIENT_LIGHT_FREQUENCY_NONE:
-          return SuggestSettingsParameters::AmbientLightFrequency::none;
-        case RosRequestTypes::AMBIENT_LIGHT_FREQUENCY_50HZ:
-          return SuggestSettingsParameters::AmbientLightFrequency::hz50;
-        case RosRequestTypes::AMBIENT_LIGHT_FREQUENCY_60HZ:
-          return SuggestSettingsParameters::AmbientLightFrequency::hz60;
-      }
-      logErrorAndThrowRuntimeException(
-        "Unhandled AMBIENT_LIGHT_FREQUENCY value: " +
-        std::to_string(request->ambient_light_frequency));
-    }();
+    using RosRequestTypes = zivid_interfaces::srv::CaptureAssistantSuggestSettings::Request;
+    switch (request->ambient_light_frequency) {
+      case RosRequestTypes::AMBIENT_LIGHT_FREQUENCY_NONE:
+        return SuggestSettingsParameters::AmbientLightFrequency::none;
+      case RosRequestTypes::AMBIENT_LIGHT_FREQUENCY_50HZ:
+        return SuggestSettingsParameters::AmbientLightFrequency::hz50;
+      case RosRequestTypes::AMBIENT_LIGHT_FREQUENCY_60HZ:
+        return SuggestSettingsParameters::AmbientLightFrequency::hz60;
+    }
+    logErrorAndThrowRuntimeException(
+      "Unhandled AMBIENT_LIGHT_FREQUENCY value: " +
+      std::to_string(request->ambient_light_frequency));
+  }();
 
   SuggestSettingsParameters suggest_settings_parameters{
     SuggestSettingsParameters::MaxCaptureTime{max_capture_time}, ambient_light_frequency};
   RCLCPP_INFO_STREAM(
-    get_logger(),
-    "Getting suggested settings using parameters: " << suggest_settings_parameters);
+    get_logger(), "Getting suggested settings using parameters: " << suggest_settings_parameters);
   const auto suggested_settings = runFunctionAndCatchExceptionsAndRethrow(
     [&]() {
       return Zivid::CaptureAssistant::suggestSettings(*camera_, suggest_settings_parameters);
-    }, get_logger());
+    },
+    get_logger());
 
   RCLCPP_INFO_STREAM(
     get_logger(), "CaptureAssistant::suggestSettings returned "
-      << suggested_settings.acquisitions().size() << " acquisitions");
+                    << suggested_settings.acquisitions().size() << " acquisitions");
 
   settings_controller_->setSettings(suggested_settings);
   response->suggested_settings = serializeZividDataModel(suggested_settings);
@@ -649,8 +640,7 @@ void ZividCamera::publishFrame(const Zivid::Frame & frame)
 
   if (
     publish_points_xyz || publish_points_xyzrgba || publish_color_img || publish_depth_img ||
-    publish_snr_img || publish_normals_xyz)
-  {
+    publish_snr_img || publish_normals_xyz) {
     const auto header = makeHeader();
     auto point_cloud = frame.pointCloud();
 

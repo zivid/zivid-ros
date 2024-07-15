@@ -1,13 +1,9 @@
 #include <exception>
-
 #include <rclcpp/rclcpp.hpp>
-
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_srvs/srv/trigger.hpp>
-
 #include <zivid_interfaces/srv/capture_assistant_suggest_settings.hpp>
-
 
 /*
  * This sample shows how to use the capture assistant service to suggest and set the capture
@@ -19,8 +15,8 @@ void capture_assistant_suggest_settings(const std::shared_ptr<rclcpp::Node> & no
 {
   using zivid_interfaces::srv::CaptureAssistantSuggestSettings;
 
-  auto client = node->create_client<CaptureAssistantSuggestSettings>(
-    "capture_assistant/suggest_settings");
+  auto client =
+    node->create_client<CaptureAssistantSuggestSettings>("capture_assistant/suggest_settings");
   while (!client->wait_for_service(std::chrono::seconds(3))) {
     if (!rclcpp::ok()) {
       RCLCPP_ERROR(node->get_logger(), "Client interrupted while waiting for service to appear.");
@@ -53,8 +49,8 @@ void capture(const std::shared_ptr<rclcpp::Node> & node)
   }
 
   RCLCPP_INFO(node->get_logger(), "Triggering capture");
-  auto result = capture_client->async_send_request(
-    std::make_shared<std_srvs::srv::Trigger::Request>());
+  auto result =
+    capture_client->async_send_request(std::make_shared<std_srvs::srv::Trigger::Request>());
 
   if (rclcpp::spin_until_future_complete(node, result) != rclcpp::FutureReturnCode::SUCCESS) {
     RCLCPP_ERROR(node->get_logger(), "Failed to trigger capture");
@@ -71,8 +67,7 @@ int main(int argc, char * argv[])
   auto points_xyzrgba_subscription = node->create_subscription<sensor_msgs::msg::PointCloud2>(
     "points/xyzrgba", 10, [&](sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) -> void {
       RCLCPP_INFO(
-        node->get_logger(), "Received point cloud of size %d x %d", msg->width,
-        msg->height);
+        node->get_logger(), "Received point cloud of size %d x %d", msg->width, msg->height);
     });
 
   auto color_image_color_subscription = node->create_subscription<sensor_msgs::msg::Image>(

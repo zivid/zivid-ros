@@ -538,12 +538,15 @@ colcon build --cmake-args -DCOMPILER_WARNINGS=ON
 
 ### How to format the source code
 
-The CI test for this package enforces the linting defined by `ament_lint_auto`.
+The CI test for this package enforces the linting defined by `clang-format`. From the code analysis
+docker image, run:
 
 ```bash
-cd ~/ros2_ws/src/zivid-ros
-ament_uncrustify --reformat ./
+find /host -name '*.cpp' -or -name '*.hpp' | xargs clang-format -i
 ```
+
+The style follows the one from
+[`ament_clang_format`](https://github.com/ament/ament_lint/blob/master/ament_clang_format/doc/index.rst).
 
 ## License
 

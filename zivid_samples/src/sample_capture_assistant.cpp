@@ -26,6 +26,8 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+#include <exception>
+
 #include <rclcpp/rclcpp.hpp>
 
 #include <sensor_msgs/msg/image.hpp>
@@ -34,7 +36,6 @@
 
 #include <zivid_interfaces/srv/capture_assistant_suggest_settings.hpp>
 
-#include <exception>
 
 /*
  * This sample shows how to use the capture assistant service to suggest and set the capture

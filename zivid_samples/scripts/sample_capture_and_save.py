@@ -13,20 +13,20 @@ from zivid_interfaces.srv import CaptureAndSave
 class Sample(Node):
 
     def __init__(self):
-        super().__init__("sample_capture_and_save_py")
+        super().__init__('sample_capture_and_save_py')
 
         self.capture_and_save_service = self.create_client(
-            CaptureAndSave, "capture_and_save"
+            CaptureAndSave, 'capture_and_save'
         )
         while not self.capture_and_save_service.wait_for_service(timeout_sec=3.0):
-            self.get_logger().info("Capture service not available, waiting again...")
+            self.get_logger().info('Capture service not available, waiting again...')
 
         self._set_capture_settings()
 
     def _set_capture_settings(self):
-        self.get_logger().info("Setting parameter 'settings_yaml'")
+        self.get_logger().info('Setting parameter `settings_yaml`')
         settings_parameter = Parameter(
-            "settings_yaml",
+            'settings_yaml',
             Parameter.Type.STRING,
             """
 __version__:
@@ -45,14 +45,14 @@ Settings:
           Threshold: 5
 """,
         ).to_parameter_msg()
-        param_client = AsyncParameterClient(self, "zivid_camera")
+        param_client = AsyncParameterClient(self, 'zivid_camera')
         param_client.wait_for_services()
         future = param_client.set_parameters([settings_parameter])
         rclpy.spin_until_future_complete(self, future)
 
     def capture(self):
-        file_path = tempfile.gettempdir() + "/zivid_sample_capture_and_save.zdf"
-        self.get_logger().info(f"Calling capture service with file path: {file_path}")
+        file_path = tempfile.gettempdir() + '/zivid_sample_capture_and_save.zdf'
+        self.get_logger().info(f'Calling capture service with file path: {file_path}')
         request = CaptureAndSave.Request(file_path=file_path)
         return self.capture_and_save_service.call_async(request)
 
@@ -68,9 +68,9 @@ def main(args=None):
 
         response: CaptureAndSave.Response = future.result()
         if not response.success:
-            sample.get_logger().error(f"Failed capture and save: {response.message}")
+            sample.get_logger().error(f'Failed capture and save: {response.message}')
 
-        sample.get_logger().info(f"Capture and save complete")
+        sample.get_logger().info('Capture and save complete')
 
     except KeyboardInterrupt:
         pass
@@ -78,5 +78,5 @@ def main(args=None):
         sys.exit(1)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

@@ -45,9 +45,8 @@ install(PROGRAMS scripts/sample_capture_assistant.py DESTINATION lib/${PROJECT_N
 install(PROGRAMS scripts/sample_capture_with_settings_from_file.py DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
-  # TODO enable linting of the samples
-  #find_package(ament_lint_auto REQUIRED)
-  #ament_lint_auto_find_test_dependencies()
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
 endif()
 
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})

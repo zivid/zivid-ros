@@ -45,8 +45,9 @@ void set_settings(const std::shared_ptr<rclcpp::Node> & node)
 {
   const auto share_directory = ament_index_cpp::get_package_share_directory("zivid_samples");
   const auto path_to_settings_yml = share_directory + "/settings/camera_settings.yml";
-  RCLCPP_INFO_STREAM(node->get_logger(),
-                     "Setting parameter `settings_file_path` to '" << path_to_settings_yml << "'");
+  RCLCPP_INFO_STREAM(
+    node->get_logger(),
+    "Setting parameter `settings_file_path` to '" << path_to_settings_yml << "'");
 
   auto param_client = std::make_shared<rclcpp::AsyncParametersClient>(node, "zivid_camera");
   while (!param_client->wait_for_service(std::chrono::seconds(3))) {
@@ -80,17 +81,18 @@ auto create_capture_client(std::shared_ptr<rclcpp::Node> & node)
   return client;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
   auto node = rclcpp::Node::make_shared("sample_capture_with_settings_from_file");
   RCLCPP_INFO(node->get_logger(), "Started the sample node");
 
   auto points_xyzrgba_subscription = node->create_subscription<sensor_msgs::msg::PointCloud2>(
-  "points/xyzrgba", 10, [&](sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) -> void {
-      RCLCPP_INFO(node->get_logger(), "Received point cloud of size %d x %d", msg->width,
-                msg->height);
-  });
+    "points/xyzrgba", 10, [&](sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) -> void {
+      RCLCPP_INFO(
+        node->get_logger(), "Received point cloud of size %d x %d", msg->width,
+        msg->height);
+    });
 
   set_settings(node);
 

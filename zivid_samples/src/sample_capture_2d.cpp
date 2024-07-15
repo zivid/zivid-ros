@@ -88,7 +88,7 @@ auto create_capture_2d_client(std::shared_ptr<rclcpp::Node> & node)
   return client;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
   auto node = rclcpp::Node::make_shared("sample_capture_2d");
@@ -103,10 +103,10 @@ int main(int argc, char *argv[])
     };
 
   auto color_image_color_subscription = node->create_subscription<sensor_msgs::msg::Image>(
-  "color/image_color", 10, [&](sensor_msgs::msg::Image::ConstSharedPtr msg) -> void {
+    "color/image_color", 10, [&](sensor_msgs::msg::Image::ConstSharedPtr msg) -> void {
       RCLCPP_INFO(node->get_logger(), "Received image of size %d x %d", msg->width, msg->height);
       trigger_capture();
-  });
+    });
 
   trigger_capture();
 

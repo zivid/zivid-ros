@@ -92,7 +92,7 @@ auto create_capture_client(std::shared_ptr<rclcpp::Node> & node)
   return client;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
   auto node = rclcpp::Node::make_shared("sample_capture");
@@ -107,12 +107,14 @@ int main(int argc, char *argv[])
     };
 
   auto points_xyzrgba_subscription =
-    node->create_subscription<sensor_msgs::msg::PointCloud2>("points/xyzrgba", 10, [&](
-        sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) -> void {
-        RCLCPP_INFO(node->get_logger(), "Received point cloud of size %d x %d",
-      msg->width, msg->height);
-        trigger_capture();
-  });
+    node->create_subscription<sensor_msgs::msg::PointCloud2>(
+    "points/xyzrgba", 10, [&](
+      sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) -> void {
+      RCLCPP_INFO(
+        node->get_logger(), "Received point cloud of size %d x %d",
+        msg->width, msg->height);
+      trigger_capture();
+    });
 
   trigger_capture();
 

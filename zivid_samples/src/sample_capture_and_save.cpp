@@ -93,8 +93,9 @@ void capture_and_save(const std::shared_ptr<rclcpp::Node> & node)
 
   auto request = std::make_shared<CaptureAndSave::Request>();
   request->file_path = (std::filesystem::temp_directory_path() / filename).string();
-  RCLCPP_INFO(node->get_logger(), "Sending capture and save request with file path: %s",
-              request->file_path.c_str());
+  RCLCPP_INFO(
+    node->get_logger(), "Sending capture and save request with file path: %s",
+    request->file_path.c_str());
 
   auto result = client->async_send_request(request);
   if (rclcpp::spin_until_future_complete(node, result) != rclcpp::FutureReturnCode::SUCCESS) {
@@ -104,15 +105,16 @@ void capture_and_save(const std::shared_ptr<rclcpp::Node> & node)
 
   auto capture_response = result.get();
   if (!capture_response->success) {
-    RCLCPP_ERROR(node->get_logger(), "Capture and save operation was unsuccessful: %s",
-                 capture_response->message.c_str());
+    RCLCPP_ERROR(
+      node->get_logger(), "Capture and save operation was unsuccessful: %s",
+      capture_response->message.c_str());
     std::terminate();
   }
 
   RCLCPP_INFO(node->get_logger(), "Capture and save operation successful");
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
   auto node = rclcpp::Node::make_shared("sample_capture_and_save");

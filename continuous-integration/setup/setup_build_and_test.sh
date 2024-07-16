@@ -56,8 +56,7 @@ echo "Installing compiler $CI_TEST_COMPILER"
 
 if [[ "$CI_TEST_COMPILER" == "g++"    ||
       "$CI_TEST_COMPILER" == "g++-12"  ||
-      "$CI_TEST_COMPILER" == "g++-13"  ||
-      "$CI_TEST_COMPILER" == "g++-14"
+      "$CI_TEST_COMPILER" == "g++-13"
       ]]; then
 
     apt-yes install software-properties-common || exit $?

@@ -47,6 +47,11 @@
 
 namespace
 {
+template <typename T>
+struct DependentFalse : std::false_type
+{
+};
+
 sensor_msgs::msg::PointField createPointField(
   std::string name, uint32_t offset, uint8_t datatype, uint32_t count)
 {
@@ -183,7 +188,7 @@ template <typename Logger>
 [[noreturn]] void logErrorToLoggerAndThrowRuntimeException(
   const Logger & logger, const std::string & message)
 {
-  RCLCPP_ERROR(logger, message.c_str());
+  RCLCPP_ERROR(logger, "%s", message.c_str());
   throw std::runtime_error(message);
 }
 
@@ -258,12 +263,12 @@ private:
 
   constexpr auto baseName() const
   {
-    if (std::is_same_v<SettingsType, Zivid::Settings>) {
+    if constexpr (std::is_same_v<SettingsType, Zivid::Settings>) {
       return "settings";
-    } else if (std::is_same_v<SettingsType, Zivid::Settings2D>) {
+    } else if constexpr (std::is_same_v<SettingsType, Zivid::Settings2D>) {
       return "settings_2d";
     } else {
-      static_assert("Unhandled SettingsType");
+      static_assert(DependentFalse<SettingsType>::value, "Unhandled node type");
     }
   }
 
@@ -282,7 +287,7 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
   settings_2d_controller_{std::make_unique<CaptureSettingsController<Zivid::Settings2D>>(*this)}
 {
   // Disable buffering on stdout
-  setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+  setvbuf(stdout, nullptr, _IONBF, BUFSIZ);
 
   RCLCPP_INFO_STREAM(get_logger(), "Zivid ROS driver");  // Fix: add version
   RCLCPP_INFO(get_logger(), "The node's namespace is '%s'", get_namespace());
@@ -514,10 +519,10 @@ void ZividCamera::captureServiceHandler(
   RCLCPP_INFO_STREAM(get_logger(), __func__);
 
   const auto settings = runFunctionAndCatchExceptionsAndRethrow(
-    [&] {  return settings_controller_->currentSettings(); }, get_logger());
+    [&] { return settings_controller_->currentSettings(); }, get_logger());
 
   runFunctionAndCatchExceptions(
-    [&]() {  invokeCaptureAndPublishFrame(settings); }, response, get_logger(), "Capture");
+    [&]() { invokeCaptureAndPublishFrame(settings); }, response, get_logger(), "Capture");
 }
 
 void ZividCamera::captureAndSaveServiceHandler(
@@ -527,7 +532,7 @@ void ZividCamera::captureAndSaveServiceHandler(
 {
   RCLCPP_INFO_STREAM(get_logger(), __func__);
   const auto settings = runFunctionAndCatchExceptionsAndRethrow(
-    [&] {  return settings_controller_->currentSettings(); }, get_logger());
+    [&] { return settings_controller_->currentSettings(); }, get_logger());
 
   runFunctionAndCatchExceptions(
     [&]() {
@@ -548,7 +553,7 @@ void ZividCamera::capture2DServiceHandler(
   serviceHandlerHandleCameraConnectionLoss();
 
   const auto settings2D = runFunctionAndCatchExceptionsAndRethrow(
-    [&] {  return settings_2d_controller_->currentSettings(); }, get_logger());
+    [&] { return settings_2d_controller_->currentSettings(); }, get_logger());
 
   runFunctionAndCatchExceptions(
     [&]() {
@@ -907,4 +912,15 @@ void ZividCamera::logErrorAndThrowRuntimeException(const std::string & message)
 }  // namespace zivid_camera
 
 #include "rclcpp_components/register_node_macro.hpp"
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wglobal-constructors"
+#pragma clang diagnostic ignored "-Wexit-time-destructors"
+#endif
+
 RCLCPP_COMPONENTS_REGISTER_NODE(zivid_camera::ZividCamera)
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif

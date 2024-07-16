@@ -71,7 +71,7 @@ class ZividCamera : public rclcpp::Node
 {
 public:
   ZIVID_CAMERA_ROS_PUBLIC ZividCamera(const rclcpp::NodeOptions & options);
-  ~ZividCamera();
+  ~ZividCamera() override;
   ZIVID_CAMERA_ROS_PUBLIC Zivid::Application & zividApplication();
 
 private:

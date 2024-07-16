@@ -39,9 +39,6 @@ function(set_target_warning_compile_options TARGET)
                                         # problem, maybe even linker will resolve this. Must add boilerplate to
                                         # fix, not worth it
     )
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 7.0)
-      list(APPEND WARNINGS_THAT_SHOULD_BE_IGNORED return-std-move-in-c++11) # Applies to old compilers, we aim for newer C++17 compilers
-    endif()
 
     foreach(WARNING ${WARNINGS_THAT_SHOULD_BE_IGNORED})
       list(APPEND TARGET_FLAGS -Wno-${WARNING})

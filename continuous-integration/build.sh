@@ -25,7 +25,7 @@ rosdep install -i --from-path src -y || exit $?
 
 echo "Building with compiler=$CI_TEST_COMPILER"
 
-colcon build --symlink --cmake-args -DCOMPILER_WARNINGS=ON -DCMAKE_CXX_COMPILER=/usr/bin/$CI_TEST_COMPILER || exit $?
+colcon build --symlink --event-handlers console_direct+ --cmake-args -DCOMPILER_WARNINGS=ON -DCMAKE_CXX_COMPILER=/usr/bin/$CI_TEST_COMPILER -DCMAKE_EXPORT_COMPILE_COMMANDS=ON || exit $?
 
 echo "Check that the expected packages are found"
 source ~/ros2_ws/install/setup.bash

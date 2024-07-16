@@ -125,8 +125,9 @@ std::string toString(zivid_camera::CameraStatus camera_status)
       return "Disconnected";
     case zivid_camera::CameraStatus::Idle:
       return "Idle";
+    default:  // NOLINT(clang-diagnostic-covered-switch-default)
+      return "N/A";
   }
-  return "N/A";
 }
 
 template <typename ZividDataModel>
@@ -591,10 +592,11 @@ void ZividCamera::captureAssistantSuggestSettingsServiceHandler(
         return SuggestSettingsParameters::AmbientLightFrequency::hz50;
       case RosRequestTypes::AMBIENT_LIGHT_FREQUENCY_60HZ:
         return SuggestSettingsParameters::AmbientLightFrequency::hz60;
+      default:
+        logErrorAndThrowRuntimeException(
+          "Unhandled AMBIENT_LIGHT_FREQUENCY value: " +
+          std::to_string(request->ambient_light_frequency));
     }
-    logErrorAndThrowRuntimeException(
-      "Unhandled AMBIENT_LIGHT_FREQUENCY value: " +
-      std::to_string(request->ambient_light_frequency));
   }();
 
   SuggestSettingsParameters suggest_settings_parameters{
@@ -796,7 +798,20 @@ void ZividCamera::publishColorImage(
     get_logger(), "Publishing " << color_image_publisher_.getTopic() << " from Image");
   auto msg = makeImage(header, sensor_msgs::image_encodings::RGBA8, image.width(), image.height());
   const auto uint8_ptr_begin = reinterpret_cast<const uint8_t *>(image.data());
+
+#ifdef __clang__
+#if __has_warning("-Wunsafe-buffer-usage")
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
+#endif
+#endif
   const auto uint8_ptr_end = reinterpret_cast<const uint8_t *>(image.data() + image.size());
+#ifdef __clang__
+#if __has_warning("-Wunsafe-buffer-usage")
+#pragma clang diagnostic pop
+#endif
+#endif
+
   msg->data = std::vector<uint8_t>(uint8_ptr_begin, uint8_ptr_end);
   color_image_publisher_.publish(msg, camera_info);
 }

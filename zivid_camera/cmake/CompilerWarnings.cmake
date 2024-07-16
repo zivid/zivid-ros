@@ -38,6 +38,7 @@ function(set_target_warning_compile_options TARGET)
         weak-vtables                    # The vtable must be duplicated in multiple translation units. Small
                                         # problem, maybe even linker will resolve this. Must add boilerplate to
                                         # fix, not worth it
+        covered-switch-default          # We don't want this warning, because we want the default labels for safety.
     )
 
     foreach(WARNING ${WARNINGS_THAT_SHOULD_BE_IGNORED})

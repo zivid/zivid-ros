@@ -20,6 +20,16 @@ echo "Running tests"
 # We exclude `clang_format` here since it has variations between versions, instead we check it during code analysis.
 excludeTests="clang_format"
 
+if [ "$CI_TEST_OS" == "ros:humble-ros-base-jammy" ] || [ "$CI_TEST_OS" == "ros:iron-ros-core-jammy" ]; then
+  # The listed OSes have issues invoking clang-tidy correctly:
+  #   - Humble seems to not invoke it with the correct C++ language version, resulting in it not finding
+  #     std::optional and std::variant.
+  #   - Iron does not find the compile commands.
+  # On the other hand, Jazzy seems to work well, so we get the checks when testing on this OS.
+  echo "Skipping clang-tidy tests since OS is '$CI_TEST_OS'"
+  excludeTests+="|clang_tidy"
+fi
+
 export GTEST_BREAK_ON_FAILURE=1;
 colcon test --event-handlers console_direct+ --ctest-args tests --exclude-regex $excludeTests --output-on-failure --ros-args --log-level debug || exit $?
 

@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import sys
 
 from builtin_interfaces.msg import Duration

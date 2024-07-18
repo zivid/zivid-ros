@@ -343,8 +343,9 @@ will cause some additional processing time for calculating the normals.
 In the `zivid_samples` package we have added samples that demonstrate how to use
 the Zivid ROS driver. These samples can be used as a starting point for your project.
 
-To launch the Python samples using `ros2 launch`, you might need `python` registered as a command,
-such as by using:
+To launch the Python samples using `ros2 launch`, you need `python` to be available as a command.
+For example, the `python-is-python3` package can be installed to achieve this, by running the
+following command:
 
 ```bash
 sudo apt install python-is-python3

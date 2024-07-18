@@ -18,7 +18,7 @@ class Sample(Node):
 
         self.capture_2d_service = self.create_client(Trigger, 'capture_2d')
         while not self.capture_2d_service.wait_for_service(timeout_sec=3.0):
-            self.get_logger().info('Capture service not available, waiting again...')
+            self.get_logger().info('capture_2d service not available, waiting again...')
 
         self._set_settings_2d()
 
@@ -56,7 +56,7 @@ Settings2D:
             raise RuntimeError('Failed to set parameters')
 
     def capture(self):
-        self.get_logger().info('Calling capture service')
+        self.get_logger().info('Calling capture_2d service')
         return self.capture_2d_service.call_async(Trigger.Request())
 
     def on_image_color(self, msg):

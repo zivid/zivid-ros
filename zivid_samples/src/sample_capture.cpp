@@ -60,7 +60,7 @@ auto create_capture_client(std::shared_ptr<rclcpp::Node> & node)
     RCLCPP_INFO(node->get_logger(), "Waiting for the capture service to appear...");
   }
 
-  RCLCPP_INFO(node->get_logger(), "Capture service is available");
+  RCLCPP_INFO(node->get_logger(), "capture service is available");
   return client;
 }
 

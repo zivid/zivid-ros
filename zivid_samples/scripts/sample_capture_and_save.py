@@ -20,7 +20,7 @@ class Sample(Node):
             CaptureAndSave, 'capture_and_save'
         )
         while not self.capture_and_save_service.wait_for_service(timeout_sec=3.0):
-            self.get_logger().info('Capture service not available, waiting again...')
+            self.get_logger().info('capture_and_save service not available, waiting again...')
 
         self._set_settings()
 
@@ -60,7 +60,7 @@ Settings:
 
     def capture(self):
         file_path = tempfile.gettempdir() + '/zivid_sample_capture_and_save.zdf'
-        self.get_logger().info(f'Calling capture service with file path: {file_path}')
+        self.get_logger().info(f'Calling capture_and_save service with file path: {file_path}')
         request = CaptureAndSave.Request(file_path=file_path)
         return self.capture_and_save_service.call_async(request)
 

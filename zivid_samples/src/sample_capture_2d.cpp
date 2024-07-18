@@ -53,10 +53,10 @@ auto create_capture_2d_client(std::shared_ptr<rclcpp::Node> & node)
       RCLCPP_ERROR(node->get_logger(), "Client interrupted while waiting for service to appear.");
       std::terminate();
     }
-    RCLCPP_INFO(node->get_logger(), "Waiting for the capture service to appear...");
+    RCLCPP_INFO(node->get_logger(), "Waiting for the capture_2d service to appear...");
   }
 
-  RCLCPP_INFO(node->get_logger(), "Capture service is available");
+  RCLCPP_INFO(node->get_logger(), "capture_2d service is available");
   return client;
 }
 

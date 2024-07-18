@@ -71,7 +71,7 @@ void capture_and_save(const std::shared_ptr<rclcpp::Node> & node)
 
   auto result = client->async_send_request(request);
   if (rclcpp::spin_until_future_complete(node, result) != rclcpp::FutureReturnCode::SUCCESS) {
-    RCLCPP_ERROR(node->get_logger(), "Failed to call capture_and_save service");
+    RCLCPP_ERROR(node->get_logger(), "Failed to call the capture_and_save service");
     std::terminate();
   }
 

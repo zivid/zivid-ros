@@ -18,7 +18,7 @@ class Sample(Node):
 
         self.capture_service = self.create_client(Trigger, 'capture')
         while not self.capture_service.wait_for_service(timeout_sec=3.0):
-            self.get_logger().info('Capture service not available, waiting again...')
+            self.get_logger().info('capture service not available, waiting again...')
 
         self._set_settings()
 

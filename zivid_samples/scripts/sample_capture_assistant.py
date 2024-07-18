@@ -15,7 +15,7 @@ from zivid_interfaces.srv import CaptureAssistantSuggestSettings
 class Sample(Node):
 
     def __init__(self):
-        super().__init__('sample_capture_and_save_py')
+        super().__init__('sample_capture_assistant_py')
 
         self.capture_assistant_suggest_settings_service = self.create_client(
             CaptureAssistantSuggestSettings, 'capture_assistant/suggest_settings'

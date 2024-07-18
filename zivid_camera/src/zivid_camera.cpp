@@ -180,7 +180,7 @@ auto runFunctionAndCatchExceptionsAndRethrow(Function && function, const Logger 
     return function();
   } catch (const Zivid::Exception & exception) {
     const auto exception_message = Zivid::toString(exception);
-    RCLCPP_ERROR_STREAM(logger, exception_message);
+    RCLCPP_ERROR_STREAM(logger, "A function threw a Zivid::Exception: \"" + exception_message + "\"");
     throw;
   }
 }

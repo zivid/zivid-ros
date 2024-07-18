@@ -23,13 +23,13 @@ class Sample(Node):
         while not self.capture_service.wait_for_service(timeout_sec=3.0):
             self.get_logger().info('Capture service not available, waiting again...')
 
-        self._set_capture_settings()
+        self._set_settings()
 
         self.subscription = self.create_subscription(
             PointCloud2, 'points/xyzrgba', self.on_points, 10
         )
 
-    def _set_capture_settings(self):
+    def _set_settings(self):
         path_to_settings_yml = (
             get_package_share_directory('zivid_samples')
             + '/settings/camera_settings.yml'

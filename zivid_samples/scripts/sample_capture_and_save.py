@@ -23,9 +23,9 @@ class Sample(Node):
         while not self.capture_and_save_service.wait_for_service(timeout_sec=3.0):
             self.get_logger().info('Capture service not available, waiting again...')
 
-        self._set_capture_settings()
+        self._set_settings()
 
-    def _set_capture_settings(self):
+    def _set_settings(self):
         self.get_logger().info('Setting parameter `settings_yaml`')
         settings_parameter = Parameter(
             'settings_yaml',

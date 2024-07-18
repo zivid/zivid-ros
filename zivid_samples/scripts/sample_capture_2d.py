@@ -21,13 +21,13 @@ class Sample(Node):
         while not self.capture_2d_service.wait_for_service(timeout_sec=3.0):
             self.get_logger().info('Capture service not available, waiting again...')
 
-        self._set_capture_settings()
+        self._set_settings_2d()
 
         self.subscription = self.create_subscription(
             Image, 'color/image_color', self.on_image_color, 10
         )
 
-    def _set_capture_settings(self):
+    def _set_settings_2d(self):
         self.get_logger().info('Setting parameter `settings_2d_yaml`')
         settings_parameter = Parameter(
             'settings_2d_yaml',

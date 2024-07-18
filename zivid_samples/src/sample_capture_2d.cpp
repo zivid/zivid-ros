@@ -37,7 +37,9 @@ Settings2D:
 
   auto result =
     param_client->set_parameters({rclcpp::Parameter("settings_2d_yaml", settings_2d_yaml)});
-  if (rclcpp::spin_until_future_complete(node, result) != rclcpp::FutureReturnCode::SUCCESS) {
+  if (
+    rclcpp::spin_until_future_complete(node, result, std::chrono::seconds(30)) !=
+    rclcpp::FutureReturnCode::SUCCESS) {
     RCLCPP_ERROR(node->get_logger(), "Failed to set `settings_2d_yaml` parameter");
     std::terminate();
   }

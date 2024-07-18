@@ -30,7 +30,9 @@ void set_settings(const std::shared_ptr<rclcpp::Node> & node)
 
   auto result =
     param_client->set_parameters({rclcpp::Parameter("settings_file_path", path_to_settings_yml)});
-  if (rclcpp::spin_until_future_complete(node, result) != rclcpp::FutureReturnCode::SUCCESS) {
+  if (
+    rclcpp::spin_until_future_complete(node, result, std::chrono::seconds(30)) !=
+    rclcpp::FutureReturnCode::SUCCESS) {
     RCLCPP_ERROR(node->get_logger(), "Failed to set `settings_file_path` parameter");
     std::terminate();
   }

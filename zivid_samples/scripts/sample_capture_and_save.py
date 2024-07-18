@@ -7,8 +7,8 @@ import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.parameter import Parameter
-from rclpy.parameter_client import AsyncParameterClient
 
+from rcl_interfaces.srv import SetParameters
 from zivid_interfaces.srv import CaptureAndSave
 
 
@@ -47,10 +47,17 @@ Settings:
           Threshold: 5
 """,
         ).to_parameter_msg()
-        param_client = AsyncParameterClient(self, 'zivid_camera')
-        param_client.wait_for_services()
-        future = param_client.set_parameters([settings_parameter])
-        rclpy.spin_until_future_complete(self, future)
+
+        param_client = self.create_client(SetParameters, 'zivid_camera/set_parameters')
+        while not param_client.wait_for_service(timeout_sec=3):
+            self.get_logger().info('Parameter service not available, waiting again...')
+
+        future = param_client.call_async(
+            SetParameters.Request(parameters=[settings_parameter])
+        )
+        rclpy.spin_until_future_complete(self, future, timeout_sec=30)
+        if not future.result():
+            raise RuntimeError('Failed to set parameters')
 
     def capture(self):
         file_path = tempfile.gettempdir() + '/zivid_sample_capture_and_save.zdf'

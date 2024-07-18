@@ -31,7 +31,9 @@ void capture_assistant_suggest_settings(const std::shared_ptr<rclcpp::Node> & no
     CaptureAssistantSuggestSettings::Request::AMBIENT_LIGHT_FREQUENCY_NONE;
 
   auto result = client->async_send_request(request);
-  if (rclcpp::spin_until_future_complete(node, result) != rclcpp::FutureReturnCode::SUCCESS) {
+  if (
+    rclcpp::spin_until_future_complete(node, result, std::chrono::seconds(30)) !=
+    rclcpp::FutureReturnCode::SUCCESS) {
     RCLCPP_ERROR(node->get_logger(), "Failed to call capture assistant service");
     std::terminate();
   }

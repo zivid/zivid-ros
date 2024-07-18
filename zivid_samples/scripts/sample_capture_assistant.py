@@ -70,7 +70,9 @@ def main(args=None):
         sample = Sample()
 
         future = sample.capture_assistant_suggest_settings()
-        rclpy.spin_until_future_complete(sample, future)
+        rclpy.spin_until_future_complete(sample, future, timeout_sec=30)
+        if not future.result():
+            raise RuntimeError('Failed to suggest settings')
         sample.get_logger().info('Capture assistant complete')
 
         future = sample.capture()

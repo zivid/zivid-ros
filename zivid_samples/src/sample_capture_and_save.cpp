@@ -96,9 +96,6 @@ int main(int argc, char * argv[])
 
   capture_and_save(node);
 
-  RCLCPP_INFO(node->get_logger(), "Spinning node.. Press Ctrl+C to abort.");
-  rclcpp::spin(node);
-
   rclcpp::shutdown();
 
   return EXIT_SUCCESS;

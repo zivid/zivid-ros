@@ -126,7 +126,7 @@ std::string toString(zivid_camera::CameraStatus camera_status)
     case zivid_camera::CameraStatus::Idle:
       return "Idle";
     default:  // NOLINT(clang-diagnostic-covered-switch-default)
-      return "N/A";
+      throw std::runtime_error("Enum `camera_status` out of range.");
   }
 }
 

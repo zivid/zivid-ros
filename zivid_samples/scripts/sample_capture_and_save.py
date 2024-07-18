@@ -3,12 +3,11 @@
 import sys
 import tempfile
 
+from rcl_interfaces.srv import SetParameters
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.parameter import Parameter
-
-from rcl_interfaces.srv import SetParameters
 from zivid_interfaces.srv import CaptureAndSave
 
 

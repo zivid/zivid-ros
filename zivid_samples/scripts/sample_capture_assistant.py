@@ -3,11 +3,9 @@
 import sys
 
 from builtin_interfaces.msg import Duration
-
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
-
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import PointCloud2
 from std_srvs.srv import Trigger

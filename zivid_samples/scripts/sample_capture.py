@@ -2,12 +2,11 @@
 
 import sys
 
+from rcl_interfaces.srv import SetParameters
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.parameter import Parameter
-
-from rcl_interfaces.srv import SetParameters
 from sensor_msgs.msg import PointCloud2
 from std_srvs.srv import Trigger
 

@@ -84,6 +84,9 @@ def main(args=None):
 
         sample.get_logger().info('Capture and save complete')
 
+        sample.get_logger().info('Spinning node.. Press Ctrl+C to abort.')
+        rclpy.spin(sample)
+
     except KeyboardInterrupt:
         pass
     except ExternalShutdownException:

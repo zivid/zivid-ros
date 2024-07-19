@@ -78,7 +78,8 @@ private:
   void onCameraConnectionKeepAliveTimeout();
   void reconnectToCameraIfNecessary();
   void setCameraStatus(CameraStatus camera_status);
-  rcl_interfaces::msg::SetParametersResult setParametersCallback(const std::vector<rclcpp::Parameter> &parameters);
+  rcl_interfaces::msg::SetParametersResult setParametersCallback(
+    const std::vector<rclcpp::Parameter> & parameters);
   void cameraInfoModelNameServiceHandler(
     const std::shared_ptr<rmw_request_id_t> request_header,
     const std::shared_ptr<zivid_interfaces::srv::CameraInfoModelName::Request> request,

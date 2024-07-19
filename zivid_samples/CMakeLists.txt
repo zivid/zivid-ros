@@ -37,6 +37,7 @@ zivid_add_cpp_sample(sample_capture_and_save DEPENDENCIES rclcpp zivid_interface
 zivid_add_cpp_sample(sample_capture_assistant DEPENDENCIES rclcpp zivid_interfaces sensor_msgs std_srvs)
 zivid_add_cpp_sample(sample_capture_with_settings_from_file DEPENDENCIES rclcpp sensor_msgs std_srvs ament_index_cpp)
 
+zivid_add_python_sample(sample_capture)
 zivid_add_python_sample(sample_capture_2d)
 zivid_add_python_sample(sample_capture_and_save)
 zivid_add_python_sample(sample_capture_assistant)

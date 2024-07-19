@@ -164,7 +164,7 @@ void runFunctionAndCatchExceptions(
   try {
     function();
     response->success = true;
-  } catch (const Zivid::Exception & exception) {
+  } catch (const std::exception & exception) {
     const auto exception_message = Zivid::toString(exception);
     RCLCPP_ERROR_STREAM(
       logger, operation + " failed with exception: \"" << exception_message << "\"");
@@ -178,10 +178,9 @@ auto runFunctionAndCatchExceptionsAndRethrow(Function && function, const Logger 
 {
   try {
     return function();
-  } catch (const Zivid::Exception & exception) {
+  } catch (const std::exception & exception) {
     const auto exception_message = Zivid::toString(exception);
-    RCLCPP_ERROR_STREAM(
-      logger, "A function threw a Zivid::Exception: \"" + exception_message + "\"");
+    RCLCPP_ERROR_STREAM(logger, "A function failed with exception: \"" + exception_message + "\"");
     throw;
   }
 }

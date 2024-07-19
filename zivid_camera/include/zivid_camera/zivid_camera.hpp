@@ -78,7 +78,7 @@ private:
   void onCameraConnectionKeepAliveTimeout();
   void reconnectToCameraIfNecessary();
   void setCameraStatus(CameraStatus camera_status);
-
+  rcl_interfaces::msg::SetParametersResult setParametersCallback(const std::vector<rclcpp::Parameter> &parameters);
   void cameraInfoModelNameServiceHandler(
     const std::shared_ptr<rmw_request_id_t> request_header,
     const std::shared_ptr<zivid_interfaces::srv::CameraInfoModelName::Request> request,
@@ -142,9 +142,9 @@ private:
   sensor_msgs::msg::CameraInfo::ConstSharedPtr makeCameraInfo(
     const std_msgs::msg::Header & header, std::size_t width, std::size_t height,
     const Zivid::CameraIntrinsics & intrinsics);
-
   [[noreturn]] void logErrorAndThrowRuntimeException(const std::string & message);
 
+  OnSetParametersCallbackHandle::SharedPtr set_parameters_callback_handle_;
   rclcpp::TimerBase::SharedPtr camera_connection_keepalive_timer_;
   bool use_latched_publisher_for_points_xyz_{false};
   bool use_latched_publisher_for_points_xyzrgba_{false};

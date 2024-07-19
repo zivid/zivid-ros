@@ -212,14 +212,11 @@ public:
   explicit CaptureSettingsController(rclcpp::Node & node)
   : node_(node),
     file_path_param_{baseName() + std::string{"_file_path"}},
-    yaml_string_param_{baseName() + std::string{"_yaml"}},
-    param_subscriber_{std::make_shared<rclcpp::ParameterEventHandler>(&node)}
+    yaml_string_param_{baseName() + std::string{"_yaml"}}
   {
     using namespace std::placeholders;
     for (const auto & param : {yaml_string_param_, file_path_param_}) {
       node_.declare_parameter<std::string>(param, "");
-      cb_handles_.push_back(param_subscriber_->add_parameter_callback(
-        param, std::bind(&CaptureSettingsController::parameterCallback, this, _1)));
     }
   }
 
@@ -255,13 +252,6 @@ public:
   }
 
 private:
-  void parameterCallback(const rclcpp::Parameter & p)
-  {
-    RCLCPP_INFO(
-      node_.get_logger(), "Parameter '%s' was set to '%s'", p.get_name().c_str(),
-      p.as_string().c_str());
-  }
-
   constexpr auto baseName() const
   {
     if constexpr (std::is_same_v<SettingsType, Zivid::Settings>) {
@@ -276,12 +266,12 @@ private:
   rclcpp::Node & node_;
   std::string file_path_param_;
   std::string yaml_string_param_;
-  std::shared_ptr<rclcpp::ParameterEventHandler> param_subscriber_;
-  std::vector<std::shared_ptr<rclcpp::ParameterCallbackHandle>> cb_handles_;
 };
 
 ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
 : rclcpp::Node{"zivid_camera", options},
+  set_parameters_callback_handle_{this->add_on_set_parameters_callback(
+    std::bind(&ZividCamera::setParametersCallback, this, std::placeholders::_1))},
   zivid_{std::make_unique<Zivid::Application>()},
   camera_status_{CameraStatus::Idle},
   settings_controller_{std::make_unique<CaptureSettingsController<Zivid::Settings>>(*this)},
@@ -290,7 +280,7 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
   // Disable buffering on stdout
   setvbuf(stdout, nullptr, _IONBF, BUFSIZ);
 
-  RCLCPP_INFO_STREAM(get_logger(), "Zivid ROS driver");  // Fix: add version
+  RCLCPP_INFO_STREAM(get_logger(), "Zivid ROS driver");
   RCLCPP_INFO(get_logger(), "The node's namespace is '%s'", get_namespace());
   RCLCPP_INFO_STREAM(get_logger(), "Running Zivid Core version " << ZIVID_CORE_VERSION);
 
@@ -493,6 +483,19 @@ void ZividCamera::setCameraStatus(CameraStatus camera_status)
     }
     camera_status_ = camera_status;
   }
+}
+
+rcl_interfaces::msg::SetParametersResult ZividCamera::setParametersCallback(
+  const std::vector<rclcpp::Parameter> & parameters)
+{
+  rcl_interfaces::msg::SetParametersResult result;
+  result.successful = true;
+  for (const auto & param : parameters) {
+    RCLCPP_DEBUG_STREAM(
+      get_logger(), "Set parameter '" << param.get_name() << "' (" << param.get_type_name()
+                                      << ") to '" << param.value_to_string() << "'");
+  }
+  return result;
 }
 
 void ZividCamera::cameraInfoModelNameServiceHandler(

@@ -2,7 +2,7 @@
 
 This is the official ROS driver for [Zivid 3D cameras](https://www.zivid.com/).
 
-_A preview branch with support for ROS 2 is [now available here](https://github.com/zivid/zivid-ros/tree/ros2-preview)!_
+This is the branch for the ROS 1 driver. The ROS 2 driver can be found on the master branch, [available here](https://github.com/zivid/zivid-ros/tree/master).
 
 [![Build Status][ci-badge]][ci-url]
 ![Zivid Image][header-image]
@@ -75,7 +75,7 @@ mkdir -p ~/catkin_ws/src
 Clone the Zivid ROS project into the src directory:
 ```bash
 cd ~/catkin_ws/src
-git clone https://github.com/zivid/zivid-ros.git
+git clone https://github.com/zivid/zivid-ros.git -b ros1-master
 ```
 
 Install dependencies:

@@ -1,82 +1,106 @@
-#include <zivid_camera/SettingsAcquisitionConfig.h>
-#include <zivid_camera/SettingsConfig.h>
-#include <zivid_camera/CaptureAndSave.h>
-#include <Zivid/Version.h>
-#include <dynamic_reconfigure/Reconfigure.h>
-#include <dynamic_reconfigure/client.h>
-#include <ros/ros.h>
+#include <filesystem>
+#include <rclcpp/rclcpp.hpp>
+#include <stdexcept>
+#include <zivid_interfaces/srv/capture_and_save.hpp>
 
-#define CHECK(cmd)                                                                                                     \
-  do                                                                                                                   \
-  {                                                                                                                    \
-    if (!cmd)                                                                                                          \
-    {                                                                                                                  \
-      throw std::runtime_error{ "\"" #cmd "\" failed!" };                                                              \
-    }                                                                                                                  \
-  } while (false)
+/*
+ * This sample shows how to set the settings_yaml parameter of the zivid node, then invoke the
+ * capture_and_save service, and read the response from the service call. If successful, the
+ * captured frame is stored in a temporary directory.
+ */
 
-namespace
+void fatal_error(const rclcpp::Logger & logger, const std::string & message)
 {
-const ros::Duration default_wait_duration{ 30 };
-
-void capture_and_save()
-{
-  ROS_INFO("Calling capture_and_save service");
-  zivid_camera::CaptureAndSave capture_and_save;
-  std::string file_path = "/tmp/capture_cpp.zdf";
-  capture_and_save.request.file_path = file_path;
-  CHECK(ros::service::call("/zivid_camera/capture_and_save", capture_and_save));
-  ROS_INFO("Your .zdf file is now available here: %s", file_path.c_str());
+  RCLCPP_ERROR_STREAM(logger, message);
+  throw std::runtime_error(message);
 }
 
-void enable_first_acquisition()
+void set_settings(const std::shared_ptr<rclcpp::Node> & node)
 {
-  dynamic_reconfigure::Client<zivid_camera::SettingsAcquisitionConfig> acquisition_0_client("/zivid_camera/settings/"
-                                                                                            "acquisition_0/");
+  RCLCPP_INFO(node->get_logger(), "Setting parameter 'settings_yaml'");
+  const std::string settings_yml =
+    R"(
+__version__:
+  serializer: 1
+  data: 22
+Settings:
+  Acquisitions:
+    - Acquisition:
+        Aperture: 5.66
+        ExposureTime: 8333
+  Processing:
+    Filters:
+      Outlier:
+        Removal:
+          Enabled: yes
+          Threshold: 5
+)";
 
-  // To initialize the acquisition_0_config object we need to load the default configuration from the server.
-  // The default values of settings depends on which Zivid camera model is connected.
-  zivid_camera::SettingsAcquisitionConfig acquisition_0_config;
-  CHECK(acquisition_0_client.getDefaultConfiguration(acquisition_0_config, default_wait_duration));
+  auto param_client = std::make_shared<rclcpp::AsyncParametersClient>(node, "zivid_camera");
+  while (!param_client->wait_for_service(std::chrono::seconds(3))) {
+    if (!rclcpp::ok()) {
+      fatal_error(node->get_logger(), "Client interrupted while waiting for service to appear.");
+    }
+    RCLCPP_INFO(node->get_logger(), "Waiting for the parameters client to appear...");
+  }
 
-  ROS_INFO("Enabling the first acquisition");
-  acquisition_0_config.enabled = true;
-  CHECK(acquisition_0_client.setConfiguration(acquisition_0_config));
+  auto result = param_client->set_parameters({rclcpp::Parameter("settings_yaml", settings_yml)});
+  if (
+    rclcpp::spin_until_future_complete(node, result, std::chrono::seconds(30)) !=
+    rclcpp::FutureReturnCode::SUCCESS) {
+    fatal_error(node->get_logger(), "Failed to set `settings_yaml` parameter");
+  }
 }
 
-void enable_diagnostics()
+void capture_and_save(const std::shared_ptr<rclcpp::Node> & node)
 {
-  dynamic_reconfigure::Client<zivid_camera::SettingsConfig> settings_client("/zivid_camera/"
-                                                                            "settings/");
-  zivid_camera::SettingsConfig settings_config;
-  CHECK(settings_client.getDefaultConfiguration(settings_config, default_wait_duration));
+  using zivid_interfaces::srv::CaptureAndSave;
 
-  ROS_INFO("Enabling diagnostics mode");
-  settings_config.diagnostics_enabled = true;
-  CHECK(settings_client.setConfiguration(settings_config));
+  auto client = node->create_client<CaptureAndSave>("capture_and_save");
+  while (!client->wait_for_service(std::chrono::seconds(3))) {
+    if (!rclcpp::ok()) {
+      fatal_error(node->get_logger(), "Client interrupted while waiting for service to appear.");
+    }
+    RCLCPP_INFO(node->get_logger(), "Waiting for the capture_and_save service to appear...");
+  }
+
+  const std::string filename = "zivid_sample_capture_and_save.zdf";
+
+  auto request = std::make_shared<CaptureAndSave::Request>();
+  request->file_path = (std::filesystem::temp_directory_path() / filename).string();
+  RCLCPP_INFO(
+    node->get_logger(), "Sending capture and save request with file path: %s",
+    request->file_path.c_str());
+
+  auto result = client->async_send_request(request);
+  if (rclcpp::spin_until_future_complete(node, result) != rclcpp::FutureReturnCode::SUCCESS) {
+    fatal_error(node->get_logger(), "Failed to call the capture_and_save service");
+  }
+
+  auto capture_response = result.get();
+  if (!capture_response->success) {
+    fatal_error(
+      node->get_logger(),
+      "Capture and save operation was unsuccessful: " + capture_response->message);
+  }
+
+  RCLCPP_INFO(node->get_logger(), "Capture and save operation successful");
 }
 
-}  // namespace
-
-int main(int argc, char** argv)
+int main(int argc, char * argv[])
 {
-  ros::init(argc, argv, "sample_capture_and_save_cpp");
-  ros::NodeHandle n;
+  rclcpp::init(argc, argv);
+  auto node = rclcpp::Node::make_shared("sample_capture_and_save");
+  RCLCPP_INFO(node->get_logger(), "Started the sample_capture_and_save node");
 
-  ROS_INFO("Starting sample_capture_and_save.cpp");
+  set_settings(node);
 
-  CHECK(ros::service::waitForService("/zivid_camera/capture_and_save", default_wait_duration));
+  capture_and_save(node);
 
-  ros::AsyncSpinner spinner(1);
-  spinner.start();
+  RCLCPP_INFO(node->get_logger(), "Spinning node.. Press Ctrl+C to abort.");
+  rclcpp::spin(node);
 
-  enable_first_acquisition();
+  rclcpp::shutdown();
 
-  enable_diagnostics();
-
-  capture_and_save();
-
-  ros::waitForShutdown();
-
-  return 0;
+  return EXIT_SUCCESS;
 }

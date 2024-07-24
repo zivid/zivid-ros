@@ -2,6 +2,22 @@
 
 This project adheres to [Semantic Versioning](https://semver.org).
 
+# 3.0.0
+
+* Driver is updated with support for ROS 2. ROS 1 is no longer supported. If you need support
+  for ROS 1, check one of the earlier releases below, or use the branch `ros1-master`.
+* Capture settings must be set via .yml files or YAML strings, which can be exported from
+  Zivid Studio or the Zivid SDK. The driver no longer supports changing individual Zivid
+  settings nodes directly from ROS. See the Configuration section of the [README](./README.md)
+  for more details.
+* Service descriptions have been moved to a separate ROS package named `zivid_interfaces`.
+* The `capture` and `capture_2d` services now use the standard `std_srvs/srv/Trigger` type.
+* The `load_settings_from_file` and `load_settings_2d_from_file` services are removed. Settings
+  files must now be configured via parameters. See the Configuration section of the
+  [README](./README.md) for more details.
+* The data type of the `rgba` field in the `points/xyzrgba` topic is changed from `FLOAT32` to
+  `UINT32`.
+
 ## 2.5.0
 
 * Fixed an issue where the driver when running as a nodelet could not attach to a manager

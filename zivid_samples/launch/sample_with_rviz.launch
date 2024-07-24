@@ -1,0 +1,6 @@
+<launch>
+  <arg name="sample" default=""/>
+  <node pkg="zivid_camera" exec="zivid_camera" name="zivid_camera" />
+  <node pkg="zivid_samples" exec="$(var sample)" name="$(var sample)" />
+  <node pkg="rviz2" exec="rviz2" args="-d $(find-pkg-share zivid_camera)/config/rviz/zivid.rviz" />
+</launch>

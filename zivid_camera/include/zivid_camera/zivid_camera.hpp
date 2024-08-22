@@ -145,7 +145,6 @@ private:
     const Zivid::CameraIntrinsics & intrinsics);
   [[noreturn]] void logErrorAndThrowRuntimeException(const std::string & message);
 
-  OnSetParametersCallbackHandle::SharedPtr set_parameters_callback_handle_;
   rclcpp::TimerBase::SharedPtr camera_connection_keepalive_timer_;
   bool use_latched_publisher_for_points_xyz_{false};
   bool use_latched_publisher_for_points_xyzrgba_{false};
@@ -174,6 +173,10 @@ private:
   CameraStatus camera_status_{CameraStatus::Idle};
   std::unique_ptr<CaptureSettingsController<Zivid::Settings>> settings_controller_;
   std::unique_ptr<CaptureSettingsController<Zivid::Settings2D>> settings_2d_controller_;
+  // The callback must be declared after the settings controllers since the callback references
+  // both controllers. Otherwise, the callback could run before the controllers are initialized,
+  // which is undefined behavior.
+  OnSetParametersCallbackHandle::SharedPtr set_parameters_callback_handle_;
   std::unique_ptr<Zivid::Camera> camera_;
   std::string frame_id_;
 };

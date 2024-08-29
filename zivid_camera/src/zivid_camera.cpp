@@ -299,12 +299,9 @@ private:
 
 ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
 : rclcpp::Node{"zivid_camera", options},
-  set_parameters_callback_handle_{this->add_on_set_parameters_callback(
-    std::bind(&ZividCamera::setParametersCallback, this, std::placeholders::_1))},
   zivid_{std::make_unique<Zivid::Application>(makeZividApplication())},
-  camera_status_{CameraStatus::Idle},
-  settings_controller_{std::make_unique<CaptureSettingsController<Zivid::Settings>>(*this)},
-  settings_2d_controller_{std::make_unique<CaptureSettingsController<Zivid::Settings2D>>(*this)}
+  set_parameters_callback_handle_{this->add_on_set_parameters_callback(
+    std::bind(&ZividCamera::setParametersCallback, this, std::placeholders::_1))}
 {
   // Disable buffering on stdout
   setvbuf(stdout, nullptr, _IONBF, BUFSIZ);
@@ -312,6 +309,14 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
   RCLCPP_INFO_STREAM(get_logger(), "Zivid ROS driver");
   RCLCPP_INFO(get_logger(), "The node's namespace is '%s'", get_namespace());
   RCLCPP_INFO_STREAM(get_logger(), "Running Zivid Core version " << ZIVID_CORE_VERSION);
+
+  // The "set parameters" callback references both controllers so the pointers must be initialized
+  // before the callback is added. This is because constructing the controllers will cause the "set
+  // parameters" event to fire, and we want to handle that first event in order to log it.
+  // Therefore, we ensure the controllers are initialized to nullptr before initializing the
+  // callback in the initializer list and then construct the controllers here afterward.
+  settings_controller_ = std::make_unique<CaptureSettingsController<Zivid::Settings>>(*this);
+  settings_2d_controller_ = std::make_unique<CaptureSettingsController<Zivid::Settings2D>>(*this);
 
   const auto serial_number = declare_parameter<std::string>(ParamNames::serial_number, "");
 

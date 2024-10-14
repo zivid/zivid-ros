@@ -562,11 +562,12 @@ void ZividCamera::captureServiceHandler(
 {
   RCLCPP_INFO_STREAM(get_logger(), __func__);
 
-  const auto settings = runFunctionAndCatchExceptionsAndRethrow(
-    [&] { return settings_controller_->currentSettings(); }, get_logger());
-
   runFunctionAndCatchExceptions(
-    [&]() { invokeCaptureAndPublishFrame(settings); }, response, get_logger(), "Capture");
+    [&]() {
+      const auto settings = settings_controller_->currentSettings();
+      invokeCaptureAndPublishFrame(settings);
+    },
+    response, get_logger(), "Capture");
 }
 
 void ZividCamera::captureAndSaveServiceHandler(
@@ -575,11 +576,10 @@ void ZividCamera::captureAndSaveServiceHandler(
   std::shared_ptr<zivid_interfaces::srv::CaptureAndSave::Response> response)
 {
   RCLCPP_INFO_STREAM(get_logger(), __func__);
-  const auto settings = runFunctionAndCatchExceptionsAndRethrow(
-    [&] { return settings_controller_->currentSettings(); }, get_logger());
 
   runFunctionAndCatchExceptions(
     [&]() {
+      const auto settings = settings_controller_->currentSettings();
       const auto frame = invokeCaptureAndPublishFrame(settings);
       const auto destination_path = request->file_path;
       RCLCPP_INFO(get_logger(), "Saving frame to '%s'", destination_path.c_str());
@@ -596,11 +596,9 @@ void ZividCamera::capture2DServiceHandler(
 
   serviceHandlerHandleCameraConnectionLoss();
 
-  const auto settings2D = runFunctionAndCatchExceptionsAndRethrow(
-    [&] { return settings_2d_controller_->currentSettings(); }, get_logger());
-
   runFunctionAndCatchExceptions(
     [&]() {
+      const auto settings2D = settings_2d_controller_->currentSettings();
       auto frame2D = camera_->capture(settings2D);
       if (shouldPublishColorImg()) {
         const auto header = makeHeader();

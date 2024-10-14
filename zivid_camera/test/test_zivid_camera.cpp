@@ -547,44 +547,58 @@ TEST_F(ZividNodeTest, testServiceIsConnected)
   ASSERT_EQ(is_connected_request->is_connected, true);
 }
 
-TEST_F(ZividNodeTest, testCaptureConfigurationThrowsIfBothPathAndYmlSet)
+TEST_F(ZividNodeTest, testCaptureConfigurationErrorIfBothPathAndYmlSet)
 {
   auto run_test = [&](
-                    const auto & service_name, const auto & path_param, const auto & yml_param,
-                    const auto & yml_content) {
+                    const auto & service_name, const std::string & path_param,
+                    const std::string & yml_param, const auto & yml_content) {
     auto color_image_sub = subscribe<sensor_msgs::msg::Image>(color_image_color_topic_name);
     auto assert_num_topics_received = [&](auto num_topics) {
       ASSERT_EQ(color_image_sub.numMessages(), num_topics);
     };
+
+    const auto expectedErrorBothEmpty =
+      "Both '" + path_param + "' and '" + yml_param +
+      "' parameters are empty! Please set one of these parameters.";
+    const auto expectedErrorBothSet =
+      "Both '" + path_param + "' and '" + yml_param +
+      "' parameters are non-empty! Please set only one of these parameters.";
+
+    setNodeParameter(path_param, "");
+    setNodeParameter(yml_param, "");
+    verifyTriggerResponseError(doStdSrvsTriggerRequest(service_name), expectedErrorBothEmpty);
+    executor_.spin_some();
+    assert_num_topics_received(0);
+
     auto tmp_file = TmpFile("settings.yml", yml_content);
     setNodeParameter(path_param, tmp_file.string());
     setNodeParameter(yml_param, yml_content);
-    ASSERT_THROW(doStdSrvsTriggerRequest(service_name), std::exception);
+    verifyTriggerResponseError(doStdSrvsTriggerRequest(service_name), expectedErrorBothSet);
     assert_num_topics_received(0);
 
     setNodeParameter(path_param, "");
-    ASSERT_TRUE(doStdSrvsTriggerRequest(service_name));
+    verifyTriggerResponseSuccess(doStdSrvsTriggerRequest(service_name));
     executor_.spin_some();
     assert_num_topics_received(1);
 
     setNodeParameter(path_param, tmp_file.string());
     setNodeParameter(yml_param, "");
-    ASSERT_TRUE(doStdSrvsTriggerRequest(service_name));
+    verifyTriggerResponseSuccess(doStdSrvsTriggerRequest(service_name));
     executor_.spin_some();
     assert_num_topics_received(2);
 
     setNodeParameter(path_param, tmp_file.string());
     setNodeParameter(yml_param, yml_content);
-    ASSERT_THROW(doStdSrvsTriggerRequest(service_name), std::exception);
+    verifyTriggerResponseError(doStdSrvsTriggerRequest(service_name), expectedErrorBothSet);
     executor_.spin_some();
     assert_num_topics_received(2);
 
-    // Reset for next test
     setNodeParameter(path_param, "");
     setNodeParameter(yml_param, "");
-    ASSERT_THROW(doStdSrvsTriggerRequest(service_name), std::exception);
+    verifyTriggerResponseError(doStdSrvsTriggerRequest(service_name), expectedErrorBothEmpty);
     executor_.spin_some();
     assert_num_topics_received(2);
+    // Leave both path and yml params empty, for the next test
   };
 
   run_test(

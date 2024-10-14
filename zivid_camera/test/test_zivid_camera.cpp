@@ -1214,7 +1214,8 @@ protected:
 
     auto points_sub = subscribe<sensor_msgs::msg::PointCloud2>(points_xyz_topic_name);
 
-    doCaptureAssistantRequest(ambient_light_frequency, max_capture_time);
+    auto caResponse = doCaptureAssistantRequest(ambient_light_frequency, max_capture_time);
+    verifyTriggerResponseSuccess(caResponse);
 
     Zivid::CaptureAssistant::SuggestSettingsParameters suggest_settings_parameters{
       Zivid::CaptureAssistant::SuggestSettingsParameters::MaxCaptureTime{max_capture_time},
@@ -1227,6 +1228,7 @@ protected:
     ASSERT_EQ(
       getNodeStringParameter(parameter_settings_yaml),
       serializeZividDataModel(api_suggested_settings));
+    ASSERT_EQ(caResponse->suggested_settings, serializeZividDataModel(api_suggested_settings));
     // settings_file_path parameter has been reset to empty
     ASSERT_EQ(getNodeStringParameter(parameter_settings_file_path), "");
     ASSERT_EQ(points_sub.numMessages(), 0U);
@@ -1262,9 +1264,9 @@ TEST_F(ZividCATest, testDifferentMaxCaptureTimeAndAmbientLightFrequency)
 TEST_F(ZividCATest, testCaptureAssistantWithMaxCaptureTimeZeroFails)
 {
   using Request = zivid_interfaces::srv::CaptureAssistantSuggestSettings::Request;
-  ASSERT_THROW(
+  verifyTriggerResponseError(
     doCaptureAssistantRequest(Request::AMBIENT_LIGHT_FREQUENCY_NONE, std::chrono::milliseconds{0}),
-    std::exception);
+    "MaxCaptureTime{ 0 } is not in range [200, 10000]");
 }
 
 TEST_F(ZividCATest, testCaptureAssistantWithMaxCaptureTimeMinMax)
@@ -1274,19 +1276,21 @@ TEST_F(ZividCATest, testCaptureAssistantWithMaxCaptureTimeMinMax)
   const auto valid_range =
     Zivid::CaptureAssistant::SuggestSettingsParameters::MaxCaptureTime::validRange();
 
-  ASSERT_THROW(
+  verifyTriggerResponseError(
     doCaptureAssistantRequest(
       Request::AMBIENT_LIGHT_FREQUENCY_NONE, valid_range.min() - small_delta),
-    std::exception);
+    "MaxCaptureTime{ 199 } is not in range [200, 10000]");
 
-  ASSERT_TRUE(doCaptureAssistantRequest(Request::AMBIENT_LIGHT_FREQUENCY_NONE, valid_range.min()));
+  verifyTriggerResponseSuccess(
+    doCaptureAssistantRequest(Request::AMBIENT_LIGHT_FREQUENCY_NONE, valid_range.min()));
 
-  ASSERT_THROW(
+  verifyTriggerResponseError(
     doCaptureAssistantRequest(
       Request::AMBIENT_LIGHT_FREQUENCY_NONE, valid_range.max() + small_delta),
-    std::exception);
+    "MaxCaptureTime{ 10001 } is not in range [200, 10000]");
 
-  ASSERT_TRUE(doCaptureAssistantRequest(Request::AMBIENT_LIGHT_FREQUENCY_NONE, valid_range.max()));
+  verifyTriggerResponseSuccess(
+    doCaptureAssistantRequest(Request::AMBIENT_LIGHT_FREQUENCY_NONE, valid_range.max()));
 }
 
 TEST_F(ZividCATest, testCaptureAssistantDefaultAmbientLightFrequencyWorks)
@@ -1294,15 +1298,17 @@ TEST_F(ZividCATest, testCaptureAssistantDefaultAmbientLightFrequencyWorks)
   using Request = zivid_interfaces::srv::CaptureAssistantSuggestSettings::Request;
   auto request = std::make_shared<Request>();
   request->max_capture_time = rclcpp::Duration{std::chrono::seconds{1}};
-  ASSERT_TRUE(doSrvRequest<zivid_interfaces::srv::CaptureAssistantSuggestSettings>(
+  verifyTriggerResponseSuccess(doSrvRequest<zivid_interfaces::srv::CaptureAssistantSuggestSettings>(
     capture_assistant_suggest_settings_service_name, request));
 }
 
 TEST_F(ZividCATest, testCaptureAssistantInvalidAmbientLightFrequencyFails)
 {
   using Request = zivid_interfaces::srv::CaptureAssistantSuggestSettings::Request;
-  ASSERT_THROW(doCaptureAssistantRequest(255, std::chrono::seconds{1}), std::exception);
-  ASSERT_TRUE(
+  verifyTriggerResponseError(
+    doCaptureAssistantRequest(255, std::chrono::seconds{1}),
+    "Unhandled AMBIENT_LIGHT_FREQUENCY value: 255");
+  verifyTriggerResponseSuccess(
     doCaptureAssistantRequest(Request::AMBIENT_LIGHT_FREQUENCY_60HZ, std::chrono::seconds{1}));
 }
 

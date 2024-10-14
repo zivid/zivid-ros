@@ -173,18 +173,6 @@ void runFunctionAndCatchExceptions(
   }
 }
 
-template <typename Function, typename Logger>
-auto runFunctionAndCatchExceptionsAndRethrow(Function && function, const Logger & logger)
-{
-  try {
-    return function();
-  } catch (const std::exception & exception) {
-    const auto exception_message = Zivid::toString(exception);
-    RCLCPP_ERROR_STREAM(logger, "A function failed with exception: \"" + exception_message + "\"");
-    throw;
-  }
-}
-
 template <typename Logger>
 [[noreturn]] void logErrorToLoggerAndThrowRuntimeException(
   const Logger & logger, const std::string & message)
@@ -620,42 +608,46 @@ void ZividCamera::captureAssistantSuggestSettingsServiceHandler(
 
   serviceHandlerHandleCameraConnectionLoss();
 
-  using SuggestSettingsParameters = Zivid::CaptureAssistant::SuggestSettingsParameters;
-
-  const auto max_capture_time =
-    rclcpp::Duration{request->max_capture_time}.to_chrono<std::chrono::milliseconds>();
-  const auto ambient_light_frequency = [this, &request]() {
-    using RosRequestTypes = zivid_interfaces::srv::CaptureAssistantSuggestSettings::Request;
-    switch (request->ambient_light_frequency) {
-      case RosRequestTypes::AMBIENT_LIGHT_FREQUENCY_NONE:
-        return SuggestSettingsParameters::AmbientLightFrequency::none;
-      case RosRequestTypes::AMBIENT_LIGHT_FREQUENCY_50HZ:
-        return SuggestSettingsParameters::AmbientLightFrequency::hz50;
-      case RosRequestTypes::AMBIENT_LIGHT_FREQUENCY_60HZ:
-        return SuggestSettingsParameters::AmbientLightFrequency::hz60;
-      default:
-        logErrorAndThrowRuntimeException(
-          "Unhandled AMBIENT_LIGHT_FREQUENCY value: " +
-          std::to_string(request->ambient_light_frequency));
-    }
-  }();
-
-  SuggestSettingsParameters suggest_settings_parameters{
-    SuggestSettingsParameters::MaxCaptureTime{max_capture_time}, ambient_light_frequency};
-  RCLCPP_INFO_STREAM(
-    get_logger(), "Getting suggested settings using parameters: " << suggest_settings_parameters);
-  const auto suggested_settings = runFunctionAndCatchExceptionsAndRethrow(
+  runFunctionAndCatchExceptions(
     [&]() {
-      return Zivid::CaptureAssistant::suggestSettings(*camera_, suggest_settings_parameters);
+      using SuggestSettingsParameters = Zivid::CaptureAssistant::SuggestSettingsParameters;
+
+      const auto max_capture_time =
+        rclcpp::Duration{request->max_capture_time}.to_chrono<std::chrono::milliseconds>();
+      const auto ambient_light_frequency = [this, &request]() {
+        using RosRequestTypes = zivid_interfaces::srv::CaptureAssistantSuggestSettings::Request;
+        switch (request->ambient_light_frequency) {
+          case RosRequestTypes::AMBIENT_LIGHT_FREQUENCY_NONE:
+            return SuggestSettingsParameters::AmbientLightFrequency::none;
+          case RosRequestTypes::AMBIENT_LIGHT_FREQUENCY_50HZ:
+            return SuggestSettingsParameters::AmbientLightFrequency::hz50;
+          case RosRequestTypes::AMBIENT_LIGHT_FREQUENCY_60HZ:
+            return SuggestSettingsParameters::AmbientLightFrequency::hz60;
+          default:
+            logErrorAndThrowRuntimeException(
+              "Unhandled AMBIENT_LIGHT_FREQUENCY value: " +
+              std::to_string(request->ambient_light_frequency));
+        }
+      }();
+
+      SuggestSettingsParameters suggest_settings_parameters{
+        SuggestSettingsParameters::MaxCaptureTime{max_capture_time}, ambient_light_frequency};
+
+      RCLCPP_INFO_STREAM(
+        get_logger(),
+        "Getting suggested settings using parameters: " << suggest_settings_parameters);
+
+      const auto suggested_settings =
+        Zivid::CaptureAssistant::suggestSettings(*camera_, suggest_settings_parameters);
+
+      RCLCPP_INFO_STREAM(
+        get_logger(), "CaptureAssistant::suggestSettings returned "
+                        << suggested_settings.acquisitions().size() << " acquisitions");
+
+      settings_controller_->setSettings(suggested_settings);
+      response->suggested_settings = serializeZividDataModel(suggested_settings);
     },
-    get_logger());
-
-  RCLCPP_INFO_STREAM(
-    get_logger(), "CaptureAssistant::suggestSettings returned "
-                    << suggested_settings.acquisitions().size() << " acquisitions");
-
-  settings_controller_->setSettings(suggested_settings);
-  response->suggested_settings = serializeZividDataModel(suggested_settings);
+    response, get_logger(), "CaptureAssistantSuggestSettings");
 }
 
 void ZividCamera::serviceHandlerHandleCameraConnectionLoss()

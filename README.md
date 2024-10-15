@@ -172,8 +172,8 @@ to a .yml file, or as a YAML string.
 
 The following ROS parameters control which settings are used when capturing with the driver. Note
 that you must set _either_ the `_file_path` or the `_yaml` parameter. If both `_file_path` and `_yaml`
-parameters are set to a non-empty string at the same time, then the driver will throw an exception
-when capturing. By default, all settings parameters are empty.
+parameters are set to a non-empty string at the same time, then the driver will return an error when
+capturing. By default, all settings parameters are empty.
 
 ### 3D capture
 

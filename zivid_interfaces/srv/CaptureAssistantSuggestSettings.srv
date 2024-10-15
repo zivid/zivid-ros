@@ -6,3 +6,5 @@ builtin_interfaces/Duration max_capture_time
 uint8 ambient_light_frequency
 ---
 string suggested_settings
+bool success
+string message

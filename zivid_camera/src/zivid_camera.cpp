@@ -223,12 +223,12 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   camera_connection_keepalive_timer_ =
       nh_.createTimer(ros::Duration(10), &ZividCamera::onCameraConnectionKeepAliveTimeout, this);
 
-  capture_settings_controller_ =
-      std::make_unique<Capture3DSettingsController>(nh_, camera_, "settings", max_capture_acquisitions);
+  // capture_settings_controller_ =
+  //    std::make_unique<Capture3DSettingsController>(nh_, camera_, "settings", max_capture_acquisitions);
 
   // HDR is not supported in 2D mode, but for future-proofing the 2D configuration API is analogous
   // to 3D except there is only 1 acquisition.
-  capture_2d_settings_controller_ = std::make_unique<Capture2DSettingsController>(nh_, camera_, "settings_2d", 1);
+  // capture_2d_settings_controller_ = std::make_unique<Capture2DSettingsController>(nh_, camera_, "settings_2d", 1);
 
   ROS_INFO("Advertising topics");
   points_xyz_publisher_ =
@@ -372,7 +372,7 @@ bool ZividCamera::capture2DServiceHandler(Capture2D::Request&, Capture2D::Respon
 
   serviceHandlerHandleCameraConnectionLoss();
 
-  const auto settings2D = capture_2d_settings_controller_->zividSettings();
+  const auto settings2D = current_settings_2d_;  // capture_2d_settings_controller_->zividSettings();
 
   if (settings2D.acquisitions().isEmpty())
   {
@@ -399,12 +399,12 @@ bool ZividCamera::captureAssistantSuggestSettingsServiceHandler(CaptureAssistant
 
   serviceHandlerHandleCameraConnectionLoss();
 
-  if (capture_settings_controller_->numAcquisitionConfigServers() < 10)
+  /*if (capture_settings_controller_->numAcquisitionConfigServers() < 10)
   {
     throw std::runtime_error("To use the CaptureAssistant the launch parameter 'max_capture_acquisitions' "
                              "must be at least 10, since the Capture Assistant may suggest up to 10 acquisitions. "
                              "See README.md for more information.");
-  }
+  }*/
 
   using SuggestSettingsParameters = Zivid::CaptureAssistant::SuggestSettingsParameters;
 
@@ -429,7 +429,8 @@ bool ZividCamera::captureAssistantSuggestSettingsServiceHandler(CaptureAssistant
   const auto suggested_settings = Zivid::CaptureAssistant::suggestSettings(camera_, suggest_settings_parameters);
   ROS_INFO_STREAM("CaptureAssistant::suggestSettings returned " << suggested_settings.acquisitions().size()
                                                                 << " acquisitions");
-  capture_settings_controller_->setZividSettings(suggested_settings);
+  current_settings_ = suggested_settings;
+  // capture_settings_controller_->setZividSettings(suggested_settings);
 
   return true;
 }
@@ -438,7 +439,8 @@ bool ZividCamera::loadSettingsFromFileServiceHandler(LoadSettingsFromFile::Reque
                                                      LoadSettingsFromFile::Response&)
 {
   ROS_DEBUG_STREAM(__func__ << ": Request: " << req);
-  capture_settings_controller_->setZividSettings(Zivid::Settings{ req.file_path.c_str() });
+  // capture_settings_controller_->setZividSettings(Zivid::Settings{ req.file_path.c_str() });
+  current_settings_ = Zivid::Settings{ req.file_path.c_str() };
   return true;
 }
 
@@ -446,7 +448,8 @@ bool ZividCamera::loadSettings2DFromFileServiceHandler(LoadSettings2DFromFile::R
                                                        LoadSettings2DFromFile::Response&)
 {
   ROS_DEBUG_STREAM(__func__ << ": Request: " << req);
-  capture_2d_settings_controller_->setZividSettings(Zivid::Settings2D{ req.file_path.c_str() });
+  // capture_2d_settings_controller_->setZividSettings(Zivid::Settings2D{ req.file_path.c_str() });
+  current_settings_2d_ = Zivid::Settings2D{ req.file_path.c_str() };
   return true;
 }
 
@@ -712,7 +715,7 @@ Zivid::Frame ZividCamera::invokeCaptureAndPublishFrame()
 
   serviceHandlerHandleCameraConnectionLoss();
 
-  const auto settings = capture_settings_controller_->zividSettings();
+  const auto settings = current_settings_;  // capture_settings_controller_->zividSettings();
 
   if (settings.acquisitions().isEmpty())
   {

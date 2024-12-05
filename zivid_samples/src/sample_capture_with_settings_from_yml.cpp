@@ -1,5 +1,3 @@
-#include <zivid_camera/SettingsAcquisitionConfig.h>
-#include <zivid_camera/SettingsConfig.h>
 #include <zivid_camera/Capture.h>
 #include <zivid_camera/LoadSettingsFromFile.h>
 #include <dynamic_reconfigure/Reconfigure.h>

@@ -1,8 +1,10 @@
 # Zivid ROS driver
 
-This is the official ROS driver for [Zivid 3D cameras](https://www.zivid.com/).
+This is a preview branch for the Zivid ROS 1 driver for Zivid SDK 2.14.0.  Be aware that this branch does not support configuring
+Zivid settings via dynamic_reconfigure. You must use service `load_settings_from_file` or `load_settings_2d_from_file`
+and provide a .yml file, to set the Zivid capture settings. See [Services](#services) for more info.
 
-This is the branch for the ROS 1 driver. The ROS 2 driver can be found on the master branch, [available here](https://github.com/zivid/zivid-ros/tree/master).
+The ROS 2 driver can be found on the master branch, [available here](https://github.com/zivid/zivid-ros/tree/master).
 
 [![Build Status][ci-badge]][ci-url]
 ![Zivid Image][header-image]
@@ -15,7 +17,6 @@ This is the branch for the ROS 1 driver. The ROS 2 driver can be found on the ma
 [**Launching**](#launching-the-driver) |
 [**Services**](#services) |
 [**Topics**](#topics) |
-[**Configuration**](#configuration) |
 [**Samples**](#samples) |
 [**FAQ**](#frequently-asked-questions)
 
@@ -38,7 +39,7 @@ sudo apt-get install -y python3-catkin-tools python3-osrf-pycommon git
 
 ### Zivid SDK
 
-To use the ROS driver you need to download and install the "Zivid Core" package. Zivid SDK version 2.9.0 to 2.13.1 is
+To use the ROS driver you need to download and install the "Zivid Core" package. Zivid SDK version 2.9.0 to 2.14.0 is
 supported. See [releases](https://github.com/zivid/zivid-ros/releases) for older ROS driver releases
 that supports older SDK versions.
 
@@ -187,14 +188,6 @@ Or, if using `roslaunch` specify the parameter using `<param>`:
 
 `frame_id` (string, default: "zivid_optical_frame")
 > Specify the frame_id used for all published images and point clouds.
-
-`max_capture_acquisitions` (int, default: 10)
-> Specify the number of dynamic_reconfigure `settings/acquisition_<n>` nodes that are created. This number
-> defines the maximum number of acquisitions that can be a part of a 3D capture. All `settings/acquisition_<n>`
-> nodes are by default enabled=false (see section [Configuration](#configuration)). If you need to
-> perform 3D HDR capture with more than 10 enabled acquisitions then increase this number. Otherwise it can
-> be left as default. We do not recommend lowering this setting, especially if you are using the
-> [capture_assistant/suggest_settings](#capture_assistantsuggest_settings) service.
 
 `serial_number` (string, default: "")
 > Specify the serial number of the Zivid camera to use. Important: When passing this value via
@@ -630,27 +623,6 @@ Using rosrun (when `roscore` and `zivid_camera` are running):
 ```bash
 rosrun zivid_samples sample_capture_with_settings_from_yml_cpp
 rosrun zivid_samples sample_capture_with_settings_from_yml.py
-```
-
-### Sample Capture and Save
-
-This sample performs a single-acquisition 3D capture and saves the frame as ZDF file.
-This sample shows how to simply [enable the first default acquisition](#configuration),
-and how to invoke the [capture_and_save](#capture_and_save) service.
-The file is saved to `/tmp/capture_py.zdf` for the Python sample and
-`/tmp/capture_cpp.zdf` for the C++ sample.
-
-Source code: [C++](./zivid_samples/src/sample_capture_and_save.cpp), [Python](./zivid_samples/scripts/sample_capture_and_save.py)
-
-Using roslaunch (also launches `roscore`, `zivid_camera`, `rviz` and `rqt_reconfigure`):
-```bash
-roslaunch zivid_samples sample.launch type:=sample_capture_and_save_cpp
-roslaunch zivid_samples sample.launch type:=sample_capture_and_save.py
-```
-Using rosrun (when `roscore` and `zivid_camera` are running):
-```bash
-rosrun zivid_samples sample_capture_and_save_cpp
-rosrun zivid_samples sample_capture_and_save.py
 ```
 
 ## Frequently Asked Questions

@@ -744,6 +744,11 @@ void traverseSettingsTree(const SettingsNode& node, GeneratorType& generator)
   {
     // Acquisitions ignored here. Acqusitition is handled separately.
   }
+  else if constexpr (std::is_same_v<SettingsNode, typename Zivid::Settings::Color>)
+  {
+    // Zivid::Settings::Color node cannot be set via ROS dynamic_reconfigure parameter.
+    // You must use `load_settings_from_file` service.
+  }
   else if constexpr (SettingsNode::nodeType == Zivid::DataModel::NodeType::group)
   {
     node.forEach([&](const auto& child) { traverseSettingsTree<SettingsType>(child, generator); });

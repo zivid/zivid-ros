@@ -531,7 +531,11 @@ TEST_F(ZividNodeTest, testServiceCameraInfoModelName)
 {
   auto model_name_request =
     doEmptySrvRequest<zivid_interfaces::srv::CameraInfoModelName>("camera_info/model_name");
+#if (ZIVID_CORE_VERSION_MAJOR == 2 && ZIVID_CORE_VERSION_MINOR <= 13)
   ASSERT_EQ(model_name_request->model_name, std::string("FileCamera-") + ZIVID_CORE_VERSION);
+#else
+  ASSERT_EQ(model_name_request->model_name, std::string("FileCamera"));
+#endif
 }
 
 TEST_F(ZividNodeTest, testServiceCameraInfoSerialNumber)
@@ -672,11 +676,9 @@ __version__:
   data: 3
 Settings2D:
   Acquisitions:
-    - Acquisition:
-    - Acquisition:
 )";
 
-  // This capture throws because 2D capture does not support multiple acquisitions
+  // This capture throws because acquisitions list is empty
   verifyTriggerResponseError(doCapture2DUsingFilePath(settings2DYmlInvalid));
   verifyTriggerResponseError(doCapture2DUsingYmlString(settings2DYmlInvalid));
   topics_subscriber.assert_num_topics_received(0U);

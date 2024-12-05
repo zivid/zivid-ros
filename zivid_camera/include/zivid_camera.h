@@ -1,7 +1,6 @@
 #pragma once
 
 #include "auto_generated_include_wrapper.h"
-#include "capture_settings_controller.h"
 
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/Image.h>
@@ -74,10 +73,10 @@ private:
   sensor_msgs::CameraInfoConstPtr makeCameraInfo(const std_msgs::Header& header, std::size_t width, std::size_t height,
                                                  const Zivid::CameraIntrinsics& intrinsics);
 
-  using Capture3DSettingsController =
-      CaptureSettingsController<Zivid::Settings, SettingsConfig, SettingsAcquisitionConfig>;
-  using Capture2DSettingsController =
-      CaptureSettingsController<Zivid::Settings2D, Settings2DConfig, Settings2DAcquisitionConfig>;
+  // using Capture3DSettingsController =
+  //    CaptureSettingsController<Zivid::Settings, SettingsConfig, SettingsAcquisitionConfig>;
+  // using Capture2DSettingsController =
+  //    CaptureSettingsController<Zivid::Settings2D, Settings2DConfig, Settings2DAcquisitionConfig>;
 
   ros::NodeHandle nh_;
   ros::NodeHandle priv_;
@@ -105,10 +104,13 @@ private:
   ros::ServiceServer load_settings_from_file_service_;
   ros::ServiceServer load_settings_2d_from_file_service_;
   ros::ServiceServer is_connected_service_;
-  std::unique_ptr<Capture3DSettingsController> capture_settings_controller_;
-  std::unique_ptr<Capture2DSettingsController> capture_2d_settings_controller_;
+  // std::unique_ptr<Capture3DSettingsController> capture_settings_controller_;
+  // std::unique_ptr<Capture2DSettingsController> capture_2d_settings_controller_;
   Zivid::Application zivid_;
   Zivid::Camera camera_;
+  Zivid::Settings current_settings_;
+  Zivid::Settings2D current_settings_2d_;
+
   std::string frame_id_;
   unsigned int header_seq_;
 };

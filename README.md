@@ -1,6 +1,6 @@
 # Zivid ROS driver
 
-This is a preview branch for the Zivid ROS 1 driver for Zivid SDK 2.14.0.  Be aware that this branch does not support configuring
+This is a branch for Zivid ROS 1 driver that supports Zivid SDK 2.14.0. Be aware that this branch does not support configuring
 Zivid settings via dynamic_reconfigure. You must use service `load_settings_from_file` or `load_settings_2d_from_file`
 and provide a .yml file, to set the Zivid capture settings. See [Services](#services) for more info.
 

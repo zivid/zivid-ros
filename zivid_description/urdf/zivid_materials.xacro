@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<robot>
+
+    <!-- Material Properties -->
+    <material name="zivid_gray">
+        <color rgba="0.25 0.25 0.25 1"/>
+    </material>
+
+</robot>

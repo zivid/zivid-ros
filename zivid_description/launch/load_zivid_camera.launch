@@ -1,0 +1,14 @@
+<launch>
+    <!-- Specify the Zivid camera model. See available options in `README.md`. -->
+    <arg name="model" default="ZIVID_2_M70" />
+
+    <!-- Specify the visibility of the field of view of the camera model. -->
+    <arg name="field_of_view" default="true" />
+
+    <node pkg="robot_state_publisher" name="robot_state_publisher" exec="robot_state_publisher">
+        <param
+            name="robot_description"
+            value="$(command '$(find-exec xacro) $(find-pkg-share zivid_description)/urdf/zivid_camera.urdf.xacro model:=$(var model) field_of_view:=$(var field_of_view)')"
+        />
+    </node>
+</launch>

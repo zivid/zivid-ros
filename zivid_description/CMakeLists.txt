@@ -1,11 +1,16 @@
 cmake_minimum_required(VERSION 3.5)
 project(zivid_description)
 
-find_package(catkin REQUIRED COMPONENTS)
-
-catkin_package()
+find_package(ament_cmake REQUIRED)
 
 install(
-    DIRECTORY config launch meshes urdf
-    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+  DIRECTORY config launch meshes urdf
+  DESTINATION share/${PROJECT_NAME}
 )
+
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
+endif()
+
+ament_package()

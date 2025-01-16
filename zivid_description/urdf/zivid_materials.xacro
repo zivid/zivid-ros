@@ -6,4 +6,8 @@
         <color rgba="0.25 0.25 0.25 1"/>
     </material>
 
+    <material name="zivid_fov">
+        <color rgba="0.15 0.6 1.0 0.5"/>
+    </material>
+
 </robot>

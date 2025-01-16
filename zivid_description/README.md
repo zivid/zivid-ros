@@ -1,40 +1,44 @@
 # Zivid Description
 
 ## Usage
+
 The URDF or the underlying macro can be included in your own project.
 
-To view the Zivid One Plus:
-```bash
-roslaunch zivid_description view_zivid_one_plus_camera.launch type:='ZIVID_ONE_M'
+To view the Zivid 2, Zivid 2+, or Zivid 2+R cameras:
+
+```
+ros2 launch zivid_description view_zivid_camera.launch model:=ZIVID_2_M70 field_of_view:=true
 ```
 
-The available types are: `ZIVID_ONE_S`, `ZIVID_ONE_M` (default), `ZIVID_ONE_L`
+## Available Models
 
-If an incorrect type is specified, the xacro will fail with the following error:
-```bash
-name 'optical_frame_angle' is not defined 
-when evaluating expression '0.5*pi + optical_frame_angle/180*pi' 
-```
+The available Zivid camera models are:
 
-To view the Zivid Two (Plus):
-```
-roslaunch zivid_description view_zivid_two_camera.launch type:='ZIVID_TWO_M70'
-```
+- `ZIVID_2_M70` (default)
+- `ZIVID_2_L100`
+- `ZIVID_2_PLUS_L110`
+- `ZIVID_2_PLUS_M60`
+- `ZIVID_2_PLUS_M130`
+- `ZIVID_2_PLUS_LR110`
+- `ZIVID_2_PLUS_MR130`
+- `ZIVID_2_PLUS_MR60`
 
-The available types are: `ZIVID_TWO_M70` (default), `ZIVID_TWO_M100`, `ZIVID_TWO_PLUS_L110`, `ZIVID_TWO_PLUS_M60`, `ZIVID_TWO_PLUS_M130`
+## Launch Files
 
-Note: Currently the types do not actually influence the URDF in any way for the Zivid Two or Zivid Two Plus types.
+### Load Zivid camera
 
-## Launch files
-- `load_zivid_one_plus_camera.launch`: Loads the Zivid One Plus camera    
-  Arguments:  
-  - `type` (string, options: `ZIVID_ONE_S`, `ZIVID_ONE_M`, `ZIVID_ONE_L`, default: `ZIVID_ONE_M`)
-- `view_zivid_one_plus_camera.launch`: Visualizes the Zivid One Plus camera in RViz  
-  Arguments:  
-  - `type` (string, options: `ZIVID_ONE_S`, `ZIVID_ONE_M`, `ZIVID_ONE_L`, default: `ZIVID_ONE_M`)
-- `load_zivid_two_camera.launch`: Loads the Zivid Two or Zivid Two Plus camera   
-  Arguments:  
-  - `type` (string, options: `ZIVID_TWO_M70`, `ZIVID_TWO_M100`, `ZIVID_TWO_PLUS_L110`, `ZIVID_TWO_PLUS_M60`, `ZIVID_TWO_PLUS_M130`, default: `ZIVID_TWO_M70`)
-- `load_zivid_two_camera.launch`: Visualizes the Zivid Two or Zivid Two Plus camera in RViz  
-  Arguments:  
-  - `type` (string, options: `ZIVID_TWO_M70`, `ZIVID_TWO_M100`, `ZIVID_TWO_PLUS_L110`, `ZIVID_TWO_PLUS_M60`, `ZIVID_TWO_PLUS_M130`, default: `ZIVID_TWO_M70`)
+`load_zivid_camera.launch`
+: Loads the Zivid camera description.
+
+Arguments:
+- `model` (string, default `ZIVID_2_M70`). Choose from the list of [available camera models](#available-models).
+- `field_of_view` (boolean, default `true`). Enable to include a mesh of the camera field of view.
+
+### View Zivid camera
+
+`view_zivid_camera.launch`
+: Loads the Zivid camera description and visualizes the camera in RViz.
+
+Arguments:
+- `model` (string, default `ZIVID_2_M70`). Choose from the list of [available camera models](#available-models).
+- `field_of_view` (boolean, default `true`). Enable to include a mesh of the camera field of view.

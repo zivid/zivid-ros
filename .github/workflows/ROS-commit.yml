@@ -34,7 +34,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: ['ros:humble-ros-base-jammy', 'ros:iron-ros-core-jammy', 'ros:jazzy-ros-core-noble']
+        os: ['ros:humble-ros-base-jammy', 'ros:jazzy-ros-core-noble']
         compiler: ['g++', 'clang++']
         include:
           - os: 'ros:humble-ros-base-jammy'

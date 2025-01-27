@@ -2,7 +2,11 @@
 
 This is the official ROS driver for [Zivid 3D cameras](https://www.zivid.com/).
 
-This driver provides support for ROS2. If you are looking for ROS1 support, please see the [`ros1-master` branch](https://github.com/zivid/zivid-ros/tree/ros1-master).
+This driver provides support for ROS2.
+
+If you are looking for the Zivid ROS1 driver, please use the [`ros1-master` branch](https://github.com/zivid/zivid-ros/tree/ros1-master) if
+you are using Zivid SDK 2.13 or older, or use the [`ros1-sdk-2.14.0` branch](https://github.com/zivid/zivid-ros/tree/ros1-sdk-2.14.0) if you
+are using Zivid SDK 2.14 or newer.
 
 [![Build Status][ci-badge]][ci-url]
 ![Zivid Image][header-image]
@@ -26,12 +30,14 @@ This driver provides support for ROS2. If you are looking for ROS1 support, plea
 ### Support
 
 This driver supports Ubuntu 20.04 / 22.04 / 24.04 with ROS2. Follow the official [ROS installation instructions](https://docs.ros.org/) for
-your OS. If you are looking for the ROS1 driver, please see
-the [`ros1-master` branch](https://github.com/zivid/zivid-ros/tree/ros1-master).
+your OS.
+
+If you are looking for the Zivid ROS1 driver, please use the [`ros1-master` branch](https://github.com/zivid/zivid-ros/tree/ros1-master) for
+Zivid SDK 2.13 or older, or use the [`ros1-sdk-2.14.0` branch](https://github.com/zivid/zivid-ros/tree/ros1-sdk-2.14.0) for Zivid SDK 2.14 or newer.
 
 ### Zivid SDK
 
-To use the ROS driver you need to download and install the "Zivid Core" package. Zivid SDK version 2.9.0 to 2.14.0 is
+To use the ROS driver you need to download and install the "Zivid Core" package. Zivid SDK version 2.9.0 to 2.14.1 is
 supported. See [releases](https://github.com/zivid/zivid-ros/releases) for older ROS driver releases
 that supports older SDK versions.
 

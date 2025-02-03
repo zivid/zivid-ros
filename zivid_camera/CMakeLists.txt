@@ -39,7 +39,10 @@ add_library(
 )
 
 turn_on_compiler_warnings_if_enabled(${ZIVID_DRIVER_COMPONENT_NAME})
-target_include_directories(${ZIVID_DRIVER_COMPONENT_NAME} PUBLIC include)
+target_include_directories(${ZIVID_DRIVER_COMPONENT_NAME} PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
 
 rclcpp_components_register_node(${ZIVID_DRIVER_COMPONENT_NAME}
                                 PLUGIN
@@ -48,19 +51,22 @@ rclcpp_components_register_node(${ZIVID_DRIVER_COMPONENT_NAME}
                                 "zivid_camera")
 
 target_link_libraries(${ZIVID_DRIVER_COMPONENT_NAME} Zivid::Core)
-ament_target_dependencies(${ZIVID_DRIVER_COMPONENT_NAME}
-                          rclcpp_components
-                          std_msgs
-                          std_srvs
-                          sensor_msgs
-                          image_transport
-                          zivid_interfaces)
-
+set(ZIVID_DRIVER_DEPENDENCIES
+    rclcpp_components
+    std_msgs
+    std_srvs
+    sensor_msgs
+    image_transport
+    zivid_interfaces
+)
+ament_target_dependencies(${ZIVID_DRIVER_COMPONENT_NAME} ${ZIVID_DRIVER_DEPENDENCIES})
 target_compile_definitions(${ZIVID_DRIVER_COMPONENT_NAME} PRIVATE "ZIVID_CAMERA_ROS_EXPORTING")
 
 #############
 ## Install ##
 #############
+
+set(ZIVID_DRIVER_TARGETS_EXPORT_NAME ${PROJECT_NAME}Targets)
 
 install(TARGETS ${ZIVID_DRIVER_COMPONENT_NAME}
         RUNTIME DESTINATION bin
@@ -70,6 +76,19 @@ install(TARGETS ${ZIVID_DRIVER_COMPONENT_NAME}
 install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
+
+ament_export_targets(${ZIVID_DRIVER_TARGETS_EXPORT_NAME} HAS_LIBRARY_TARGET)
+ament_export_dependencies(rclcpp_components ${ZIVID_DRIVER_DEPENDENCIES})
+
+install(
+  TARGETS ${ZIVID_DRIVER_COMPONENT_NAME}
+  EXPORT ${ZIVID_DRIVER_TARGETS_EXPORT_NAME}
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include
+)
+
 
 if(BUILD_TESTING)
 

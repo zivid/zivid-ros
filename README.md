@@ -451,6 +451,85 @@ ros2 run zivid_samples sample_capture_with_settings_from_file_cpp
 ros2 run zivid_samples sample_capture_with_settings_from_file.py
 ```
 
+### Sample Hand-eye Calibration
+
+This sample shows how to perform [hand-eye calibration](https://support.zivid.com/en/latest/academy/applications/hand-eye.html) 
+using the Zivid camera. It implements a node that communicates with the zivid camera driver in a separate node. The
+hand-eye calibration is performed locally by using the Zivid SDK directly from the sample node. The sample expects files
+saved on the camera node to be directly accessible from the sample node.
+
+```bash
+ros2 launch zivid_samples sample.launch sample:=sample_hand_eye_calibration_cpp hand_eye_mode:=eye-to-hand
+```
+
+Or using ros2 run (when `zivid_camera` node is already running):
+
+```bash
+ros2 run zivid_samples sample_capture_and_save_cpp --ros-args -p hand_eye_mode:=eye-to-hand
+```
+
+***Note:*** This sample is only built when the Zivid SDK 2.13.0 or newer is installed on the system.
+
+***Instructions:***
+
+After the sample has been initialized with the above commands, proceed as follows.
+
+1. Repeat the following for a desired number of captures, e.g. 10-20:
+    1. Position the robot with a suitable pose for the calibration object.
+    2. Ensure that the pose of the robot end-effector is reflected by the
+       [tf2](https://docs.ros.org/en/jazzy/Tutorials/Intermediate/Tf2/Introduction-To-Tf2.html) frame
+       `robot_end_effector` (customizable) with a valid transform from the world frame `map` (customizable).
+    3. Call the `/hand_eye_capture` service with a Trigger request to initiate a capture with the current robot pose.
+2. Call the `/hand_eye_calibrate` service with a Trigger request to perform the calibration using all the previous
+   captures.
+
+Source code: [C++](./zivid_samples/src/sample_hand_eye_calibration.cpp)
+
+
+The sample is initialized with up to four ROS parameters:
+- `hand_eye_mode`: Either `eye-to-hand` or `eye-in-hand`.
+- `aruco_ids` [optional]: Specifies an integer list of Aruco marker IDs, leave empty to specify
+  that a calibration board is used instead.
+- `robot_frame` [optional]: The name of the tf2 frame that the robot pose (the robot end-effector
+  transformation) will be read from. Default: `robot_end_effector`.
+- `world_frame` [optional]: The name of the fixed tf2 world frame. Default: `map`.
+
+To launch with all parameters specified:
+
+```bash
+ros2 launch zivid_samples sample.launch sample:=sample_hand_eye_calibration_cpp hand_eye_mode:=eye-to-hand aruco_ids:=[1,2,3] robot_frame:=tool0 world_frame:=world
+```
+
+The sample node exposes two services that should be used during calibration:
+
+- `/hand_eye_capture`: Reads the current robot pose, sends a `capture_and_save` request to the
+  `zivid_camera` node, loads the same capture from file, and detects the calibration object.
+  Responds with success if the calibration object was detected.
+- `/hand_eye_calibrate`: Performs the hand-eye calibration using the previous successful
+  captures. Responds with success and the calibration result if the calibration succeeded.
+
+This sample expects the `zivid_camera` to run in a separate node, in a different process. When using the Zivid API, each
+process needs to have its own copy of `Zivid::Application`, which also applies when invoking the hand-eye calibration
+procedures. For this reason, the hand-eye sample constructs its own copy of `Zivid::Application`.
+
+All captures and poses are saved to a temporary folder listed in the logged output. The folder structure is compatible
+with the Zivid CLI tool `ZividExperimentalHandEyeCalibration`.
+
+Example service calls using the command line:
+```bash
+ros2 service call /hand_eye_capture std_srvs/srv/Trigger
+ros2 service call /hand_eye_calibrate std_srvs/srv/Trigger
+```
+
+Example for setting a static robot end effector frame (for testing):
+
+```bash
+ros2 run tf2_ros static_transform_publisher --x 1 --y 2 --z 3 --yaw 1.57 --pitch 0 --roll 0 --frame-id map --child-frame-id robot_end_effector
+```
+
+Note that the robot pose and associated transform should be unique between each capture.
+
+
 ## Frequently Asked Questions
 
 ### How to visualize the output from the camera in rviz

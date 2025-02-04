@@ -754,6 +754,83 @@ With the following arguments:
 
 For more information on performing the calibration, please see the [Zivid hand-eye calibration documentation](https://support.zivid.com/en/latest/academy/applications/hand-eye.html).
 
+### Sample with SDK: Hand-Eye Calibration
+
+This sample shows how to perform [hand-eye calibration](https://support.zivid.com/en/latest/academy/applications/hand-eye.html)
+using the Zivid SDK. The sample serves to demonstrate how to use the Zivid SDK on the sample side directly, as a
+supplement to the services provided by the Zivid camera driver.
+
+Captures are performed using service calls to the Zivid camera node and stored to disk, while the hand-eye calibration
+itself is performed locally using the stored captures. The hand-eye calibration services are not used in this sample.
+The sample expects files saved on the camera node to be directly accessible from the sample node.
+
+This sample expects the `zivid_camera` to run in a separate node, in a different process. When using the Zivid API, each
+process needs to have its own copy of `Zivid::Application`, which also applies when invoking the hand-eye calibration
+procedures. For this reason, the hand-eye sample constructs its own copy of `Zivid::Application`.
+
+```bash
+ros2 launch zivid_samples sample.launch sample:=sample_with_sdk_hand_eye_calibration_cpp configuration:=eye_to_hand
+```
+
+Or using ros2 run (when `zivid_camera` node is already running):
+
+```bash
+ros2 run zivid_samples sample_capture_and_save_cpp --ros-args -p configuration:=eye_to_hand
+```
+
+***Instructions:***
+
+After the sample has been initialized with the above commands, proceed as follows.
+
+1. Repeat the following for a desired number of captures, e.g. 10-20:
+    1. Position the robot with a suitable pose for the calibration object.
+    2. Ensure that the pose of the robot end-effector is reflected by the
+       [tf2](https://docs.ros.org/en/jazzy/Tutorials/Intermediate/Tf2/Introduction-To-Tf2.html) frame
+       `robot_end_effector` (customizable) with a valid transform from the world frame `map` (customizable).
+    3. Call the `/hand_eye_capture` service with a Trigger request to initiate a capture with the current robot pose.
+2. Call the `/hand_eye_calibrate` service with a Trigger request to perform the calibration using all the previous
+   captures.
+
+Source code: [C++](./zivid_samples/src/sample_hand_eye_calibration.cpp)
+
+The sample is initialized with up to four ROS parameters:
+- `configuration`: Either `eye_to_hand` or `eye_in_hand`.
+- `aruco_ids` [optional]: Specifies an integer list of Aruco marker IDs, leave empty to specify
+  that a calibration board is used instead.
+- `robot_frame_id` [optional]: The name of the tf2 frame that the robot pose (the robot end-effector
+  transformation) will be read from. Default: `robot_end_effector`.
+- `world_frame_id` [optional]: The name of the fixed tf2 world frame. Default: `map`.
+
+To launch with all parameters specified:
+
+```bash
+ros2 launch zivid_samples sample.launch sample:=sample_hand_eye_calibration_cpp configuration:=eye_to_hand aruco_ids:=[1,2,3] robot_frame_id:=tool0 world_frame_id:=world
+```
+
+The sample node exposes two services that should be used during calibration:
+
+- `/hand_eye_sample_with_sdk_capture`: Reads the current robot pose, sends a `capture_and_save` request to the
+  `zivid_camera` node, loads the same capture from file, and detects the calibration object. Responds with success if
+  the calibration object was detected.
+- `/hand_eye_sample_with_sdk_calibrate`: Performs the hand-eye calibration using the previous successful captures.
+  Responds with success and the calibration result if the calibration succeeded.
+
+All captures and poses are saved to a temporary folder listed in the logged output. The folder structure is compatible
+with the Zivid CLI tool `ZividExperimentalHandEyeCalibration`.
+
+Example service calls using the command line:
+```bash
+ros2 service call /hand_eye_capture std_srvs/srv/Trigger
+ros2 service call /hand_eye_calibrate std_srvs/srv/Trigger
+```
+
+Example for setting a static robot end effector frame (for testing):
+```bash
+ros2 run tf2_ros static_transform_publisher --x 1 --y 2 --z 3 --yaw 1.57 --pitch 0 --roll 0 --frame-id map --child-frame-id robot_end_effector
+```
+
+Note that the robot pose and associated transform should be changed between each capture.
+
 ## Launch Files
 
 Several sample launch files are provided for the Zivid camera driver and samples. Common to all of them is that they

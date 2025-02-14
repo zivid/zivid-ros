@@ -277,6 +277,67 @@ service call. If the camera is not in `Connected` state the driver will attempt 
 the camera when it detects that the camera is available. This can happen if the camera is
 power-cycled or the USB/Ethernet cable is unplugged and then replugged.
 
+### infield_correction/read
+[std_srvs/srv/Trigger](https://docs.ros2.org/latest/api/std_srvs/srv/Trigger.html)
+
+Returns the state of the [infield correction](https://support.zivid.com/en/latest/academy/camera/infield-correction.html) of the camera.
+
+### infield_correction/verify
+[zivid_interfaces/srv/InfieldCorrectionVerify.srv](./zivid_interfaces/srv/InfieldCorrectionVerify.srv)
+
+Verifies the current camera trueness based on a single capture. The purpose of this service is to allow quick assessment
+of the quality of the infield correction on a camera, or the need for one if none exists already.
+
+Returns an indication of the dimension trueness at the location where the input data was captured. If the returned
+assessment indicates a trueness error that is above the threshold for your application, consider using
+[infield_correction/compute_and_write](#infield_correctioncompute_and_write) and related services to update the
+correction for the camera.
+
+### infield_correction/reset
+[std_srvs/srv/Trigger](https://docs.ros2.org/latest/api/std_srvs/srv/Trigger.html)
+
+Resets the infield correction on the camera to factory settings.
+
+### infield_correction/restart_captures
+[std_srvs/srv/Trigger](https://docs.ros2.org/latest/api/std_srvs/srv/Trigger.html)
+
+Restarts the infield correction capture data gathered so far in the `zivid_camera` driver.
+
+### infield_correction/capture
+[std_srvs/srv/Trigger](https://docs.ros2.org/latest/api/std_srvs/srv/Trigger.html)
+
+Take a capture to be used for infield correction. Please point the camera at a Zivid infield calibration object. It is
+recommended to cover several distances, with one or more captures at each distance. Successful captures are stored in
+the `zivid_camera` driver. The capture data set is cleared if the driver is stopped or by calling the service
+[infield_correction/restart_captures](#infield_correctionrestart_captures).
+
+After sufficiently number of captures, proceed by calling the service [infield_correction/compute](#infield_correctioncompute) to compute the camera correction based on the captures gathered so far. To compute the correction and write it to camera, proceed by calling the service [infield_correction/compute_and_write](#infield_correctioncompute_and_write).
+
+### infield_correction/compute
+[zivid_interfaces/srv/InfieldCorrectionCompute.srv](./zivid_interfaces/srv/InfieldCorrectionCompute.srv)
+
+Calculates the new infield correction based the captured data gathered so far through the service
+[infield_correction/capture](#infield_correctioncapture).
+
+The quantity and range of data is up to the user, but generally a larger dataset will yield a more accurate and reliable
+correction. If all measurements were taken at approximately the same distance, the resulting correction will mainly be
+valid at those distances. If several measurements were taken at significantly different distances, the resulting
+correction will likely be more suitable for extrapolation to distances beyond where the dataset was collected.
+
+The service returns information regarding the proposed working range and the accuracy that can be expected within the
+working range, if the correction is written to the camera. The correction may be written to the camera using
+[infield_correction/compute_and_write](#infield_correctioncompute_and_write).
+
+### infield_correction/compute_and_write
+[zivid_interfaces/srv/InfieldCorrectionCompute.srv](./zivid_interfaces/srv/InfieldCorrectionCompute.srv)
+
+Calculates the new infield correction based the captured data gathered so far through the service
+[infield_correction/capture](#infield_correctioncapture), and writes the result to the camera.
+
+Please see the [infield_correction/compute](#infield_correctioncompute) service for more information on the computed
+correction.
+
+
 ## Topics
 
 The Zivid ROS driver provides several topics providing 3D, color, SNR and camera calibration

@@ -41,6 +41,27 @@ struct DependentFalse : std::false_type
 {
 };
 
+template <typename T, typename U>
+T safeCast(U);  // Not implemented on purpose.
+
+template <>
+inline int safeCast(size_t value)
+{
+  if (value > size_t{std::numeric_limits<int>::max()}) {
+    throw std::runtime_error("Value is out of range: " + std::to_string(value));
+  }
+  return static_cast<int>(value);
+}
+
+template <>
+inline size_t safeCast(int value)
+{
+  if (value < 0) {
+    throw std::runtime_error("Value is out of range: " + std::to_string(value));
+  }
+  return static_cast<size_t>(value);
+}
+
 template <typename ZividDataModel>
 auto serializeZividDataModel(const ZividDataModel & dm)
 {
@@ -76,5 +97,17 @@ template <typename Logger>
 {
   RCLCPP_ERROR(logger, "%s", message.c_str());
   throw std::runtime_error(message);
+}
+
+inline constexpr double meterToMillimeterFactor = 1000.0;
+
+constexpr float rosLengthToZivid(double value)
+{
+  return static_cast<float>(meterToMillimeterFactor * value);
+}
+
+constexpr double zividLengthToRos(float value)
+{
+  return static_cast<double>(value) / meterToMillimeterFactor;
 }
 }  // namespace zivid_camera

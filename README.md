@@ -21,6 +21,7 @@ are using Zivid SDK 2.14 or newer.
 [**Services**](#services) |
 [**Topics**](#topics) |
 [**Samples**](#samples) |
+[**RViz Plugin**](#rviz-plugin) |
 [**FAQ**](#frequently-asked-questions)
 
 ---
@@ -277,6 +278,88 @@ service call. If the camera is not in `Connected` state the driver will attempt 
 the camera when it detects that the camera is available. This can happen if the camera is
 power-cycled or the USB/Ethernet cable is unplugged and then replugged.
 
+### infield_correction/read
+[zivid_interfaces/srv/InfieldCorrectionRead.srv](./zivid_interfaces/srv/InfieldCorrectionRead.srv)
+
+Returns the state of the [infield
+correction](https://support.zivid.com/en/latest/academy/camera/infield-correction.html) of the camera.
+
+### infield_correction/reset
+[std_srvs/srv/Trigger](https://docs.ros2.org/latest/api/std_srvs/srv/Trigger.html)
+
+Resets the infield correction on the camera to factory settings.
+
+### infield_correction/start
+[std_srvs/srv/Trigger](https://docs.ros2.org/latest/api/std_srvs/srv/Trigger.html)
+
+Prepares for infield correction, and clears any infield correction captures gathered so far in the `zivid_camera` node.
+
+This service must be called before gathering captures using the [infield_correction/capture](#infield_correctioncapture)
+service. However, other infield correction services can be used without calling the start service first. This service
+can also be used to restart an active infield correction session.
+
+Please refer to the Zivid knowledge base for further information and guidelines for [infield
+correction](https://support.zivid.com/en/latest/academy/camera/infield-correction.html). 
+
+### infield_correction/capture
+[zivid_interfaces/srv/InfieldCorrectionCapture.srv](./zivid_interfaces/srv/InfieldCorrectionCapture.srv)
+
+Takes a capture to be used for infield correction. Please point the camera at a Zivid infield calibration object. It is
+recommended to cover several distances, with one or more captures at each distance. Successful captures are stored in
+the `zivid_camera` node.
+
+Before calling this service, a call to [infield_correction/start](#infield_correctionstart) must have been made first.
+
+This service call will perform a relatively slow but high-quality point cloud capture with the connected camera. Any
+settings applied to the camera in the ROS driver will be ignored for calls to this service, appropriate settings are
+automatically used. The resulting point cloud and color image will be published just like during a normal call to the
+[capture](#capture) service.
+
+After sufficient number of captures, proceed by calling the [infield_correction/compute](#infield_correctioncompute)
+service to compute the verification metrics and the correction based on the captures gathered so far. To additionally
+write the correction to camera, proceed by calling the
+[infield_correction/compute_and_write](#infield_correctioncompute_and_write) service.
+
+The captured data is cleared if the node is stopped, or after a successful call to either of the services
+[infield_correction/start](#infield_correctionstart) or
+[infield_correction/compute_and_write](#infield_correctioncompute_and_write).
+
+### infield_correction/compute
+[zivid_interfaces/srv/InfieldCorrectionCompute.srv](./zivid_interfaces/srv/InfieldCorrectionCompute.srv)
+
+Calculates the new infield correction based the captured data gathered so far through the service
+[infield_correction/capture](#infield_correctioncapture).
+
+The quantity and range of data is up to the user, but generally a larger dataset will yield a more accurate and reliable
+correction. If all measurements are taken at approximately the same distance, the resulting correction will mainly be
+valid at those distances. If several measurements are taken at significantly different distances, the resulting
+correction will likely be more suitable for extrapolation to distances beyond where the dataset is collected.
+
+This service also acts as verification of the quality of the infield correction on a camera, or the need for one if none
+exists already. It returns an indication of the dimension trueness at the location where the input data was captured.
+
+If the returned assessment indicates a trueness error that is above the threshold for your application, consider using
+[infield_correction/compute_and_write](#infield_correctioncompute_and_write). The service also returns information
+regarding the proposed working range and the accuracy that can be expected within the working range, if the correction
+is later written to the camera.
+
+### infield_correction/compute_and_write
+[zivid_interfaces/srv/InfieldCorrectionCompute.srv](./zivid_interfaces/srv/InfieldCorrectionCompute.srv)
+
+Calculates the new infield correction based the captured data gathered so far through the service
+[infield_correction/capture](#infield_correctioncapture), and writes the result to the camera.
+
+If the write operation is successful, the infield correction capture data is cleared. To perform infield correction
+again, a new session must be started with a call to the [infield_correction/start](#infield_correctionstart) service.
+
+Please see the [infield_correction/compute](#infield_correctioncompute) service for more information on the computed
+correction.
+
+### infield_correction/remove_last_capture
+[std_srvs/srv/Trigger](https://docs.ros2.org/latest/api/std_srvs/srv/Trigger.html)
+
+Removes the last infield correction capture gathered in the `zivid_camera` node.
+
 ## Topics
 
 The Zivid ROS driver provides several topics providing 3D, color, SNR and camera calibration
@@ -451,6 +534,67 @@ ros2 run zivid_samples sample_capture_with_settings_from_file_cpp
 ros2 run zivid_samples sample_capture_with_settings_from_file.py
 ```
 
+### Sample Infield Correction
+
+This sample shows how to invoke the various [infield_correction/[...]](#infield_correctionread) services to perform infield correction on Zivid cameras.
+
+Source code: [C++](./zivid_samples/src/sample_infield_correction.cpp)
+
+```bash
+ros2 launch zivid_samples sample.launch sample:=sample_infield_correction_cpp operation:=<operation>
+```
+Using ros2 run (when `zivid_camera` node is already running):
+```bash
+ros2 run zivid_samples sample_infield_correction_cpp --ros-args -p operation:=<operation>
+```
+
+With the following argument:
+
+`operation` (string, required)
+> Specify the infield correction operation to perform, one of: 
+>   - `verify`: Verify camera correction quality based on a single capture using the [`infield_correction/start`](#infield_correctionstart), [`infield_correction/capture`](#infield_correctioncapture), and [`infield_correction/compute`](#infield_correctioncompute) services.
+>   - `correct`: Calculate in-field correction based on a series of captures at different distances. Demonstrates the use of [`infield_correction/start`](#infield_correctionstart), [`infield_correction/capture`](#infield_correctioncapture), and [`infield_correction/compute`](#infield_correctioncompute) services. Begins by preparing the camera node for infield correction captures, then the sample gathers a fixed number of captures at a fixed duration between captures. The correction result is computed after every capture.
+>   - `correct_and_write`: Same as `correct`, but additionally writes the correction results to the camera. Demonstrates the [`infield_correction/compute_and_write`](#infield_correctioncompute_and_write) service.
+>   - `read`: Get information about the correction currently on the connected camera using the [`infield_correction/read`](#infield_correctionread) service.
+>   - `reset`: Reset correction on connected camera to factory settings using the [`infield_correction/reset`](#infield_correctionreset) service.
+
+Please see the [infield correction documentation](https://support.zivid.com/en/latest/academy/camera/infield-correction.html) for prerequisites and guidelines on how to perform the correction.
+
+For a more interactive experience, we recommend using the [infield correction panel](#infield-correction-panel) from the Zivid RViz plugin.
+
+The typical procedure for performing a new infield correction is:
+
+1. `start`: Prepare for infield correction, clears any existing infield correction captures.
+2. `capture`: Take multiple captures from different angles and distances in accordance with the typical operating conditions of the camera.
+3. `compute`: Check the computed correction results and the estimated errors, verify that they give satisfactory results.
+4. `compute_and_write`: Compute the correction and write the results to camera.
+
+The `zivid_camera` node persists the infield correction dataset as long as it is running. To start the infield correction captures over again, use the `start` operation which clears all infield correction captures previously gathered. The `remove_last_capture` can be used to remove just the last capture.
+
+## RViz Plugin
+
+### Infield Correction Panel
+
+The Zivid RViz plugin provides a panel to interactively perform infield correction with a Zivid camera.
+
+To see the panel in RViz, go to `Panels -> Add New Panel`, then select `Zivid Infield Correction` and click `OK`.
+Infield correction can now be performed by interacting with the newly added panel.
+
+The panel is also visible when launching a Zivid sample with RViz, e.g.:
+```
+ros2 launch zivid_samples sample_with_rviz.launch sample:=sample_capture_with_settings_from_file_cpp
+```
+
+When the `zivid_camera` node is already running, RViz can also be started directly with the panel visible by using the
+Zivid RViz display configuration:
+```
+rviz2 -d $(ros2 pkg prefix zivid_camera)/share/zivid_camera/config/rviz/zivid.rviz
+```
+
+Please see the [infield correction documentation](https://support.zivid.com/en/latest/academy/camera/infield-correction.html)
+for prerequisites and guidelines on how to perform the correction.
+
+
 ## Frequently Asked Questions
 
 ### How to visualize the output from the camera in rviz
@@ -509,13 +653,15 @@ may try to connect to the same camera at the same time.
 ### How to run the unit and module tests
 
 This project comes with a set of unit and module tests to verify the provided functionality. To run
-the tests locally, first download and install the file camera used for testing:
+the tests locally, first download and install the required data used for testing:
 ```bash
-wget -q https://www.zivid.com/software/FileCameraZivid2M70.zip
-unzip ./FileCameraZivid2M70.zip
-rm ./FileCameraZivid2M70.zip
-sudo mkdir -p /usr/share/Zivid/data/
-sudo mv ./FileCameraZivid2M70.zfc /usr/share/Zivid/data/
+for sample in "FileCameraZivid2M70.zip" "BinWithCalibrationBoard.zip"; do
+    echo "Downloading ${sample}"
+    wget -q "https://www.zivid.com/software/${sample}" || exit $?
+    mkdir -p /usr/share/Zivid/data/ || exit $?
+    unzip "./${sample}" -d /usr/share/Zivid/data/ || exit $?
+    rm "./${sample}" || exit $?
+done
 ```
 
 Then run the tests:

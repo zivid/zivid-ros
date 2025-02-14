@@ -34,6 +34,7 @@
 #include <Zivid/Version.h>
 #include <gtest/gtest.h>
 
+#include <cstdio>
 #include <image_transport/image_transport.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
@@ -55,15 +56,59 @@
 
 namespace
 {
-constexpr auto file_camera_path = ZIVID_SAMPLE_DATA_DIR "FileCameraZivid2M70.zfc";
+constexpr auto file_camera_default_path = ZIVID_SAMPLE_DATA_DIR "FileCameraZivid2M70.zfc";
+constexpr auto file_camera_calibration_board_path =
+  ZIVID_SAMPLE_DATA_DIR "BinWithCalibrationBoard.zfc";
 }  // namespace
 
-std::shared_ptr<zivid_camera::ZividCamera> zivid_ros_node;
+std::shared_ptr<zivid_camera::ZividCamera> ZividCameraNodeWrapper::getOrConstruct(
+  FileCameraMode fileCamera, NodeReusePolicy reusePolicy)
+{
+  if (
+    !m_fileCameraMode.has_value() || reusePolicy == NodeReusePolicy::RestartNode ||
+    m_fileCameraMode.value() != fileCamera) {
+    std::string fileCameraPath;
+    switch (fileCamera) {
+      case FileCameraMode::Default:
+        fileCameraPath = file_camera_default_path;
+        break;
+      case FileCameraMode::CalibrationBoard:
+        fileCameraPath = file_camera_calibration_board_path;
+        break;
+      default:
+        throw std::runtime_error("Unexpected file camera mode");
+    }
+    auto node_options =
+      rclcpp::NodeOptions{}.append_parameter_override("file_camera_path", fileCameraPath);
+    m_zividRosNode.reset();
+    m_fileCameraMode = fileCamera;
+    m_zividRosNode = std::make_shared<zivid_camera::ZividCamera>(node_options);
+  }
+  return m_zividRosNode;
+}
+
+std::shared_ptr<zivid_camera::ZividCamera> ZividCameraNodeWrapper::get()
+{
+  if (m_zividRosNode == nullptr) {
+    throw std::runtime_error("File camera not constructed");
+  }
+  return m_zividRosNode;
+}
+
+void ZividCameraNodeWrapper::reset()
+{
+  m_fileCameraMode.reset();
+  m_zividRosNode.reset();
+}
 
 TestWithFileCamera::TestWithFileCamera()
-: camera_(zivid_ros_node->zividApplication().createFileCamera(file_camera_path))
+: camera_(
+    ZividCameraNodeWrapper::get()->zividApplication().createFileCamera(file_camera_default_path))
 {
 }
+
+std::optional<FileCameraMode> ZividCameraNodeWrapper::m_fileCameraMode;
+std::shared_ptr<zivid_camera::ZividCamera> ZividCameraNodeWrapper::m_zividRosNode;
 
 TEST_F(ZividNodeTest, testCaptureServiceReady)
 {
@@ -84,9 +129,18 @@ TEST_F(ZividNodeTest, testServiceCameraInfoModelName)
 
 TEST_F(ZividNodeTest, testServiceCameraInfoSerialNumber)
 {
-  auto serial_number_request =
+  auto response =
     doEmptySrvRequest<zivid_interfaces::srv::CameraInfoSerialNumber>("camera_info/serial_number");
-  ASSERT_EQ(serial_number_request->serial_number, "F1");
+  int file_camera_number = -1;
+  int characters_consumed = -1;
+  const int num_assigned_arguments = std::sscanf(
+    response->serial_number.c_str(), "F%d%n", &file_camera_number, &characters_consumed);
+  ASSERT_EQ(num_assigned_arguments, 1);
+  ASSERT_EQ(static_cast<size_t>(characters_consumed), response->serial_number.size());
+  // The exact value depends on how many file cameras have been loaded so far in this process, which
+  // depends on the order and number of tests run.
+  ASSERT_GE(file_camera_number, 0);
+  ASSERT_LE(file_camera_number, 100);
 }
 
 TEST_F(ZividNodeTest, testServiceIsConnected)
@@ -864,14 +918,10 @@ int main(int argc, char ** argv)
 
   rclcpp::init(argc, argv);
 
-  auto node_options =
-    rclcpp::NodeOptions{}.append_parameter_override("file_camera_path", file_camera_path);
-  zivid_ros_node = std::make_shared<zivid_camera::ZividCamera>(node_options);
-
   const auto return_code = RUN_ALL_TESTS();
   rclcpp::shutdown();
 
-  zivid_ros_node.reset();
+  ZividCameraNodeWrapper::reset();
 
   return return_code;
 }

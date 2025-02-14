@@ -42,11 +42,41 @@
 #include <std_srvs/srv/trigger.hpp>
 #include <zivid_camera/zivid_camera.hpp>
 
-extern std::shared_ptr<zivid_camera::ZividCamera> zivid_ros_node;
+enum class FileCameraMode
+{
+  Default,
+  CalibrationBoard,
+};
+
+enum class NodeReusePolicy
+{
+  AllowReuse,
+  RestartNode,
+};
+
+class ZividCameraNodeWrapper
+{
+public:
+  static std::shared_ptr<zivid_camera::ZividCamera> getOrConstruct(
+    FileCameraMode fileCamera, NodeReusePolicy reusePolicy);
+
+  static std::shared_ptr<zivid_camera::ZividCamera> get();
+
+  static void reset();
+
+private:
+  static std::optional<FileCameraMode> m_fileCameraMode;
+  static std::shared_ptr<zivid_camera::ZividCamera> m_zividRosNode;
+};
 
 inline std::filesystem::path getTemporaryFilePath(const std::string & name)
 {
   return std::filesystem::temp_directory_path() / name;
+}
+
+inline bool containsSubstring(const std::string & value, const std::string & substr)
+{
+  return value.find(substr) != std::string::npos;
 }
 
 class TmpFile
@@ -127,10 +157,14 @@ protected:
   static constexpr auto parameter_settings_2d_file_path = "settings_2d_file_path";
   static constexpr auto parameter_settings_2d_yaml = "settings_2d_yaml";
 
-  ZividNodeTest() : test_node_(rclcpp::Node::make_shared("test_node"))
+  ZividNodeTest(
+    FileCameraMode file_camera_mode = FileCameraMode::Default,
+    NodeReusePolicy camera_node_reuse_policy = NodeReusePolicy::AllowReuse)
+  : test_node_(rclcpp::Node::make_shared("test_node"))
   {
     executor_.add_node(test_node_);
-    executor_.add_node(zivid_ros_node);
+    executor_.add_node(
+      ZividCameraNodeWrapper::getOrConstruct(file_camera_mode, camera_node_reuse_policy));
 
     // Reset test state
     setNodeParameter(parameter_settings_file_path, "");
@@ -210,12 +244,12 @@ protected:
 
   std::string getNodeStringParameter(const std::string & key)
   {
-    return zivid_ros_node->get_parameter(key).as_string();
+    return ZividCameraNodeWrapper::get()->get_parameter(key).as_string();
   }
 
   void setNodeParameter(const std::string & key, const std::string & value)
   {
-    auto set_result = zivid_ros_node->set_parameter(rclcpp::Parameter{key, value});
+    auto set_result = ZividCameraNodeWrapper::get()->set_parameter(rclcpp::Parameter{key, value});
     ASSERT_TRUE(set_result.successful);
     ASSERT_EQ(getNodeStringParameter(key), value);
   }

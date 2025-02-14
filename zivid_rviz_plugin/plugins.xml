@@ -1,0 +1,5 @@
+<library path="zivid_rviz_plugin">
+  <class type="zivid_rviz_plugin::InfieldCorrection" base_class_type="rviz_common::Panel" name="zivid_rviz_plugin/Zivid Infield Correction">
+    <description>Infield correction for Zivid 3D cameras.</description>
+  </class>
+</library>

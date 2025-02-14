@@ -1,5 +1,11 @@
 <launch>
   <arg name="sample" default=""/>
+
+  <!-- For infield correction -->
+  <arg name="operation" default=""/>
+
   <node pkg="zivid_camera" exec="zivid_camera" name="zivid_camera" />
-  <node pkg="zivid_samples" exec="$(var sample)" name="zivid_sample" />
+  <node pkg="zivid_samples" exec="$(var sample)" name="zivid_sample">
+    <param name="operation" value="$(var operation)"/>
+  </node>
 </launch>

@@ -1,0 +1,52 @@
+---
+bool success
+string message
+
+# Returns true if infield correction has been started on the target node. It needs to be started before capturing and
+# computing.
+bool infield_correction_started
+
+# Number of successful infield correction captures. We recommend multiple captures with different board positions.
+int32 number_of_captures
+
+# The list of estimated local dimension trueness error for each capture in this infield correction session. The
+# dimension trueness represents the relative deviation between the measured size of the calibration object and the true
+# size of the calibration object, including the effects of any in-field correction stored on the camera at the time of
+# capture. Note that this estimate is local, i.e. only valid for the region of space very close to the calibration
+# object.
+#
+# The value is a fraction (relative trueness error). Multiply by 100 to get trueness error in percent.
+float32[] trueness_errors
+
+# The average local dimension trueness error for the captures in this session. See 'trueness_errors' for more
+# information on this measure.
+float32 average_trueness_error
+
+# The maximum local dimension trueness error for the captures in this session. See 'trueness_errors' for more
+# information on this measure.
+float32 maximum_trueness_error
+
+# The estimated dimension accuracy error obtained if the correction is applied.
+#
+# This number represents a 1-sigma (68% confidence) upper bound for dimension trueness error in the working volume
+# (z=z_min to z=z_max, across the entire field of view). In other words, it represents the expected distribution of
+# local dimension trueness measurements (see `trueness_errors`) that can be expected if measuring throughout the working
+# volume.
+#
+# The value is a fraction (relative trueness error). Multiply by 100 to get trueness in percent.
+#
+# Note that the accuracy close to where the original data was captured is likely much better than what is implied by
+# this number. This number is rather an accuracy estimate for the entire extrapolated working volume.
+float32 dimension_accuracy
+
+# The range of validity of the accuracy estimate (lower end).
+#
+# Note: Lengths are given in units of meter. In the Zivid driver, the units are automatically converted from the default
+# units of the Zivid point clouds in millimeter, to the ROS convention of meter.
+float32 z_min
+
+# The range of validity of the accuracy estimate (upper end).
+#
+# Note: Lengths are given in units of meter. In the Zivid driver, the units are automatically converted from the default
+# units of the Zivid point clouds in millimeter, to the ROS convention of meter.
+float32 z_max

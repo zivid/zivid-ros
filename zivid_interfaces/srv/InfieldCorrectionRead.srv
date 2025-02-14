@@ -1,0 +1,9 @@
+---
+bool success
+string message
+
+# True if the camera has a stored correction.
+bool has_camera_correction
+
+# The calendar time of the current camera correction, or zero if no correction is stored on the camera.
+builtin_interfaces/Time camera_correction_timestamp

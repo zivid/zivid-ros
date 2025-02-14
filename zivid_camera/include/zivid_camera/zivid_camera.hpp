@@ -40,6 +40,8 @@
 #include <zivid_interfaces/srv/camera_info_serial_number.hpp>
 #include <zivid_interfaces/srv/capture_and_save.hpp>
 #include <zivid_interfaces/srv/capture_assistant_suggest_settings.hpp>
+#include <zivid_interfaces/srv/infield_correction_compute.hpp>
+#include <zivid_interfaces/srv/infield_correction_verify.hpp>
 #include <zivid_interfaces/srv/is_connected.hpp>
 
 namespace Zivid
@@ -66,6 +68,7 @@ enum class CameraStatus
 };
 template <typename SettingsType>
 class CaptureSettingsController;
+struct InfieldCorrectionState;
 
 class ZividCamera : public rclcpp::Node
 {
@@ -109,6 +112,40 @@ private:
     const std::shared_ptr<rmw_request_id_t> request_header,
     const std::shared_ptr<zivid_interfaces::srv::IsConnected::Request> request,
     std::shared_ptr<zivid_interfaces::srv::IsConnected::Response> response);
+
+  void infieldCorrectionRead(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+    std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+  void infieldCorrectionReset(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+    std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+  void infieldCorrectionVerify(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<zivid_interfaces::srv::InfieldCorrectionVerify::Request> request,
+    std::shared_ptr<zivid_interfaces::srv::InfieldCorrectionVerify::Response> response);
+  void infieldCorrectionRemoveLastCapture(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+    std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+  void infieldCorrectionStart(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+    std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+  void infieldCorrectionCapture(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+    std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+  void infieldCorrectionCompute(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<zivid_interfaces::srv::InfieldCorrectionCompute::Request> request,
+    std::shared_ptr<zivid_interfaces::srv::InfieldCorrectionCompute::Response> response);
+  void infieldCorrectionComputeAndWrite(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<zivid_interfaces::srv::InfieldCorrectionCompute::Request> request,
+    std::shared_ptr<zivid_interfaces::srv::InfieldCorrectionCompute::Response> response);
+
   void publishFrame(const Zivid::Frame & frame);
   Zivid::Frame invokeCaptureAndPublishFrame(const Zivid::Settings & settings);
   bool shouldPublishPointsXYZ() const;
@@ -168,6 +205,19 @@ private:
   rclcpp::Service<zivid_interfaces::srv::CaptureAssistantSuggestSettings>::SharedPtr
     capture_assistant_suggest_settings_service_;
   rclcpp::Service<zivid_interfaces::srv::IsConnected>::SharedPtr is_connected_service_;
+
+  std::unique_ptr<InfieldCorrectionState> infield_correction_state_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr infield_correction_read_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr infield_correction_reset_;
+  rclcpp::Service<zivid_interfaces::srv::InfieldCorrectionVerify>::SharedPtr
+    infield_correction_verify_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr infield_correction_remove_last_capture_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr infield_correction_start_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr infield_correction_capture_;
+  rclcpp::Service<zivid_interfaces::srv::InfieldCorrectionCompute>::SharedPtr
+    infield_correction_compute_;
+  rclcpp::Service<zivid_interfaces::srv::InfieldCorrectionCompute>::SharedPtr
+    infield_correction_compute_and_write_;
 
   std::unique_ptr<Zivid::Application> zivid_;
   CameraStatus camera_status_{CameraStatus::Idle};

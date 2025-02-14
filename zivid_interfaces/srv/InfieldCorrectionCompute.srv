@@ -1,0 +1,33 @@
+---
+bool success
+string message
+
+# Returns true if infield correction has been started on the target node. It needs to be started before capturing and computing.
+bool infield_correction_started
+
+# Number of successful infield calibration captures. We recommend multiple captures with different board positions.
+int32 number_of_captures
+
+# Camera metrics
+float32 current_trueness_error
+float32 average_trueness_error
+float32 maximum_trueness_error
+
+# The estimated dimension accuracy error obtained if the correction is applied.
+#
+# This number represents a 1-sigma (68% confidence) upper bound for dimension trueness error in the working volume
+# (z=zMin() to z=zMax(), across the entire field of view). In other words, it represents the expected distribution of
+# local dimension trueness measurements (see <see cref="CameraVerification" />) that can be expected if measuring
+# throughout the working volume.
+#
+# The value is a fraction (relative trueness error). Multiply by 100 to get trueness in percent.
+#
+# Note that the accuracy close to where the original data was captured is likely much better than what is implied by
+# this number. This number is rather an accuracy estimate for the entire extrapolated working volume.
+float32 dimension_accuracy
+
+# The range of validity of the accuracy estimate (lower end).
+float32 z_min
+
+# The range of validity of the accuracy estimate (upper end).
+float32 z_max

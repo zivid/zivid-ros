@@ -1,0 +1,14 @@
+---
+bool success
+string message
+
+# The estimated local dimension trueness error. The dimension trueness represents the relative deviation between the
+# measured size of the calibration object and the true size of the calibration object, including the effects of any
+# in-field correction stored on the camera at the time of capture. Note that this estimate is local, i.e. only valid for
+# the region of space very close to the calibration object.
+#
+# The value is a fraction (relative trueness error). Multiply by 100 to get trueness error in percent.
+float32 local_dimension_trueness
+
+# The location at which the measurement was made.
+geometry_msgs/Point position

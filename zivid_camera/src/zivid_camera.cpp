@@ -27,10 +27,12 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include <Zivid/Application.h>
+#include <Zivid/Calibration/Detector.h>
 #include <Zivid/Camera.h>
 #include <Zivid/CaptureAssistant.h>
 #include <Zivid/Exception.h>
 #include <Zivid/Experimental/Calibration.h>
+#include <Zivid/Experimental/Calibration/InfieldCorrection.h>
 #include <Zivid/Firmware.h>
 #include <Zivid/Frame2D.h>
 #include <Zivid/Image.h>
@@ -51,6 +53,86 @@ template <typename T>
 struct DependentFalse : std::false_type
 {
 };
+
+std::string infieldCorrectionDistancesToString(
+  const std::vector<Zivid::Experimental::Calibration::InfieldCorrectionInput> & dataset)
+{
+  auto zValues = std::vector<float>(dataset.size());
+  std::transform(dataset.begin(), dataset.end(), zValues.begin(), [](const auto & input) {
+    return input.detectionResult().centroid().z;
+  });
+  std::sort(zValues.begin(), zValues.end());
+
+  std::stringstream ss;
+  ss << "Measured positions: [";
+  for (size_t i = 0; i < zValues.size(); ++i) {
+    ss << std::setprecision(1) << std::fixed << zValues.at(i) << "mm";
+    if (i < zValues.size() - 1) {
+      ss << ", ";
+    }
+  }
+  ss << "].";
+
+  if (!zValues.empty()) {
+    ss << " Range covered: " << zValues.back() - zValues.front() << "mm.";
+  }
+
+  return ss.str();
+}
+
+struct InfieldCorrectionStatistics
+{
+  size_t numberOfCaptures;
+  float currentTruenessError;
+  float averageTruenessError;
+  float maximumTruenessError;
+};
+
+InfieldCorrectionStatistics calculateInfieldCorrectionStatistics(
+  const std::vector<Zivid::Experimental::Calibration::InfieldCorrectionInput> & dataset)
+{
+  if (dataset.empty()) {
+    throw std::runtime_error("Empty dataset");
+  }
+  const auto dimensionTruenessErrors = [&] {
+    std::vector<float> result;
+    std::transform(
+      dataset.begin(), dataset.end(), std::back_inserter(result), [](const auto & input) {
+        return Zivid::Experimental::Calibration::verifyCamera(input).localDimensionTrueness();
+      });
+    return result;
+  }();
+  const float currentTruenessError = dimensionTruenessErrors.back();
+  const float averageTruenessError =
+    std::accumulate(cbegin(dimensionTruenessErrors), cend(dimensionTruenessErrors), 0.0F) /
+    static_cast<float>(size(dimensionTruenessErrors));
+  const float maximumTruenessError =
+    *std::max_element(dimensionTruenessErrors.begin(), dimensionTruenessErrors.end());
+  return InfieldCorrectionStatistics{
+    dataset.size(), currentTruenessError, averageTruenessError, maximumTruenessError};
+}
+
+std::string infieldCorrectionEstimateToString(
+  const InfieldCorrectionStatistics & statistics,
+  const Zivid::Experimental::Calibration::AccuracyEstimate & accuracyEstimate)
+{
+  std::stringstream ss;
+  ss << std::fixed << std::setprecision(2);
+  ss << "Number of captures: " << statistics.numberOfCaptures << "\n";
+  ss << "Camera metrics:";
+  ss << "\n  Current trueness error: " << 100.0F * statistics.currentTruenessError << "%.";
+  if (statistics.numberOfCaptures > 1) {
+    ss << "\n  Average trueness error: " << 100.0F * statistics.averageTruenessError << "%.";
+    ss << "\n  Maximum trueness error: " << 100.0F * statistics.maximumTruenessError << "%.";
+  }
+  ss << "\n";
+  ss << "Expected post-correction metrics:";
+  ss << "\n  Dimension trueness error: " << 100.0F * accuracyEstimate.dimensionAccuracy()
+     << "% or less.";
+  ss << "\n  Optimized workspace (depth): " << static_cast<int>(std::round(accuracyEstimate.zMin()))
+     << " - " << static_cast<int>(std::round(accuracyEstimate.zMax())) << " mm.";
+  return ss.str();
+}
 
 sensor_msgs::msg::PointField createPointField(
   std::string name, uint32_t offset, uint8_t datatype, uint32_t count)
@@ -148,8 +230,8 @@ void runFunctionAndCatchExceptions(
   const std::string & operation)
 {
   try {
-    function();
     response->success = true;
+    function();
   } catch (const std::exception & exception) {
     const auto exception_message = Zivid::toString(exception);
     RCLCPP_ERROR_STREAM(
@@ -259,6 +341,12 @@ private:
   std::string file_path_param_;
   std::string yaml_string_param_;
   mutable std::optional<SettingsType> cached_settings_;
+};
+
+struct InfieldCorrectionState
+{
+  bool started = false;
+  std::vector<Zivid::Experimental::Calibration::InfieldCorrectionInput> dataset;
 };
 
 ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
@@ -426,6 +514,30 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
     create_service<zivid_interfaces::srv::CaptureAssistantSuggestSettings>(
       "capture_assistant/suggest_settings",
       std::bind(&ZividCamera::captureAssistantSuggestSettingsServiceHandler, this, _1, _2, _3));
+
+  infield_correction_state_ = std::make_unique<InfieldCorrectionState>();
+  infield_correction_read_ = create_service<std_srvs::srv::Trigger>(
+    "infield_correction/read", std::bind(&ZividCamera::infieldCorrectionRead, this, _1, _2, _3));
+  infield_correction_reset_ = create_service<std_srvs::srv::Trigger>(
+    "infield_correction/reset", std::bind(&ZividCamera::infieldCorrectionReset, this, _1, _2, _3));
+  infield_correction_verify_ = create_service<zivid_interfaces::srv::InfieldCorrectionVerify>(
+    "infield_correction/verify",
+    std::bind(&ZividCamera::infieldCorrectionVerify, this, _1, _2, _3));
+  infield_correction_remove_last_capture_ = create_service<std_srvs::srv::Trigger>(
+    "infield_correction/remove_last_capture",
+    std::bind(&ZividCamera::infieldCorrectionRemoveLastCapture, this, _1, _2, _3));
+  infield_correction_start_ = create_service<std_srvs::srv::Trigger>(
+    "infield_correction/start", std::bind(&ZividCamera::infieldCorrectionStart, this, _1, _2, _3));
+  infield_correction_capture_ = create_service<std_srvs::srv::Trigger>(
+    "infield_correction/capture",
+    std::bind(&ZividCamera::infieldCorrectionCapture, this, _1, _2, _3));
+  infield_correction_compute_ = create_service<zivid_interfaces::srv::InfieldCorrectionCompute>(
+    "infield_correction/compute",
+    std::bind(&ZividCamera::infieldCorrectionCompute, this, _1, _2, _3));
+  infield_correction_compute_and_write_ =
+    create_service<zivid_interfaces::srv::InfieldCorrectionCompute>(
+      "infield_correction/compute_and_write",
+      std::bind(&ZividCamera::infieldCorrectionComputeAndWrite, this, _1, _2, _3));
 
   RCLCPP_INFO(get_logger(), "Zivid camera driver is now ready!");
 }
@@ -643,6 +755,197 @@ void ZividCamera::isConnectedServiceHandler(
   std::shared_ptr<zivid_interfaces::srv::IsConnected::Response> response)
 {
   response->is_connected = camera_status_ == CameraStatus::Connected;
+}
+
+void ZividCamera::infieldCorrectionRead(
+  const std::shared_ptr<rmw_request_id_t> /*request_header*/,
+  const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
+  std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+{
+  RCLCPP_INFO_STREAM(get_logger(), __func__);
+
+  runFunctionAndCatchExceptions(
+    [&]() {
+      if (Zivid::Experimental::Calibration::hasCameraCorrection(*camera_)) {
+        const auto timestamp =
+          Zivid::Experimental::Calibration::cameraCorrectionTimestamp(*camera_);
+        const auto time = std::chrono::system_clock::to_time_t(timestamp);
+        std::stringstream ss;
+        ss << "Timestamp of current camera correction: "
+           << std::put_time(std::gmtime(&time), "%FT%TZ");
+        response->message = ss.str();
+      } else {
+        response->message = "This camera has no in-field correction written to it.";
+      }
+    },
+    response, get_logger(), "InfieldCorrectionRead");
+}
+
+void ZividCamera::infieldCorrectionReset(
+  const std::shared_ptr<rmw_request_id_t> /*request_header*/,
+  const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
+  std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+{
+  RCLCPP_INFO_STREAM(get_logger(), __func__);
+
+  runFunctionAndCatchExceptions(
+    [&]() { Zivid::Experimental::Calibration::resetCameraCorrection(*camera_); }, response,
+    get_logger(), "InfieldCorrectionReset");
+}
+
+void ZividCamera::infieldCorrectionVerify(
+  const std::shared_ptr<rmw_request_id_t> /*request_header*/,
+  const std::shared_ptr<zivid_interfaces::srv::InfieldCorrectionVerify::Request> /*request*/,
+  std::shared_ptr<zivid_interfaces::srv::InfieldCorrectionVerify::Response> response)
+{
+  RCLCPP_INFO_STREAM(get_logger(), __func__);
+
+  runFunctionAndCatchExceptions(
+    [&]() {
+      RCLCPP_DEBUG_STREAM(get_logger(), "Capturing calibration object");
+      const auto detectionResult = Zivid::Experimental::Calibration::detectFeaturePoints(*camera_);
+      const auto input = Zivid::Experimental::Calibration::InfieldCorrectionInput{detectionResult};
+      if (!input.valid()) {
+        response->message = "Invalid capture! Feedback: " + input.statusDescription();
+        response->success = false;
+        return;
+      }
+      RCLCPP_DEBUG_STREAM(get_logger(), "Successful measurement, starting verification");
+      const auto verification = Zivid::Experimental::Calibration::verifyCamera(input);
+      const auto centroid = detectionResult.centroid();
+      std::stringstream ss;
+      ss << "Successful measurement at " << detectionResult.centroid()
+         << ". Estimated dimension trueness error at measured position: " << std::setprecision(2)
+         << std::fixed << 100.0F * verification.localDimensionTrueness() << "%";
+      response->local_dimension_trueness = verification.localDimensionTrueness();
+      response->position.x = static_cast<double>(centroid.x);
+      response->position.y = static_cast<double>(centroid.y);
+      response->position.z = static_cast<double>(centroid.z);
+      response->message = ss.str();
+    },
+    response, get_logger(), "InfieldCorrectionVerify");
+}
+
+void ZividCamera::infieldCorrectionRemoveLastCapture(
+  const std::shared_ptr<rmw_request_id_t> /*request_header*/,
+  const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
+  std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+{
+  RCLCPP_INFO_STREAM(get_logger(), __func__);
+
+  runFunctionAndCatchExceptions(
+    [&]() {
+      if (infield_correction_state_->dataset.empty()) {
+        throw std::runtime_error("Infield correction dataset is empty");
+      }
+      infield_correction_state_->dataset.pop_back();
+    },
+    response, get_logger(), "InfieldCorrectionRemoveLastCapture");
+}
+
+void ZividCamera::infieldCorrectionStart(
+  const std::shared_ptr<rmw_request_id_t> /*request_header*/,
+  const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
+  std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+{
+  RCLCPP_INFO_STREAM(get_logger(), __func__);
+
+  runFunctionAndCatchExceptions(
+    [&]() {
+      *infield_correction_state_ = {};
+      infield_correction_state_->started = true;
+    },
+    response, get_logger(), "InfieldCorrectionStart");
+}
+
+void ZividCamera::infieldCorrectionCapture(
+  const std::shared_ptr<rmw_request_id_t> /*request_header*/,
+  const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
+  std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+{
+  RCLCPP_INFO_STREAM(get_logger(), __func__);
+
+  runFunctionAndCatchExceptions(
+    [&]() {
+      if (!infield_correction_state_->started) {
+        throw std::runtime_error(
+          "Infield correction not started. Please call the infield correction start service before "
+          "capturing.");
+      }
+      const auto detectionResult = Zivid::Calibration::detectCalibrationBoard(*camera_);
+      const auto input = Zivid::Experimental::Calibration::InfieldCorrectionInput{detectionResult};
+      if (input.valid()) {
+        auto & dataset = infield_correction_state_->dataset;
+        dataset.push_back(input);
+        response->message = "Valid detection. Collected " + std::to_string(dataset.size()) +
+                            " valid measurement(s) so far. " +
+                            infieldCorrectionDistancesToString(dataset);
+      } else {
+        response->success = false;
+        response->message = "Invalid detection. This measurement will not be used. Feedback: " +
+                            input.statusDescription();
+      }
+    },
+    response, get_logger(), "InfieldCorrectionCapture");
+}
+
+void ZividCamera::infieldCorrectionCompute(
+  const std::shared_ptr<rmw_request_id_t> /*request_header*/,
+  const std::shared_ptr<zivid_interfaces::srv::InfieldCorrectionCompute::Request> /*request*/,
+  std::shared_ptr<zivid_interfaces::srv::InfieldCorrectionCompute::Response> response)
+{
+  RCLCPP_INFO_STREAM(get_logger(), __func__);
+
+  runFunctionAndCatchExceptions(
+    [&]() {
+      const auto & dataset = infield_correction_state_->dataset;
+      // Set started & number of captures before computing, so that it is reported regardless of any exceptions.
+      response->infield_correction_started = infield_correction_state_->started;
+      response->number_of_captures = static_cast<int>(dataset.size());
+      const auto correction = Zivid::Experimental::Calibration::computeCameraCorrection(dataset);
+      const auto accuracyEstimate = correction.accuracyEstimate();
+      const auto statistics = calculateInfieldCorrectionStatistics(dataset);
+      response->current_trueness_error = statistics.currentTruenessError;
+      response->average_trueness_error = statistics.averageTruenessError;
+      response->maximum_trueness_error = statistics.maximumTruenessError;
+      response->z_min = accuracyEstimate.zMin();
+      response->z_max = accuracyEstimate.zMax();
+      response->dimension_accuracy = accuracyEstimate.dimensionAccuracy();
+      response->message = "Camera correction computed successfully.\n" +
+                          infieldCorrectionEstimateToString(statistics, accuracyEstimate);
+    },
+    response, get_logger(), "InfieldCorrectionCompute");
+}
+
+void ZividCamera::infieldCorrectionComputeAndWrite(
+  const std::shared_ptr<rmw_request_id_t> /*request_header*/,
+  const std::shared_ptr<zivid_interfaces::srv::InfieldCorrectionCompute::Request> /*request*/,
+  std::shared_ptr<zivid_interfaces::srv::InfieldCorrectionCompute::Response> response)
+{
+  RCLCPP_INFO_STREAM(get_logger(), __func__);
+
+  runFunctionAndCatchExceptions(
+    [&]() {
+      auto & dataset = infield_correction_state_->dataset;
+      response->infield_correction_started = infield_correction_state_->started;
+      response->number_of_captures = static_cast<int>(dataset.size());
+      const auto correction = Zivid::Experimental::Calibration::computeCameraCorrection(dataset);
+      RCLCPP_DEBUG(get_logger(), "Writing correction to camera");
+      Zivid::Experimental::Calibration::writeCameraCorrection(*camera_, correction);
+      const auto accuracyEstimate = correction.accuracyEstimate();
+      const auto statistics = calculateInfieldCorrectionStatistics(dataset);
+      response->current_trueness_error = statistics.currentTruenessError;
+      response->average_trueness_error = statistics.averageTruenessError;
+      response->maximum_trueness_error = statistics.maximumTruenessError;
+      response->z_min = accuracyEstimate.zMin();
+      response->z_max = accuracyEstimate.zMax();
+      response->dimension_accuracy = accuracyEstimate.dimensionAccuracy();
+      response->message = "Camera correction successfully written to camera.\n" +
+                          infieldCorrectionEstimateToString(statistics, accuracyEstimate);
+      // Clear the dataset after a successful write, the captures cannot be used again.
+      dataset.clear();
+    },
+    response, get_logger(), "InfieldCorrectionComputeAndWrite");
 }
 
 void ZividCamera::publishFrame(const Zivid::Frame & frame)

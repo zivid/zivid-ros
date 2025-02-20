@@ -126,7 +126,7 @@ CaptureSettingsController<ZividSettingsType, SettingsConfigType, SettingsAcquisi
   {
     if (dr_config_server->config().enabled)
     {
-      ROS_DEBUG("Config %s is enabled", dr_config_server->name().c_str());
+      ROS_INFO("Config %s is enabled", dr_config_server->name().c_str());
       typename ZividSettingsType::Acquisition acquisition;
       applyConfigToZividSettings(dr_config_server->config(), acquisition);
       settings.acquisitions().emplaceBack(std::move(acquisition));
@@ -164,7 +164,7 @@ void CaptureSettingsController<ZividSettingsType, SettingsConfigType, SettingsAc
   }
 
   const auto filledSettings = fillInUnsetWithCameraDefault(settings, camera_info_);
-  ROS_DEBUG_STREAM("Updating settings to " << filledSettings);
+  ROS_INFO_STREAM("Updating settings to " << filledSettings);
   general_config_dr_server_->setConfig(zividSettingsToConfig<SettingsConfigType>(filledSettings));
 
   const auto& acquisitions = filledSettings.acquisitions();

@@ -19,6 +19,55 @@
 #include <thread>
 #include <cstdint>
 
+
+template<typename F>
+class ScopeExit final
+{
+    static_assert(std::is_invocable_v<F>);
+    static_assert(std::is_nothrow_move_constructible_v<F>);
+
+public:
+    explicit ScopeExit(F &&fn)
+        : m_fn(std::move(fn))
+    {}
+
+    ~ScopeExit()
+    {
+        if(!m_released)
+        {
+            m_fn();
+        }
+    }
+
+    ScopeExit(ScopeExit &&other) noexcept
+        : m_fn(std::move(other.m_fn))
+        , m_released(other.m_released)
+    {
+        other.release();
+    }
+
+    ScopeExit &operator=(ScopeExit &&) = delete;
+
+    void release()
+    {
+        m_released = true;
+    }
+
+private:
+    F m_fn;
+    bool m_released = false;
+};
+
+
+#define ZIVIDROS_LOG_ENTRY() \
+    const auto current_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()); \
+    ROS_INFO_STREAM("ENTER:" << __func__ << " threadid=" << std::this_thread::get_id() << " time=" << std::put_time(std::gmtime(&current_time), "%c %Z")); \
+    auto logOnExitAlso = ScopeExit([funname=std::string{__func__}]() { \
+      const auto exit_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()); \
+      ROS_INFO_STREAM("EXIT:" << funname << " threadid=" << std::this_thread::get_id() << " time=" << std::put_time(std::gmtime(&exit_time), "%c %Z")); \
+    });
+
+
 namespace
 {
 sensor_msgs::PointField createPointField(std::string name, uint32_t offset, uint8_t datatype, uint32_t count)
@@ -107,9 +156,10 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   , zivid_(makeZividApplication())
   , header_seq_(0)
 {
-  ROS_INFO("Zivid ROS driver version %s", ZIVID_ROS_DRIVER_VERSION);
-
+  ZIVIDROS_LOG_ENTRY();
+  ROS_INFO_STREAM("Zivid ROS driver version" << ZIVID_ROS_DRIVER_VERSION);
   ROS_INFO("Node's namespace is '%s'", nh_.getNamespace().c_str());
+
   if (nh_.getNamespace() == "")
   {
     // Require the user to specify the namespace that this node will run in.
@@ -264,7 +314,7 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
 
 void ZividCamera::onCameraConnectionKeepAliveTimeout(const ros::TimerEvent&)
 {
-  ROS_INFO_STREAM(__func__);
+  ZIVIDROS_LOG_ENTRY();
   try
   {
     reconnectToCameraIfNecessary();
@@ -277,7 +327,7 @@ void ZividCamera::onCameraConnectionKeepAliveTimeout(const ros::TimerEvent&)
 
 void ZividCamera::reconnectToCameraIfNecessary()
 {
-  ROS_INFO_STREAM(__func__);
+  ZIVIDROS_LOG_ENTRY();
 
   const auto state = camera_.state();
   if (state.isConnected().value())
@@ -316,6 +366,7 @@ void ZividCamera::reconnectToCameraIfNecessary()
 
 void ZividCamera::setCameraStatus(CameraStatus camera_status)
 {
+  ZIVIDROS_LOG_ENTRY();
   if (camera_status_ != camera_status)
   {
     std::stringstream ss;
@@ -348,8 +399,7 @@ bool ZividCamera::cameraInfoSerialNumberServiceHandler(zivid_camera::CameraInfoS
 
 bool ZividCamera::captureServiceHandler(Capture::Request&, Capture::Response&)
 {
-  ROS_INFO_STREAM(__func__);
-
+  ZIVIDROS_LOG_ENTRY();
   invokeCaptureAndPublishFrame();
 
   return true;
@@ -357,8 +407,7 @@ bool ZividCamera::captureServiceHandler(Capture::Request&, Capture::Response&)
 
 bool ZividCamera::captureAndSaveServiceHandler(CaptureAndSave::Request& req, CaptureAndSave::Response&)
 {
-  ROS_INFO_STREAM(__func__);
-
+  ZIVIDROS_LOG_ENTRY();
   const auto frame = invokeCaptureAndPublishFrame();
   ROS_INFO("Saving frame to '%s'", req.file_path.c_str());
   frame.save(req.file_path);
@@ -368,8 +417,7 @@ bool ZividCamera::captureAndSaveServiceHandler(CaptureAndSave::Request& req, Cap
 
 bool ZividCamera::capture2DServiceHandler(Capture2D::Request&, Capture2D::Response&)
 {
-  ROS_INFO_STREAM(__func__);
-
+  ZIVIDROS_LOG_ENTRY();
   serviceHandlerHandleCameraConnectionLoss();
 
   const auto settings2D = capture_2d_settings_controller_->zividSettings();
@@ -395,8 +443,7 @@ bool ZividCamera::capture2DServiceHandler(Capture2D::Request&, Capture2D::Respon
 bool ZividCamera::captureAssistantSuggestSettingsServiceHandler(CaptureAssistantSuggestSettings::Request& req,
                                                                 CaptureAssistantSuggestSettings::Response&)
 {
-  ROS_INFO_STREAM(__func__ << ": Request: " << req);
-
+  ZIVIDROS_LOG_ENTRY();
   serviceHandlerHandleCameraConnectionLoss();
 
   if (capture_settings_controller_->numAcquisitionConfigServers() < 10)
@@ -437,6 +484,7 @@ bool ZividCamera::captureAssistantSuggestSettingsServiceHandler(CaptureAssistant
 bool ZividCamera::loadSettingsFromFileServiceHandler(LoadSettingsFromFile::Request& req,
                                                      LoadSettingsFromFile::Response&)
 {
+  ZIVIDROS_LOG_ENTRY();
   ROS_INFO_STREAM(__func__ << ": Request: " << req);
   capture_settings_controller_->setZividSettings(Zivid::Settings{ req.file_path.c_str() });
   return true;
@@ -445,6 +493,7 @@ bool ZividCamera::loadSettingsFromFileServiceHandler(LoadSettingsFromFile::Reque
 bool ZividCamera::loadSettings2DFromFileServiceHandler(LoadSettings2DFromFile::Request& req,
                                                        LoadSettings2DFromFile::Response&)
 {
+  ZIVIDROS_LOG_ENTRY();
   ROS_INFO_STREAM(__func__ << ": Request: " << req);
   capture_2d_settings_controller_->setZividSettings(Zivid::Settings2D{ req.file_path.c_str() });
   return true;
@@ -452,6 +501,8 @@ bool ZividCamera::loadSettings2DFromFileServiceHandler(LoadSettings2DFromFile::R
 
 void ZividCamera::serviceHandlerHandleCameraConnectionLoss()
 {
+  ZIVIDROS_LOG_ENTRY();
+  ROS_INFO_STREAM(__func__ << " threadid=" << std::this_thread::get_id());
   reconnectToCameraIfNecessary();
   if (camera_status_ != CameraStatus::Connected)
   {
@@ -468,6 +519,7 @@ bool ZividCamera::isConnectedServiceHandler(IsConnected::Request&, IsConnected::
 
 void ZividCamera::publishFrame(const Zivid::Frame& frame)
 {
+  ZIVIDROS_LOG_ENTRY();
   const bool publish_points_xyz = shouldPublishPointsXYZ();
   const bool publish_points_xyzrgba = shouldPublishPointsXYZRGBA();
   const bool publish_color_img = shouldPublishColorImg();
@@ -560,6 +612,7 @@ std_msgs::Header ZividCamera::makeHeader()
 
 void ZividCamera::publishPointCloudXYZ(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud)
 {
+  ZIVIDROS_LOG_ENTRY();
   ROS_INFO_STREAM("Publishing " << points_xyz_publisher_.getTopic());
 
   // We are using the Zivid::XYZW type here for compatibility with the pcl::PointXYZ type, which contains an
@@ -583,6 +636,7 @@ void ZividCamera::publishPointCloudXYZ(const std_msgs::Header& header, const Ziv
 
 void ZividCamera::publishPointCloudXYZRGBA(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud)
 {
+  ZIVIDROS_LOG_ENTRY();
   ROS_INFO_STREAM("Publishing " << points_xyzrgba_publisher_.getTopic());
 
   auto msg = boost::make_shared<sensor_msgs::PointCloud2>();
@@ -708,7 +762,7 @@ sensor_msgs::CameraInfoConstPtr ZividCamera::makeCameraInfo(const std_msgs::Head
 
 Zivid::Frame ZividCamera::invokeCaptureAndPublishFrame()
 {
-  ROS_INFO_STREAM(__func__);
+  ZIVIDROS_LOG_ENTRY();
 
   serviceHandlerHandleCameraConnectionLoss();
 

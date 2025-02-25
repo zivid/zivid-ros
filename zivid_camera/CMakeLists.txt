@@ -27,7 +27,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(zivid_interfaces REQUIRED)
 
-find_package(Zivid 2.9.0 COMPONENTS Core REQUIRED)
+find_package(Zivid 2.15.0 COMPONENTS Core REQUIRED)
 message(STATUS "Found Zivid SDK version ${Zivid_VERSION}")
 
 set(ZIVID_DRIVER_COMPONENT_NAME ${PROJECT_NAME}_component)

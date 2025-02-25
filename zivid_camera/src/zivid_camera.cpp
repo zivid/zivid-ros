@@ -133,27 +133,13 @@ std::string toString(zivid_camera::CameraStatus camera_status)
 template <typename ZividDataModel>
 auto serializeZividDataModel(const ZividDataModel & dm)
 {
-#if (ZIVID_CORE_VERSION_MAJOR == 2 && ZIVID_CORE_VERSION_MINOR <= 12)
-  std::stringstream ss;
-  Zivid::Detail::save(dm, ss);
-  return ss.str();
-#else
   return dm.serialize();
-#endif
 }
 
 template <typename ZividDataModel>
 auto deserializeZividDataModel(const std::string & serialized)
 {
-#if (ZIVID_CORE_VERSION_MAJOR == 2 && ZIVID_CORE_VERSION_MINOR <= 12)
-  ZividDataModel dm;
-  std::stringstream ss;
-  ss << serialized;
-  Zivid::Detail::load(dm, ss);
-  return dm;
-#else
   return ZividDataModel::fromSerialized(serialized);
-#endif
 }
 
 template <typename Function, typename ResponseSharedPtr, typename Logger>
@@ -179,16 +165,6 @@ template <typename Logger>
 {
   RCLCPP_ERROR(logger, "%s", message.c_str());
   throw std::runtime_error(message);
-}
-
-Zivid::Application makeZividApplication()
-{
-#if ZIVID_CORE_VERSION_MAJOR >= 3 || \
-  (ZIVID_CORE_VERSION_MAJOR == 2 && ZIVID_CORE_VERSION_MINOR >= 13)
-  return Zivid::Detail::createApplicationForWrapper(Zivid::Detail::EnvironmentInfo::Wrapper::ros2);
-#else
-  return Zivid::Application();
-#endif
 }
 }  // namespace
 
@@ -287,7 +263,8 @@ private:
 
 ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
 : rclcpp::Node{"zivid_camera", options},
-  zivid_{std::make_unique<Zivid::Application>(makeZividApplication())},
+  zivid_{std::make_unique<Zivid::Application>(
+    Zivid::Detail::createApplicationForWrapper(Zivid::Detail::EnvironmentInfo::Wrapper::ros2))},
   set_parameters_callback_handle_{this->add_on_set_parameters_callback(
     std::bind(&ZividCamera::setParametersCallback, this, std::placeholders::_1))}
 {

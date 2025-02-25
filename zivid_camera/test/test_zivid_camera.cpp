@@ -307,27 +307,13 @@ Settings2D:
   template <typename ZividDataModel>
   auto serializeZividDataModel(const ZividDataModel & dm)
   {
-#if (ZIVID_CORE_VERSION_MAJOR == 2 && ZIVID_CORE_VERSION_MINOR <= 12)
-    std::stringstream ss;
-    Zivid::Detail::save(dm, ss);
-    return ss.str();
-#else
     return dm.serialize();
-#endif
   }
 
   template <typename ZividDataModel>
   auto deserializeZividDataModel(const std::string & serialized)
   {
-#if (ZIVID_CORE_VERSION_MAJOR == 2 && ZIVID_CORE_VERSION_MINOR <= 12)
-    ZividDataModel dm;
-    std::stringstream ss;
-    ss << serialized;
-    Zivid::Detail::load(dm, ss);
-    return dm;
-#else
     return ZividDataModel::fromSerialized(serialized);
-#endif
   }
 
   template <typename ResponseSharedPtr>

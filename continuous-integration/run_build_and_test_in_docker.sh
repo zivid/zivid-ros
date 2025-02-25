@@ -19,7 +19,6 @@ echo "Starting $(basename $0)"
 echo "CI_TEST_ZIVID_VERSION=$CI_TEST_ZIVID_VERSION"
 echo "CI_TEST_OS=$CI_TEST_OS"
 echo "CI_TEST_COMPILER=$CI_TEST_COMPILER"
-echo "CI_TEST_DOWNLOAD_TELICAM=$CI_TEST_DOWNLOAD_TELICAM"
 
 docker run \
     --volume $PWD:/host  \
@@ -27,6 +26,5 @@ docker run \
     --env CI_TEST_ZIVID_VERSION="$CI_TEST_ZIVID_VERSION" \
     --env CI_TEST_COMPILER="$CI_TEST_COMPILER" \
     --env CI_TEST_OS="$CI_TEST_OS" \
-    --env CI_TEST_DOWNLOAD_TELICAM="$CI_TEST_DOWNLOAD_TELICAM" \
     $CI_TEST_OS  \
     bash -c "./build_and_test.sh" || exit $?

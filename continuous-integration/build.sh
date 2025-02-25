@@ -9,8 +9,12 @@ echo "Creating workspace"
 mkdir -p ~/ros2_ws/src || exit $?
 cd ~/ros2_ws || exit $?
 
-echo "Adding link to the source folder"
-ln -s "$ROOT_DIR" ~/ros2_ws/src || exit $?
+if [ -z "$(ls --almost-all ~/ros2_ws/src)" ]; then
+  echo "Adding link to the source folder"
+  ln -s "$ROOT_DIR" ~/ros2_ws/src || exit $?
+else
+  echo "Skipping link to source folder since it already exists"
+fi
 
 if [ "$ROS_DISTRO" != "humble" ]; then
   echo "Initializing rosdep"

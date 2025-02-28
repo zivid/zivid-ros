@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="zivid_one_plus_camera_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <!-- Specify the type of the Zivid two camera -->
+    <!--   Options: ZIVID_ONE_PLUS_S, ZIVID_ONE_PLUS_M, ZIVID_ONE_PLUS_L -->
+    <xacro:arg name="type" default="ZIVID_ONE_PLUS_M" />
+
+    <!-- Import and load Zivid camera -->
+    <xacro:include filename="$(find zivid_description)/urdf/macros/zivid_one_plus_camera.xacro"/>
+    <xacro:zivid_one_plus_camera prefix="" type="$(arg type)"/>
+</robot>

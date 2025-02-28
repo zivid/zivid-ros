@@ -14,6 +14,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/predef.h>
+#include <boost/process.hpp>
 
 #include <sstream>
 #include <thread>
@@ -61,10 +62,10 @@ private:
 
 #define ZIVIDROS_LOG_ENTRY() \
     const auto current_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()); \
-    ROS_INFO_STREAM("ENTER:" << __func__ << " threadid=" << std::this_thread::get_id() << " time=" << std::put_time(std::gmtime(&current_time), "%c %Z")); \
+    ROS_INFO_STREAM("ENTER:" << __func__ << " threadid=" << std::this_thread::get_id() << " time=" << std::put_time(std::localtime(&current_time), "%c %Z")); \
     auto logOnExitAlso = ScopeExit([funname=std::string{__func__}]() { \
       const auto exit_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()); \
-      ROS_INFO_STREAM("EXIT:" << funname << " threadid=" << std::this_thread::get_id() << " time=" << std::put_time(std::gmtime(&exit_time), "%c %Z")); \
+      ROS_INFO_STREAM("EXIT:" << funname << " threadid=" << std::this_thread::get_id() << " time=" << std::put_time(std::localtime(&exit_time), "%c %Z")); \
     });
 
 
@@ -159,6 +160,9 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   ZIVIDROS_LOG_ENTRY();
   ROS_INFO_STREAM("Zivid ROS driver version" << ZIVID_ROS_DRIVER_VERSION);
   ROS_INFO("Node's namespace is '%s'", nh_.getNamespace().c_str());
+
+  boost::process::pid_t pid = boost::this_process::get_id();
+  ROS_INFO_STREAM("This node's process id is " << pid);
 
   if (nh_.getNamespace() == "")
   {
@@ -386,6 +390,7 @@ void ZividCamera::setCameraStatus(CameraStatus camera_status)
 bool ZividCamera::cameraInfoModelNameServiceHandler(zivid_camera::CameraInfoModelName::Request&,
                                                     zivid_camera::CameraInfoModelName::Response& res)
 {
+  ZIVIDROS_LOG_ENTRY();
   res.model_name = camera_.info().modelName().toString();
   return true;
 }
@@ -393,6 +398,7 @@ bool ZividCamera::cameraInfoModelNameServiceHandler(zivid_camera::CameraInfoMode
 bool ZividCamera::cameraInfoSerialNumberServiceHandler(zivid_camera::CameraInfoSerialNumber::Request&,
                                                        zivid_camera::CameraInfoSerialNumber::Response& res)
 {
+  ZIVIDROS_LOG_ENTRY();
   res.serial_number = camera_.info().serialNumber().toString();
   return true;
 }
@@ -502,7 +508,6 @@ bool ZividCamera::loadSettings2DFromFileServiceHandler(LoadSettings2DFromFile::R
 void ZividCamera::serviceHandlerHandleCameraConnectionLoss()
 {
   ZIVIDROS_LOG_ENTRY();
-  ROS_INFO_STREAM(__func__ << " threadid=" << std::this_thread::get_id());
   reconnectToCameraIfNecessary();
   if (camera_status_ != CameraStatus::Connected)
   {
@@ -513,7 +518,9 @@ void ZividCamera::serviceHandlerHandleCameraConnectionLoss()
 
 bool ZividCamera::isConnectedServiceHandler(IsConnected::Request&, IsConnected::Response& res)
 {
+  ZIVIDROS_LOG_ENTRY();
   res.is_connected = camera_status_ == CameraStatus::Connected;
+  ROS_INFO_STREAM(__func__ << " res.is_connected=" << (int)res.is_connected);
   return true;
 }
 

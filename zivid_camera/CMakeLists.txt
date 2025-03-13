@@ -7,6 +7,8 @@ else()
   set(CMAKE_CXX_STANDARD 17)
 endif()
 
+set(CMAKE_BUILD_TYPE Debug)
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 option(COMPILER_WARNINGS "Turn on warnings and warnings-as-errors during compilation" OFF)

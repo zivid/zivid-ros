@@ -1,9 +1,22 @@
 #include <nodelet/loader.h>
 #include <ros/ros.h>
 #include <cstdlib>
+#include <csignal>
+
+void signalHandler(int /*signal*/)
+{
+  std::abort();
+}
 
 int main(int argc, char** argv)
 {
+  const auto rc = std::signal(SIGTERM, signalHandler);
+  if (rc == SIG_ERR)
+  {
+    std::cerr << "Failed to set signal handler for SIGTERM" << std::endl;
+    return EXIT_FAILURE;
+  }
+
   try
   {
     ros::init(argc, argv, "zivid_camera");

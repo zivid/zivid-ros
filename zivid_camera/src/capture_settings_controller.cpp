@@ -1,5 +1,7 @@
 #include "capture_settings_controller.h"
 
+#include "zivid_logging.h"
+
 #include "SettingsConfigUtils.h"
 #include "SettingsAcquisitionConfigUtils.h"
 #include "Settings2DConfigUtils.h"
@@ -119,11 +121,15 @@ template <typename ZividSettingsType, typename SettingsConfigType, typename Sett
 ZividSettingsType
 CaptureSettingsController<ZividSettingsType, SettingsConfigType, SettingsAcquisitionConfigType>::zividSettings() const
 {
+  ZIVIDROS_LOG_ENTRY();
+
+  ROS_INFO_STREAM("Reading configuration from " << general_config_dr_server_->name());
   ZividSettingsType settings;
   applyConfigToZividSettings(general_config_dr_server_->config(), settings);
 
   for (const auto& dr_config_server : acquisition_config_dr_servers_)
   {
+    ROS_INFO_STREAM("Reading configuration from " << dr_config_server->name());
     if (dr_config_server->config().enabled)
     {
       ROS_INFO("Config %s is enabled", dr_config_server->name().c_str());
@@ -139,6 +145,8 @@ template <typename ZividSettingsType, typename SettingsConfigType, typename Sett
 void CaptureSettingsController<ZividSettingsType, SettingsConfigType, SettingsAcquisitionConfigType>::setZividSettings(
     const ZividSettingsType& settings)
 {
+  ZIVIDROS_LOG_ENTRY();
+
   const auto numAcquisitions = settings.acquisitions().size();
   if (numAcquisitions == 0)
   {

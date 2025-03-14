@@ -1,0 +1,11 @@
+# Specify the working directory to load captures (ZDF) and robot poses (YAML) from a previous hand-eye calibration
+# session. The hand-eye calibration will be started in a read-only mode. No new captures can be made, but calibration
+# can be done on the existing files in the workspace.
+string working_directory
+
+# Specify the calibration object(s) used during the hand-eye calibration session.
+HandEyeCalibrationObjects calibration_objects
+
+---
+bool success
+string message

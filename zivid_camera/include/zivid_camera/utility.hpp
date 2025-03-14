@@ -28,9 +28,14 @@
 
 #pragma once
 
+#include <Zivid/Calibration/Pose.h>
 #include <Zivid/Exception.h>
+#include <Zivid/Matrix.h>
 
 #include <exception>
+#include <geometry_msgs/msg/point.hpp>
+#include <geometry_msgs/msg/pose.hpp>
+#include <geometry_msgs/msg/transform.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <string>
 
@@ -40,6 +45,15 @@ template <typename T>
 struct DependentFalse : std::false_type
 {
 };
+
+template <class... Ts>
+struct Overloaded : Ts...
+{
+  using Ts::operator()...;
+};
+
+template <class... Ts>
+Overloaded(Ts...) -> Overloaded<Ts...>;
 
 template <typename T, typename U>
 T safeCast(U);  // Not implemented on purpose.
@@ -110,4 +124,11 @@ constexpr double zividLengthToRos(float value)
 {
   return static_cast<double>(value) / meterToMillimeterFactor;
 }
+
+Zivid::Calibration::Pose toZividPose(const geometry_msgs::msg::Pose & pose);
+
+Zivid::PointXYZ toZividPoint(const geometry_msgs::msg::Point & point);
+
+geometry_msgs::msg::Transform toGeometryMsgTransform(const Zivid::Matrix4x4 & transform);
+
 }  // namespace zivid_camera

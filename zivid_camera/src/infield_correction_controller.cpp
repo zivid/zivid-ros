@@ -32,8 +32,6 @@
 
 #include <cstdint>
 #include <numeric>
-#include <sensor_msgs/distortion_models.hpp>
-#include <sensor_msgs/image_encodings.hpp>
 #include <sstream>
 #include <zivid_camera/infield_correction_controller.hpp>
 #include <zivid_camera/utility.hpp>

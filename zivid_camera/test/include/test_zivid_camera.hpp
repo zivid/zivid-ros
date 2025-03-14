@@ -106,6 +106,33 @@ private:
   std::filesystem::path m_path;
 };
 
+class TmpDirectory
+{
+public:
+  TmpDirectory(const std::string & name) : m_path{getTemporaryFilePath(name)}
+  {
+    if (std::filesystem::exists(m_path)) {
+      throw std::runtime_error{"Temporary folder already exists: " + m_path.string()};
+    }
+    if (!std::filesystem::create_directory(m_path)) {
+      throw std::runtime_error{"Failed to create directory: " + m_path.string()};
+    }
+  }
+
+  TmpDirectory(const TmpFile &) noexcept = delete;
+  TmpDirectory(TmpFile &&) noexcept = delete;
+  TmpDirectory & operator=(const TmpFile &) = delete;
+  TmpDirectory & operator=(TmpFile &&) = delete;
+
+  ~TmpDirectory() { std::filesystem::remove_all(m_path); }
+
+  std::string string() const { return m_path.string(); }
+  const std::filesystem::path & path() const { return m_path; }
+
+private:
+  std::filesystem::path m_path;
+};
+
 class ZividNodeTestBase : public testing::Test
 {
 protected:
@@ -135,6 +162,7 @@ protected:
   static constexpr auto short_wait_duration{std::chrono::milliseconds{500}};
   static constexpr auto default_service_timeout{std::chrono::seconds{10}};
   static constexpr auto capture_service_timeout{std::chrono::seconds{20}};
+  static constexpr auto hand_eye_calibration_load_service_timeout{std::chrono::seconds{30}};
   static constexpr auto capture_service_name = "capture";
   static constexpr auto capture_and_save_service_name = "capture_and_save";
   static constexpr auto capture_2d_service_name = "capture_2d";
@@ -318,6 +346,12 @@ Settings2D:
   decltype(auto) doSingleDefaultAcquisitionCapture2DUsingFilePath()
   {
     return doCapture2DUsingFilePath(defaultSingleAcquisitionSettings2DYml());
+  }
+
+  void setSingleDefaultAcquisitionSettingsUsingYml()
+  {
+    setNodeParameter(parameter_settings_yaml, defaultSingleAcquisitionSettingsYml());
+    setNodeParameter(parameter_settings_file_path, "");
   }
 
   template <typename ZividDataModel>

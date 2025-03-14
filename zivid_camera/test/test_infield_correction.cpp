@@ -105,11 +105,15 @@ protected:
 
 TEST_F(ZividNodeTest, testInfieldCorrectionCaptureFailed)
 {
+  AllCaptureTopicsSubscriber all_capture_topics_subscriber(*this);
+  all_capture_topics_subscriber.assert_num_topics_received(0);
+
   auto start = doStdSrvsTriggerRequest("infield_correction/start");
   verifyTriggerResponseSuccess(start);
 
   auto capture = doEmptySrvRequest<zivid_interfaces::srv::InfieldCorrectionCapture>(
     "infield_correction/capture", capture_service_timeout);
+  all_capture_topics_subscriber.assert_num_topics_received(1);
   ASSERT_FALSE(capture->success);
   ASSERT_EQ(
     capture->status,
@@ -125,11 +129,15 @@ TEST_F(ZividNodeTest, testInfieldCorrectionCaptureFailed)
 
 TEST_F(TestWithCalibrationBoardFreshNode, testInfieldCorrectionCaptureOk)
 {
+  AllCaptureTopicsSubscriber all_capture_topics_subscriber(*this);
+  all_capture_topics_subscriber.assert_num_topics_received(0);
+
   auto start = doStdSrvsTriggerRequest("infield_correction/start");
   verifyTriggerResponseSuccess(start);
 
   auto capture = doEmptySrvRequest<zivid_interfaces::srv::InfieldCorrectionCapture>(
     "infield_correction/capture", capture_service_timeout);
+  all_capture_topics_subscriber.assert_num_topics_received(1);
   ASSERT_TRUE(capture->success);
   ASSERT_EQ(capture->status, zivid_interfaces::srv::InfieldCorrectionCapture::Response::STATUS_OK);
   ASSERT_EQ(capture->number_of_captures, 1);

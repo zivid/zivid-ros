@@ -1,0 +1,13 @@
+# The current pose of the robot.
+#
+# Note: Lengths should be given in units of meter. In the Zivid driver, this is converted internally to match the
+# default units of Zivid point clouds which are given in millimeter.
+geometry_msgs/Pose robot_pose
+
+---
+bool success
+string message
+
+# Capture handle which uniquely identifies this hand-eye capture for the current session. Returns -1 if the capture was
+# not successful. Existing handles are invalidated when a new session is started.
+int32 capture_handle -1

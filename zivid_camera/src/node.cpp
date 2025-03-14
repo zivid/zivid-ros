@@ -1,3 +1,5 @@
+#include "coredump.h"
+
 #include <nodelet/loader.h>
 #include <ros/ros.h>
 #include <cstdlib>
@@ -34,6 +36,9 @@ int main(int argc, char** argv)
 
   try
   {
+    zivid_coredump::enableCoreDump();
+    zivid_coredump::checkCoreDumpLocation();
+
     ROS_INFO("Creating a nodelet::Loader");
     nodelet::Loader nodelet;
     nodelet::M_string remap(ros::names::getRemappings());

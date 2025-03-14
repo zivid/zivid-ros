@@ -146,8 +146,9 @@ add_dependencies(
 
 # Node
 set(NODE_NAME ${PROJECT_NAME}_node)
-add_executable(${NODE_NAME} src/node.cpp)
+add_executable(${NODE_NAME} src/node.cpp src/coredump.cpp)
 turn_on_compiler_warnings_if_enabled(${NODE_NAME})
+target_include_directories(${NODE_NAME} PRIVATE include)
 target_include_directories(${NODE_NAME} SYSTEM PRIVATE ${catkin_INCLUDE_DIRS})
 target_link_libraries(${NODE_NAME} ${LIBRARY_NAME} ${catkin_LIBRARIES})
 add_dependencies(

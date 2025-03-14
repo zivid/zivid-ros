@@ -43,15 +43,11 @@
 #include <sstream>
 #include <std_srvs/srv/trigger.hpp>
 #include <thread>
+#include <zivid_camera/capture_settings_controller.hpp>
 #include <zivid_camera/zivid_camera.hpp>
 
 namespace
 {
-template <typename T>
-struct DependentFalse : std::false_type
-{
-};
-
 sensor_msgs::msg::PointField createPointField(
   std::string name, uint32_t offset, uint8_t datatype, uint32_t count)
 {
@@ -129,137 +125,16 @@ std::string toString(zivid_camera::CameraStatus camera_status)
       throw std::runtime_error("Enum `camera_status` out of range.");
   }
 }
-
-template <typename ZividDataModel>
-auto serializeZividDataModel(const ZividDataModel & dm)
-{
-  return dm.serialize();
-}
-
-template <typename ZividDataModel>
-auto deserializeZividDataModel(const std::string & serialized)
-{
-  return ZividDataModel::fromSerialized(serialized);
-}
-
-template <typename Function, typename ResponseSharedPtr, typename Logger>
-void runFunctionAndCatchExceptions(
-  Function && function, ResponseSharedPtr & response, const Logger & logger,
-  const std::string & operation)
-{
-  try {
-    function();
-    response->success = true;
-  } catch (const std::exception & exception) {
-    const auto exception_message = Zivid::toString(exception);
-    RCLCPP_ERROR_STREAM(
-      logger, operation + " failed with exception: \"" << exception_message << "\"");
-    response->success = false;
-    response->message = exception_message;
-  }
-}
-
-template <typename Logger>
-[[noreturn]] void logErrorToLoggerAndThrowRuntimeException(
-  const Logger & logger, const std::string & message)
-{
-  RCLCPP_ERROR(logger, "%s", message.c_str());
-  throw std::runtime_error(message);
-}
 }  // namespace
 
 namespace zivid_camera
 {
-
 namespace ParamNames
 {
 constexpr auto serial_number = "serial_number";
 constexpr auto file_camera_path = "file_camera_path";
 constexpr auto frame_id = "frame_id";
 }  // namespace ParamNames
-
-template <typename SettingsType>
-class CaptureSettingsController
-{
-public:
-  explicit CaptureSettingsController(rclcpp::Node & node)
-  : node_(node),
-    file_path_param_{baseName() + std::string{"_file_path"}},
-    yaml_string_param_{baseName() + std::string{"_yaml"}}
-  {
-    for (const auto & param : {yaml_string_param_, file_path_param_}) {
-      node_.declare_parameter<std::string>(param, "");
-    }
-  }
-
-  SettingsType currentSettings() const
-  {
-    if (cached_settings_.has_value()) {
-      RCLCPP_DEBUG_STREAM(node_.get_logger(), "Using cached settings");
-      return *cached_settings_;
-    }
-
-    const auto settings_file_path = node_.get_parameter(file_path_param_).as_string();
-    const auto settings_yaml = node_.get_parameter(yaml_string_param_).as_string();
-
-    if (!settings_file_path.empty() && !settings_yaml.empty()) {
-      logErrorToLoggerAndThrowRuntimeException(
-        node_.get_logger(),
-        "Both '" + file_path_param_ + "' and '" + yaml_string_param_ +
-          "' parameters are non-empty! Please set only one of these parameters.");
-    } else if (settings_file_path.empty() && settings_yaml.empty()) {
-      logErrorToLoggerAndThrowRuntimeException(
-        node_.get_logger(), "Both '" + file_path_param_ + "' and '" + yaml_string_param_ +
-                              "' parameters are empty! Please set one of these parameters.");
-    }
-
-    if (!settings_yaml.empty()) {
-      RCLCPP_DEBUG_STREAM(node_.get_logger(), "Using settings from yml string");
-      cached_settings_ = deserializeZividDataModel<SettingsType>(settings_yaml);
-    } else {
-      RCLCPP_DEBUG_STREAM(
-        node_.get_logger(), "Using settings from file '" << settings_file_path << "'");
-      cached_settings_ = SettingsType{settings_file_path};
-    }
-
-    return *cached_settings_;
-  }
-
-  void setSettings(const SettingsType & settings)
-  {
-    RCLCPP_DEBUG_STREAM(node_.get_logger(), "Setting settings from " << settings.name << " object");
-    node_.set_parameter(rclcpp::Parameter{yaml_string_param_, serializeZividDataModel(settings)});
-    node_.set_parameter(rclcpp::Parameter{file_path_param_, ""});
-  }
-
-  void onSetParameter(const std::string & parameterName)
-  {
-    if (
-      cached_settings_.has_value() &&
-      (parameterName == file_path_param_ || parameterName == yaml_string_param_)) {
-      RCLCPP_DEBUG_STREAM(
-        node_.get_logger(), "Resetting cached settings due to updated parameter " << parameterName);
-      cached_settings_.reset();
-    }
-  }
-
-private:
-  constexpr auto baseName() const
-  {
-    if constexpr (std::is_same_v<SettingsType, Zivid::Settings>) {
-      return "settings";
-    } else if constexpr (std::is_same_v<SettingsType, Zivid::Settings2D>) {
-      return "settings_2d";
-    } else {
-      static_assert(DependentFalse<SettingsType>::value, "Unhandled node type");
-    }
-  }
-
-  rclcpp::Node & node_;
-  std::string file_path_param_;
-  std::string yaml_string_param_;
-  mutable std::optional<SettingsType> cached_settings_;
-};
 
 ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
 : rclcpp::Node{"zivid_camera", options},
@@ -933,7 +808,6 @@ void ZividCamera::logErrorAndThrowRuntimeException(const std::string & message)
 {
   logErrorToLoggerAndThrowRuntimeException(get_logger(), message);
 }
-
 }  // namespace zivid_camera
 
 #include "rclcpp_components/register_node_macro.hpp"

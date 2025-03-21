@@ -106,6 +106,7 @@ if(BUILD_TESTING)
       image_transport
       zivid_interfaces
   )
+  target_include_directories(${TEST_TARGET_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test/include)
   target_link_libraries(${TEST_TARGET_NAME} Zivid::Core ${ZIVID_DRIVER_COMPONENT_NAME})
 
 endif()

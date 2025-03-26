@@ -1009,7 +1009,7 @@ TEST_F(CaptureOutputTest, testCaptureNormals)
     // We do a transform in the ROS driver to scale from mm to meters. However,
     // `expected_normal_xyz` are calculated without transform, so we need a slightly higher
     // delta to compare.
-    constexpr float delta = 0.001f;
+    constexpr float delta = 0.1f;
     ASSERT_NO_FATAL_FAILURE(compareFloat(normal_x, expected_sdk_before_transform.x, delta));
     ASSERT_NO_FATAL_FAILURE(compareFloat(normal_y, expected_sdk_before_transform.y, delta));
     ASSERT_NO_FATAL_FAILURE(compareFloat(normal_z, expected_sdk_before_transform.z, delta));

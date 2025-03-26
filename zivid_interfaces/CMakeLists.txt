@@ -8,11 +8,16 @@ find_package(rosidl_default_generators REQUIRED)
 find_package(geometry_msgs REQUIRED)
 
 rosidl_generate_interfaces(zivid_interfaces
+                           "msg/DetectionResultCalibrationBoard.msg"
+                           "msg/DetectionResultFiducialMarkers.msg"
                            "msg/FixedPlacementOfCalibrationBoard.msg"
                            "msg/FixedPlacementOfCalibrationObjects.msg"
                            "msg/FixedPlacementOfFiducialMarker.msg"
                            "msg/HandEyeCalibrationObjects.msg"
                            "msg/HandEyeCalibrationResidual.msg"
+                           "msg/MarkerShape.msg"
+                           "srv/CaptureAndDetectCalibrationBoard.srv"
+                           "srv/CaptureAndDetectMarkers.srv"
                            "srv/CaptureAndSave.srv"
                            "srv/CaptureAssistantSuggestSettings.srv"
                            "srv/CameraInfoModelName.srv"

@@ -241,6 +241,39 @@ capture, see [capture](#capture).
 
 See [Sample Capture 2D](#sample-capture-2d) for code example.
 
+### capture_and_detect_calibration_board
+[zivid_interfaces/srv/CaptureAndDetectCalibrationBoard.srv](./zivid_interfaces/srv/CaptureAndDetectCalibrationBoard.srv)
+
+Performs a capture to detect a calibration board and estimate its pose. This service call will perform a relatively slow
+but high-quality point cloud capture with the connected camera. Any settings applied to the camera in the ROS driver
+will be ignored for calls to this service, appropriate settings are automatically used. The resulting point cloud and
+color image will be published just like during a normal call to the [capture](#capture) service.
+
+The returned data from the service includes a member of the type
+[DetectionResultCalibrationBoard.msg](./zivid_interfaces/msg/DetectionResultCalibrationBoard.msg), with details on any
+detected calibration board.
+
+The functionality is to be exclusively used in combination with Zivid verified calibration boards. For further
+information please visit [Zivid help page](https://support.zivid.com).
+
+### capture_and_detect_markers
+[zivid_interfaces/srv/CaptureAndDetectMarkers.srv](./zivid_interfaces/srv/CaptureAndDetectMarkers.srv)
+
+Performs a capture to detect fiducial markers, such as ArUco markers, and estimate their poses. As opposed to the
+[capture_and_detect_calibration_board](#capture_and_detect_calibration_board) service, this service uses the current
+settings applied to the camera. See section [Configuration](#configuration) for how to configure the 3D capture
+settings. The resulting point cloud and color image will be published just like during a normal call to the
+[capture](#capture) service.
+
+The name of the fiducial dictionary must be provided, along with a list of marker IDs. The scene may not need not
+contain all listed markers for a successful detection. For further information on fiducial markers see [this wikipedia
+page](https://en.wikipedia.org/wiki/Fiducial_marker). For more information on ArUco markers specifically, refer to the
+[OpenCV documentation](https://docs.opencv.org/4.x/d5/dae/tutorial_aruco_detection.html).
+
+The returned data from the service includes a member of the type
+[DetectionResultFiducialMarkers.msg](./zivid_interfaces/msg/DetectionResultFiducialMarkers.msg), with details on any
+detected fiducial markers.
+
 ### capture_and_save
 [zivid_interfaces/srv/CaptureAndSave.srv](./zivid_interfaces/srv/CaptureAndSave.srv)
 
@@ -547,6 +580,40 @@ Using ros2 run (when `zivid_camera` node is already running):
 ```bash
 ros2 run zivid_samples sample_capture_2d_cpp
 ros2 run zivid_samples sample_capture_2d.py
+```
+
+### Sample Capture and Detect Calibration Board
+
+This sample performs a capture and detects any calibration board in the current scene. It shows how to invoke the
+[capture_and_detect_calibration_board](#capture_and_detect_calibration_board) service and log the detection results.
+
+Source code: [C++](./zivid_samples/src/sample_capture_and_detect_calibration_board.cpp)
+
+```bash
+ros2 launch zivid_samples sample.launch sample:=sample_capture_and_detect_calibration_board_cpp
+```
+
+Using ros2 run (when `zivid_camera` node is already running):
+
+```bash
+ros2 run zivid_samples sample_capture_and_detect_calibration_board_cpp
+```
+
+### Sample Capture and Detect Markers
+
+This sample performs a capture and detects any fiducial markers in the current scene. It shows how to invoke the
+[capture_and_detect_markers](#capture_and_detect_markers) service and log the detection result.
+
+Source code: [C++](./zivid_samples/src/sample_capture_and_detect_markers.cpp)
+
+```bash
+ros2 launch zivid_samples sample.launch sample:=sample_capture_and_detect_markers_cpp
+```
+
+Using ros2 run (when `zivid_camera` node is already running):
+
+```bash
+ros2 run zivid_samples sample_capture_and_detect_markers_cpp
 ```
 
 ### Sample Capture and Save

@@ -46,6 +46,7 @@
 #include <std_srvs/srv/trigger.hpp>
 #include <thread>
 #include <zivid_camera/capture_settings_controller.hpp>
+#include <zivid_camera/detector_controller.hpp>
 #include <zivid_camera/hand_eye_calibration_controller.hpp>
 #include <zivid_camera/infield_correction_controller.hpp>
 #include <zivid_camera/utility.hpp>
@@ -394,6 +395,8 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
       "capture_assistant/suggest_settings",
       std::bind(&ZividCamera::captureAssistantSuggestSettingsServiceHandler, this, _1, _2, _3));
 
+  detector_controller_ = std::make_unique<DetectorController>(
+    *this, *camera_, *settings_controller_, ControllerInterface{*this});
   infield_correction_controller_ =
     std::make_unique<InfieldCorrectionController>(*this, *camera_, ControllerInterface{*this});
   hand_eye_calibration_controller_ = std::make_unique<HandEyeCalibrationController>(

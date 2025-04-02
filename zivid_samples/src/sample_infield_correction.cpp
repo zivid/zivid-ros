@@ -132,6 +132,51 @@ std::string capture_status_to_string(
   }
 }
 
+std::string detection_status_to_string(
+  const std::shared_ptr<rclcpp::Node> & node,
+  const zivid_interfaces::msg::DetectionResultCalibrationBoard & msg)
+{
+  using zivid_interfaces::msg::DetectionResultCalibrationBoard;
+  switch (msg.status) {
+    case DetectionResultCalibrationBoard::STATUS_NOT_SET:
+      return "STATUS_NOT_SET";
+    case DetectionResultCalibrationBoard::STATUS_OK:
+      return "STATUS_OK";
+    case DetectionResultCalibrationBoard::STATUS_NO_VALID_FIDUCIAL_MARKER_DETECTED:
+      return "STATUS_NO_VALID_FIDUCIAL_MARKER_DETECTED";
+    case DetectionResultCalibrationBoard::STATUS_MULTIPLE_VALID_FIDUCIAL_MARKERS_DETECTED:
+      return "STATUS_MULTIPLE_VALID_FIDUCIAL_MARKERS_DETECTED";
+    case DetectionResultCalibrationBoard::STATUS_BOARD_DETECTION_FAILED:
+      return "STATUS_BOARD_DETECTION_FAILED";
+    case DetectionResultCalibrationBoard::STATUS_INSUFFICIENT_3D_QUALITY:
+      return "STATUS_INSUFFICIENT_3D_QUALITY";
+    default:
+      fatal_error(node->get_logger(), "Invalid status: " + std::to_string(msg.status));
+  }
+}
+
+void print_detection_result_calibration_board(
+  const std::shared_ptr<rclcpp::Node> & node,
+  const zivid_interfaces::msg::DetectionResultCalibrationBoard & detection_result)
+{
+  RCLCPP_INFO(node->get_logger(), "  Detection result:");
+  RCLCPP_INFO(
+    node->get_logger(), "    Status: %s",
+    detection_status_to_string(node, detection_result).c_str());
+  RCLCPP_INFO(
+    node->get_logger(), "    Status description: %s", detection_result.status_description.c_str());
+  RCLCPP_INFO(
+    node->get_logger(), "    Centroid in meter: %g, %g, %g", detection_result.centroid.x,
+    detection_result.centroid.y, detection_result.centroid.z);
+  RCLCPP_INFO(
+    node->get_logger(),
+    "    Pose: {{ Position in meter: %g, %g, %g }, { Orientation as quaternion: %g, %g, %g, %g }}",
+    detection_result.pose.position.x, detection_result.pose.position.y,
+    detection_result.pose.position.z, detection_result.pose.orientation.x,
+    detection_result.pose.orientation.y, detection_result.pose.orientation.z,
+    detection_result.pose.orientation.w);
+}
+
 bool request_capture_and_print_response(
   const rclcpp::Node::SharedPtr & node,
   const std::shared_ptr<rclcpp::Client<zivid_interfaces::srv::InfieldCorrectionCapture>> & client)
@@ -149,7 +194,7 @@ bool request_capture_and_print_response(
     result->message.empty() ? "" : (R"(""")" + result->message + R"(""")").c_str());
   RCLCPP_INFO(node->get_logger(), "  Status: %s", capture_status_to_string(node, *result).c_str());
   RCLCPP_INFO(node->get_logger(), "  Number of captures: %d", result->number_of_captures);
-
+  print_detection_result_calibration_board(node, result->detection_result);
   return result->success;
 }
 

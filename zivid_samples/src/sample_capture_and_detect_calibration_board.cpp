@@ -46,6 +46,28 @@ auto create_detect_markers_client(std::shared_ptr<rclcpp::Node> & node)
   return client;
 }
 
+void print_detection_result_calibration_board(
+  std::shared_ptr<rclcpp::Node> & node,
+  const zivid_interfaces::msg::DetectionResultCalibrationBoard & detection_result)
+{
+  RCLCPP_INFO(node->get_logger(), "  Detection result:");
+  RCLCPP_INFO(
+    node->get_logger(), "    Status: %s",
+    detection_status_to_string(node, detection_result).c_str());
+  RCLCPP_INFO(
+    node->get_logger(), "    Status description: %s", detection_result.status_description.c_str());
+  RCLCPP_INFO(
+    node->get_logger(), "    Centroid in meter: %g, %g, %g", detection_result.centroid.x,
+    detection_result.centroid.y, detection_result.centroid.z);
+  RCLCPP_INFO(
+    node->get_logger(),
+    "    Pose: {{ Position in meter: %g, %g, %g }, { Orientation as quaternion: %g, %g, %g, %g }}",
+    detection_result.pose.position.x, detection_result.pose.position.y,
+    detection_result.pose.position.z, detection_result.pose.orientation.x,
+    detection_result.pose.orientation.y, detection_result.pose.orientation.z,
+    detection_result.pose.orientation.w);
+}
+
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
@@ -68,24 +90,7 @@ int main(int argc, char * argv[])
   RCLCPP_INFO(
     node->get_logger(), "  Message: %s",
     result->message.empty() ? "" : (R"(""")" + result->message + R"(""")").c_str());
-
-  RCLCPP_INFO(node->get_logger(), "  Detection result:");
-  const auto & detection_result = result->detection_result;
-  RCLCPP_INFO(
-    node->get_logger(), "    Status: %s",
-    detection_status_to_string(node, detection_result).c_str());
-  RCLCPP_INFO(
-    node->get_logger(), "    Status description: %s", detection_result.status_description.c_str());
-  RCLCPP_INFO(
-    node->get_logger(), "    Centroid in meter: %g, %g, %g", detection_result.centroid.x,
-    detection_result.centroid.y, detection_result.centroid.z);
-  RCLCPP_INFO(
-    node->get_logger(),
-    "    Pose: {{ Position in meter: %g, %g, %g }, { Orientation as quaternion: %g, %g, %g, %g }}",
-    detection_result.pose.position.x, detection_result.pose.position.y,
-    detection_result.pose.position.z, detection_result.pose.orientation.x,
-    detection_result.pose.orientation.y, detection_result.pose.orientation.z,
-    detection_result.pose.orientation.w);
+  print_detection_result_calibration_board(node, result->detection_result);
 
   RCLCPP_INFO(node->get_logger(), "Spinning node.. Press Ctrl+C to abort.");
   rclcpp::spin(node);

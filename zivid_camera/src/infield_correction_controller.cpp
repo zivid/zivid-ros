@@ -266,6 +266,8 @@ void InfieldCorrectionController::captureServiceHandler(
             "Unhandled status value: " + std::to_string(static_cast<int>(input.status())));
       }
 
+      response->detection_result = toZividMsgDetectionResult(detectionResult);
+
       if (input.valid()) {
         dataset.push_back(input);
         response->number_of_captures = safeCast<int>(dataset.size());

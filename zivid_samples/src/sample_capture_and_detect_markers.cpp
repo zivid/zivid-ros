@@ -60,6 +60,23 @@ auto create_detect_markers_client(std::shared_ptr<rclcpp::Node> & node)
   return client;
 }
 
+void print_detection_result_fiducial_markers(
+  const std::shared_ptr<rclcpp::Node> & node,
+  const zivid_interfaces::msg::DetectionResultFiducialMarkers & detection_result)
+{
+  RCLCPP_INFO(node->get_logger(), "  Detected markers:");
+  for (const auto & marker : detection_result.detected_markers) {
+    RCLCPP_INFO(node->get_logger(), "  - ID: %d", marker.id);
+    RCLCPP_INFO(
+      node->get_logger(),
+      "    Pose: {{ Position in meter: %g, %g, %g }, { Orientation as quaternion: %g, %g, %g, %g "
+      "}}",
+      marker.pose.position.x, marker.pose.position.y, marker.pose.position.z,
+      marker.pose.orientation.x, marker.pose.orientation.y, marker.pose.orientation.z,
+      marker.pose.orientation.w);
+  }
+}
+
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
@@ -84,19 +101,7 @@ int main(int argc, char * argv[])
   RCLCPP_INFO(
     node->get_logger(), "  Message: %s",
     result->message.empty() ? "" : (R"(""")" + result->message + R"(""")").c_str());
-
-  RCLCPP_INFO(node->get_logger(), "  Detected markers:");
-  const auto & detection_result = result->detection_result;
-  for (const auto & marker : detection_result.detected_markers) {
-    RCLCPP_INFO(node->get_logger(), "  - ID: %d", marker.id);
-    RCLCPP_INFO(
-      node->get_logger(),
-      "    Pose: {{ Position in meter: %g, %g, %g }, { Orientation as quaternion: %g, %g, %g, %g "
-      "}}",
-      marker.pose.position.x, marker.pose.position.y, marker.pose.position.z,
-      marker.pose.orientation.x, marker.pose.orientation.y, marker.pose.orientation.z,
-      marker.pose.orientation.w);
-  }
+  print_detection_result_fiducial_markers(node, result->detection_result);
 
   RCLCPP_INFO(node->get_logger(), "Spinning node.. Press Ctrl+C to abort.");
   rclcpp::spin(node);

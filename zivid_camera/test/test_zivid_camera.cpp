@@ -263,6 +263,42 @@ Settings:
   topics_subscriber.assert_num_topics_received(2U);
 }
 
+TEST_F(TestWithFileCamera, testCaptureInvalidColorSpaceErrors)
+{
+  AllCaptureTopicsSubscriber topics_subscriber(*this);
+
+  setNodeParameter(parameter_color_space, "invalid_color_space");
+
+  verifyTriggerResponseError(
+    doSingleDefaultAcquisitionCaptureUsingFilePath(),
+    "Invalid value for parameter 'color_space': 'invalid_color_space'. Expected one of: "
+    "linear_rgb, srgb.");
+  topics_subscriber.assert_num_topics_received(0U);
+
+  setNodeParameter(parameter_color_space, "srgb");
+
+  verifyTriggerResponseSuccess(doSingleDefaultAcquisitionCaptureUsingFilePath());
+  topics_subscriber.assert_num_topics_received(1U);
+}
+
+TEST_F(TestWithFileCamera, testCapture2DInvalidColorSpaceErrors)
+{
+  AllCapture2DTopicsSubscriber topics_subscriber(*this);
+
+  setNodeParameter(parameter_color_space, "invalid_color_space");
+
+  verifyTriggerResponseError(
+    doSingleDefaultAcquisitionCapture2DUsingFilePath(),
+    "Invalid value for parameter 'color_space': 'invalid_color_space'. Expected one of: "
+    "linear_rgb, srgb.");
+  topics_subscriber.assert_num_topics_received(0U);
+
+  setNodeParameter(parameter_color_space, "srgb");
+
+  verifyTriggerResponseSuccess(doSingleDefaultAcquisitionCapture2DUsingFilePath());
+  topics_subscriber.assert_num_topics_received(1U);
+}
+
 TEST_F(TestWithFileCamera, testCapture2DExceptionsReturnErrors)
 {
   AllCapture2DTopicsSubscriber topics_subscriber(*this);
@@ -368,44 +404,74 @@ protected:
       ASSERT_NEAR(ros_coordinate, sdk_coordinate / 1000, delta);
     }
   }
+
+  void assertPointCloud2MetaAndFields(const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pc2)
+  {
+    ASSERT_TRUE(pc2);
+    assertSensorMsgsPointCloud2Meta(*pc2, 1944U, 1200U, 16U);
+    ASSERT_EQ(pc2->fields.size(), 4U);
+    assertPointCloud2Field(pc2->fields[0], "x", 0, sensor_msgs::msg::PointField::FLOAT32, 1);
+    assertPointCloud2Field(pc2->fields[1], "y", 4, sensor_msgs::msg::PointField::FLOAT32, 1);
+    assertPointCloud2Field(pc2->fields[2], "z", 8, sensor_msgs::msg::PointField::FLOAT32, 1);
+    assertPointCloud2Field(pc2->fields[3], "rgba", 12, sensor_msgs::msg::PointField::UINT32, 1);
+  }
+
+  template <typename ZividDataType>
+  void comparePointCloud(
+    const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pc2,
+    const Zivid::PointCloud & point_cloud)
+  {
+    static_assert(
+      std::is_same_v<ZividDataType, Zivid::PointXYZColorRGBA> ||
+      std::is_same_v<ZividDataType, Zivid::PointXYZColorRGBA_SRGB>);
+    const auto expected_xyzrgba = point_cloud.copyData<ZividDataType>();
+    ASSERT_EQ(pc2->width, expected_xyzrgba.width());
+    ASSERT_EQ(pc2->height, expected_xyzrgba.height());
+    for (std::size_t i = 0; i < expected_xyzrgba.size(); i++) {
+      const uint8_t * point_ptr = &pc2->data[i * pc2->point_step];
+      const float x = *reinterpret_cast<const float *>(&point_ptr[0]);
+      const float y = *reinterpret_cast<const float *>(&point_ptr[4]);
+      const float z = *reinterpret_cast<const float *>(&point_ptr[8]);
+      const uint32_t argb = *reinterpret_cast<const uint32_t *>(&point_ptr[12]);
+      const auto & expected = expected_xyzrgba(i);
+
+      comparePointCoordinate(x, expected.point.x);
+      comparePointCoordinate(y, expected.point.y);
+      comparePointCoordinate(z, expected.point.z);
+      const auto expected_argb = static_cast<uint32_t>(expected.color.a << 24) |
+                                 static_cast<uint32_t>(expected.color.r << 16) |
+                                 static_cast<uint32_t>(expected.color.g << 8) |
+                                 static_cast<uint32_t>(expected.color.b);
+      ASSERT_EQ(argb, expected_argb);
+    }
+  }
 };
 
-TEST_F(CaptureOutputTest, testCapturePointsXYZGBA)
+TEST_F(CaptureOutputTest, testCapturePointsXYZGBA_SRGB)
 {
   auto points_sub = subscribe<sensor_msgs::msg::PointCloud2>(points_xyzrgba_topic_name);
 
   doSingleDefaultAcquisitionCaptureUsingFilePath();
 
   const auto last_pc2 = points_sub.lastMessage();
-  ASSERT_TRUE(last_pc2);
-  assertSensorMsgsPointCloud2Meta(*last_pc2, 1944U, 1200U, 16U);
-  ASSERT_EQ(last_pc2->fields.size(), 4U);
-  assertPointCloud2Field(last_pc2->fields[0], "x", 0, sensor_msgs::msg::PointField::FLOAT32, 1);
-  assertPointCloud2Field(last_pc2->fields[1], "y", 4, sensor_msgs::msg::PointField::FLOAT32, 1);
-  assertPointCloud2Field(last_pc2->fields[2], "z", 8, sensor_msgs::msg::PointField::FLOAT32, 1);
-  assertPointCloud2Field(last_pc2->fields[3], "rgba", 12, sensor_msgs::msg::PointField::UINT32, 1);
+  assertPointCloud2MetaAndFields(last_pc2);
 
   const auto point_cloud = captureViaSDKDefaultSettings();
-  const auto expected_xyzrgba = point_cloud.copyData<Zivid::PointXYZColorRGBA>();
-  ASSERT_EQ(last_pc2->width, expected_xyzrgba.width());
-  ASSERT_EQ(last_pc2->height, expected_xyzrgba.height());
-  for (std::size_t i = 0; i < expected_xyzrgba.size(); i++) {
-    const uint8_t * point_ptr = &last_pc2->data[i * last_pc2->point_step];
-    const float x = *reinterpret_cast<const float *>(&point_ptr[0]);
-    const float y = *reinterpret_cast<const float *>(&point_ptr[4]);
-    const float z = *reinterpret_cast<const float *>(&point_ptr[8]);
-    const uint32_t argb = *reinterpret_cast<const uint32_t *>(&point_ptr[12]);
-    const auto & expected = expected_xyzrgba(i);
+  comparePointCloud<Zivid::PointXYZColorRGBA_SRGB>(last_pc2, point_cloud);
+}
 
-    comparePointCoordinate(x, expected.point.x);
-    comparePointCoordinate(y, expected.point.y);
-    comparePointCoordinate(z, expected.point.z);
-    const auto expected_argb = static_cast<uint32_t>(expected.color.a << 24) |
-                               static_cast<uint32_t>(expected.color.r << 16) |
-                               static_cast<uint32_t>(expected.color.g << 8) |
-                               static_cast<uint32_t>(expected.color.b);
-    ASSERT_EQ(argb, expected_argb);
-  }
+TEST_F(CaptureOutputTest, testCapturePointsXYZGBA_LinearRGB)
+{
+  auto points_sub = subscribe<sensor_msgs::msg::PointCloud2>(points_xyzrgba_topic_name);
+
+  setNodeColorSpaceLinearRGB();
+  doSingleDefaultAcquisitionCaptureUsingFilePath();
+
+  const auto last_pc2 = points_sub.lastMessage();
+  assertPointCloud2MetaAndFields(last_pc2);
+
+  const auto point_cloud = captureViaSDKDefaultSettings();
+  comparePointCloud<Zivid::PointXYZColorRGBA>(last_pc2, point_cloud);
 }
 
 TEST_F(CaptureOutputTest, testCapturePointsXYZ)
@@ -505,8 +571,24 @@ Settings:
   }
 }
 
-TEST_F(CaptureOutputTest, testCapture3DColorImage)
+TEST_F(CaptureOutputTest, testCapture3DColorImageSRGB)
 {
+  auto color_image_sub = subscribe<sensor_msgs::msg::Image>(color_image_color_topic_name);
+
+  doSingleDefaultAcquisitionCaptureUsingFilePath();
+  const auto image = color_image_sub.lastMessage();
+  ASSERT_TRUE(image);
+  const std::size_t bytes_per_pixel = 4U;
+  assertSensorMsgsImageMeta(*image, 1944U, 1200U, bytes_per_pixel, "rgba8");
+
+  const auto point_cloud = captureViaSDKDefaultSettings();
+  const auto expected_rgba = point_cloud.copyData<Zivid::ColorRGBA_SRGB>();
+  assertSensorMsgsImageContents(*image, expected_rgba);
+}
+
+TEST_F(CaptureOutputTest, testCapture3DColorImageLinearRGB)
+{
+  setNodeColorSpaceLinearRGB();
   auto color_image_sub = subscribe<sensor_msgs::msg::Image>(color_image_color_topic_name);
 
   doSingleDefaultAcquisitionCaptureUsingFilePath();
@@ -641,7 +723,9 @@ TEST_F(ZividNodeTest, testCaptureCameraInfo)
 class Capture2DOutputTest : public CaptureOutputTest
 {
 public:
-  void testCapture2D(const std::string & settings_yaml)
+  using ColorSpace = zivid_camera::ColorSpace;
+
+  void testCapture2D(const std::string & settings_yaml, ColorSpace color_space)
   {
     AllCapture2DTopicsSubscriber all_capture_2d_topics_subscriber(*this);
 
@@ -657,7 +741,17 @@ public:
     auto verify_image_and_camera_info = [&](const auto & img, const auto & info) {
       assertCameraInfoForFileCamera(info);
       assertSensorMsgsImageMeta(img, 1944U, 1200U, 4U, "rgba8");
-      assertSensorMsgsImageContents(img, frame_2d_from_sdk.imageRGBA());
+      switch (color_space) {
+        case ColorSpace::sRGB:
+          assertSensorMsgsImageContents(img, frame_2d_from_sdk.imageRGBA_SRGB());
+          break;
+        case ColorSpace::LinearRGB:
+          assertSensorMsgsImageContents(img, frame_2d_from_sdk.imageRGBA());
+          break;
+        default:
+          throw std::runtime_error(
+            "Unknown color space: " + std::to_string(static_cast<int>(color_space)));
+      }
     };
 
     verify_image_and_camera_info(
@@ -688,7 +782,8 @@ Settings2D:
   Acquisitions:
     - Acquisition:
        Aperture: 4
-  )");
+  )",
+    ColorSpace::sRGB);
 }
 
 TEST_F(Capture2DOutputTest, testCapture2DCustomColorBalance)
@@ -708,7 +803,14 @@ Settings2D:
         Red: 2
         Blue: 3
         Green: 4
-  )");
+  )",
+    ColorSpace::sRGB);
+}
+
+TEST_F(Capture2DOutputTest, testCapture2DLinearRGB)
+{
+  setNodeColorSpaceLinearRGB();
+  testCapture2D(defaultSingleAcquisitionSettings2DYml(), ColorSpace::LinearRGB);
 }
 
 class CaptureAndSaveTest : public TestWithFileCamera

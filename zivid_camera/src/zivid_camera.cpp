@@ -38,6 +38,8 @@
 #include <Zivid/Version.h>
 
 #include <cstdint>
+#include <map>
+#include <numeric>
 #include <sensor_msgs/distortion_models.hpp>
 #include <sensor_msgs/image_encodings.hpp>
 #include <sstream>
@@ -106,6 +108,57 @@ sensor_msgs::msg::Image::SharedPtr makePointCloudImage(
   return image;
 }
 
+template <typename ZividDataType>
+sensor_msgs::msg::Image::SharedPtr makeImageFromZividImage(
+  const Zivid::Image<ZividDataType> & image, const std_msgs::msg::Header & header,
+  const std::string & encoding)
+{
+  auto msg = makeImage(header, encoding, image.width(), image.height());
+  const auto uint8_ptr_begin = reinterpret_cast<const uint8_t *>(image.data());
+
+#ifdef __clang__
+#if __has_warning("-Wunsafe-buffer-usage")
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
+#endif
+#endif
+  const auto uint8_ptr_end = reinterpret_cast<const uint8_t *>(image.data() + image.size());
+#ifdef __clang__
+#if __has_warning("-Wunsafe-buffer-usage")
+#pragma clang diagnostic pop
+#endif
+#endif
+
+  msg->data = std::vector<uint8_t>(uint8_ptr_begin, uint8_ptr_end);
+  return msg;
+}
+
+template <typename ZividDataType>
+sensor_msgs::msg::PointCloud2::UniquePtr makePointCloud2Msg(
+  const Zivid::PointCloud & point_cloud, const std_msgs::msg::Header & header)
+{
+  // Note that the "rgba" field is actually byte order "bgra" on little-endian systems. For this
+  // reason we use the Zivid BGRA type.
+  static_assert(
+    std::is_same_v<ZividDataType, Zivid::PointXYZColorBGRA> ||
+    std::is_same_v<ZividDataType, Zivid::PointXYZColorBGRA_SRGB>);
+
+  auto msg = std::make_unique<sensor_msgs::msg::PointCloud2>();
+  fillCommonMsgFields(*msg, header, point_cloud.width(), point_cloud.height());
+  msg->fields.reserve(4);
+  msg->fields.push_back(createPointField("x", 0, sensor_msgs::msg::PointField::FLOAT32, 1));
+  msg->fields.push_back(createPointField("y", 4, sensor_msgs::msg::PointField::FLOAT32, 1));
+  msg->fields.push_back(createPointField("z", 8, sensor_msgs::msg::PointField::FLOAT32, 1));
+  msg->fields.push_back(createPointField("rgba", 12, sensor_msgs::msg::PointField::UINT32, 1));
+  msg->is_dense = false;
+
+  msg->point_step = sizeof(ZividDataType);
+  msg->row_step = msg->point_step * msg->width;
+  msg->data.resize(msg->row_step * msg->height);
+  point_cloud.copyData<ZividDataType>(reinterpret_cast<ZividDataType *>(msg->data.data()));
+  return msg;
+}
+
 rclcpp::QoS getQoSLatched(bool use_latched_publisher)
 {
   rclcpp::QoS qos{rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_default)};
@@ -128,6 +181,35 @@ std::string toString(zivid_camera::CameraStatus camera_status)
       throw std::runtime_error("Enum `camera_status` out of range.");
   }
 }
+
+template <typename List, typename ToStringFunc>
+std::string joinListToString(const List & list, ToStringFunc && to_string_func)
+{
+  return list.empty()
+           ? std::string()
+           : std::accumulate(
+               std::next(std::begin(list)), std::end(list), to_string_func(*std::begin(list)),
+               [&](const std::string & str, const auto & entry) {
+                 return str + ", " + to_string_func(entry);
+               });
+}
+
+template <typename Enum>
+Enum parameterStringToEnum(
+  const std::string & name, const std::string & value,
+  const std::map<std::string, Enum> & name_value_map)
+{
+  const auto it = name_value_map.find(value);
+  if (it == name_value_map.end()) {
+    const std::string valid_values =
+      joinListToString(name_value_map, [](auto && pair) { return pair.first; });
+    throw std::runtime_error(
+      "Invalid value for parameter '" + name + "': '" + value +
+      "'. Expected one of: " + valid_values + ".");
+  }
+  return it->second;
+}
+
 }  // namespace
 
 namespace zivid_camera
@@ -137,10 +219,15 @@ namespace ParamNames
 constexpr auto serial_number = "serial_number";
 constexpr auto file_camera_path = "file_camera_path";
 constexpr auto frame_id = "frame_id";
+constexpr auto color_space = "color_space";
 }  // namespace ParamNames
 
 ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
 : rclcpp::Node{"zivid_camera", options},
+  color_space_name_value_map_{
+    {"srgb", zivid_camera::ColorSpace::sRGB},
+    {"linear_rgb", zivid_camera::ColorSpace::LinearRGB},
+  },
   zivid_{std::make_unique<Zivid::Application>(
     Zivid::Detail::createApplicationForWrapper(Zivid::Detail::EnvironmentInfo::Wrapper::ros2))},
   set_parameters_callback_handle_{this->add_on_set_parameters_callback(
@@ -164,6 +251,8 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
   const auto serial_number = declare_parameter<std::string>(ParamNames::serial_number, "");
 
   frame_id_ = declare_parameter<std::string>(ParamNames::frame_id, "zivid_optical_frame");
+
+  declare_parameter<std::string>(ParamNames::color_space, "linear_rgb");
 
   const auto file_camera_path = declare_parameter(ParamNames::file_camera_path, "");
   const bool file_camera_mode = !file_camera_path.empty();
@@ -446,14 +535,31 @@ void ZividCamera::capture2DServiceHandler(
 
   runFunctionAndCatchExceptions(
     [&]() {
+      const auto color_space = colorSpace();
       const auto settings2D = settings_2d_controller_->currentSettings();
       auto frame2D = camera_->capture(settings2D);
       if (shouldPublishColorImg()) {
         const auto header = makeHeader();
-        auto image = frame2D.imageRGBA();
         const auto intrinsics = Zivid::Experimental::Calibration::intrinsics(*camera_);
-        const auto camera_info = makeCameraInfo(header, image.width(), image.height(), intrinsics);
-        publishColorImage(header, camera_info, image);
+
+        switch (color_space) {
+          case ColorSpace::sRGB: {
+            auto image = frame2D.imageRGBA_SRGB();
+            const auto camera_info =
+              makeCameraInfo(header, image.width(), image.height(), intrinsics);
+            publishColorImage(header, camera_info, image);
+          } break;
+          case ColorSpace::LinearRGB: {
+            auto image = frame2D.imageRGBA();
+            const auto camera_info =
+              makeCameraInfo(header, image.width(), image.height(), intrinsics);
+            publishColorImage(header, camera_info, image);
+          } break;
+          default:
+            throw std::runtime_error(
+              "Internal error: Unknown color space value " +
+              std::to_string(static_cast<int>(color_space)));
+        }
       }
     },
     response, get_logger(), "Capture2D");
@@ -541,6 +647,7 @@ void ZividCamera::publishFrame(const Zivid::Frame & frame)
   if (
     publish_points_xyz || publish_points_xyzrgba || publish_color_img || publish_depth_img ||
     publish_snr_img || publish_normals_xyz) {
+    const auto color_space = colorSpace();
     const auto header = makeHeader();
     auto point_cloud = frame.pointCloud();
 
@@ -554,7 +661,7 @@ void ZividCamera::publishFrame(const Zivid::Frame & frame)
       publishPointCloudXYZ(header, point_cloud);
     }
     if (publish_points_xyzrgba) {
-      publishPointCloudXYZRGBA(header, point_cloud);
+      publishPointCloudXYZRGBA(header, point_cloud, color_space);
     }
     if (publish_color_img || publish_depth_img || publish_snr_img) {
       const auto intrinsics = Zivid::Experimental::Calibration::intrinsics(*camera_);
@@ -562,7 +669,7 @@ void ZividCamera::publishFrame(const Zivid::Frame & frame)
         makeCameraInfo(header, point_cloud.width(), point_cloud.height(), intrinsics);
 
       if (publish_color_img) {
-        publishColorImage(header, camera_info, point_cloud);
+        publishColorImage(header, camera_info, point_cloud, color_space);
       }
       if (publish_depth_img) {
         publishDepthImage(header, camera_info, point_cloud);
@@ -647,38 +754,47 @@ void ZividCamera::publishPointCloudXYZ(
 }
 
 void ZividCamera::publishPointCloudXYZRGBA(
-  const std_msgs::msg::Header & header, const Zivid::PointCloud & point_cloud)
+  const std_msgs::msg::Header & header, const Zivid::PointCloud & point_cloud,
+  ColorSpace color_space)
 {
   RCLCPP_INFO_STREAM(get_logger(), "Publishing " << points_xyzrgba_publisher_->get_topic_name());
 
-  auto msg = std::make_unique<sensor_msgs::msg::PointCloud2>();
-  fillCommonMsgFields(*msg, header, point_cloud.width(), point_cloud.height());
-  msg->fields.reserve(4);
-  msg->fields.push_back(createPointField("x", 0, sensor_msgs::msg::PointField::FLOAT32, 1));
-  msg->fields.push_back(createPointField("y", 4, sensor_msgs::msg::PointField::FLOAT32, 1));
-  msg->fields.push_back(createPointField("z", 8, sensor_msgs::msg::PointField::FLOAT32, 1));
-  msg->fields.push_back(createPointField("rgba", 12, sensor_msgs::msg::PointField::UINT32, 1));
-  msg->is_dense = false;
-
-  // Note that the "rgba" field is actually byte order "bgra" on little-endian systems. For this
-  // reason we use the Zivid BGRA type.
-  using ZividDataType = Zivid::PointXYZColorBGRA;
-  msg->point_step = sizeof(ZividDataType);
-  msg->row_step = msg->point_step * msg->width;
-  msg->data.resize(msg->row_step * msg->height);
-  point_cloud.copyData<ZividDataType>(reinterpret_cast<ZividDataType *>(msg->data.data()));
+  auto msg = [&] {
+    switch (color_space) {
+      case ColorSpace::sRGB:
+        return makePointCloud2Msg<Zivid::PointXYZColorBGRA_SRGB>(point_cloud, header);
+      case ColorSpace::LinearRGB:
+        return makePointCloud2Msg<Zivid::PointXYZColorBGRA>(point_cloud, header);
+      default:
+        throw std::runtime_error(
+          "Internal error: Unknown color space value " +
+          std::to_string(static_cast<int>(color_space)));
+    }
+  }();
   points_xyzrgba_publisher_->publish(std::move(msg));
 }
 
 void ZividCamera::publishColorImage(
   const std_msgs::msg::Header & header,
   const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info,
-  const Zivid::PointCloud & point_cloud)
+  const Zivid::PointCloud & point_cloud, ColorSpace color_space)
 {
   RCLCPP_INFO_STREAM(
     get_logger(), "Publishing " << color_image_publisher_.getTopic() << " from point cloud");
-  auto image =
-    makePointCloudImage<Zivid::ColorRGBA>(point_cloud, header, sensor_msgs::image_encodings::RGBA8);
+  sensor_msgs::msg::Image::SharedPtr image = [&] {
+    switch (color_space) {
+      case ColorSpace::sRGB:
+        return makePointCloudImage<Zivid::ColorRGBA_SRGB>(
+          point_cloud, header, sensor_msgs::image_encodings::RGBA8);
+      case ColorSpace::LinearRGB:
+        return makePointCloudImage<Zivid::ColorRGBA>(
+          point_cloud, header, sensor_msgs::image_encodings::RGBA8);
+      default:
+        throw std::runtime_error(
+          "Internal error: Unknown color space value " +
+          std::to_string(static_cast<int>(color_space)));
+    }
+  }();
   color_image_publisher_.publish(image, camera_info);
 }
 
@@ -688,24 +804,21 @@ void ZividCamera::publishColorImage(
   const Zivid::Image<Zivid::ColorRGBA> & image)
 {
   RCLCPP_INFO_STREAM(
-    get_logger(), "Publishing " << color_image_publisher_.getTopic() << " from Image");
-  auto msg = makeImage(header, sensor_msgs::image_encodings::RGBA8, image.width(), image.height());
-  const auto uint8_ptr_begin = reinterpret_cast<const uint8_t *>(image.data());
+    get_logger(), "Publishing " << color_image_publisher_.getTopic() << " from linear RGB image");
+  auto msg =
+    makeImageFromZividImage<Zivid::ColorRGBA>(image, header, sensor_msgs::image_encodings::RGBA8);
+  color_image_publisher_.publish(msg, camera_info);
+}
 
-#ifdef __clang__
-#if __has_warning("-Wunsafe-buffer-usage")
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
-#endif
-#endif
-  const auto uint8_ptr_end = reinterpret_cast<const uint8_t *>(image.data() + image.size());
-#ifdef __clang__
-#if __has_warning("-Wunsafe-buffer-usage")
-#pragma clang diagnostic pop
-#endif
-#endif
-
-  msg->data = std::vector<uint8_t>(uint8_ptr_begin, uint8_ptr_end);
+void ZividCamera::publishColorImage(
+  const std_msgs::msg::Header & header,
+  const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info,
+  const Zivid::Image<Zivid::ColorRGBA_SRGB> & image)
+{
+  RCLCPP_INFO_STREAM(
+    get_logger(), "Publishing " << color_image_publisher_.getTopic() << " from sRGB image");
+  auto msg = makeImageFromZividImage<Zivid::ColorRGBA_SRGB>(
+    image, header, sensor_msgs::image_encodings::RGBA8);
   color_image_publisher_.publish(msg, camera_info);
 }
 
@@ -815,6 +928,13 @@ Zivid::Frame ZividCamera::invokeCaptureAndPublishFrame(const Zivid::Settings & s
 void ZividCamera::logErrorAndThrowRuntimeException(const std::string & message)
 {
   logErrorToLoggerAndThrowRuntimeException(get_logger(), message);
+}
+
+ColorSpace ZividCamera::colorSpace() const
+{
+  const auto color_space_str = get_parameter(ParamNames::color_space).as_string();
+  return parameterStringToEnum(
+    ParamNames::color_space, color_space_str, color_space_name_value_map_);
 }
 }  // namespace zivid_camera
 

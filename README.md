@@ -168,6 +168,22 @@ ros2 launch zivid_samples zivid_camera_with_serial_number.launch serial_number:=
 > Read more about [firmware update in our knowledgebase][firmware-update-kb-url].
 > This parameter is optional, and by default it is true.
 
+`color_space` (string, default: "linear_rgb")
+> Specify the color space to use when publishing point clouds and images. Valid values:
+>
+>  - `srgb`: Publish in the sRGB color space. The sRGB color space is suitable for showing an image
+>    on a display for human viewing. It is easier to see details in darker areas of an image in sRGB
+>    than in linear RGB, as more of the dynamic range is dedicated to darker colors. This format is
+>    assumed by default by most monitors and should be used when displaying an image. This option
+>    should be used to match colors to the visualization in Zivid Studio.
+>  - `linear_rgb`: Publish in linear RGB color space. Linear RGB is suitable as input to computer
+>    vision algorithms.
+>
+> In particular, this parameter affects the data published over the [color/image_color](#colorimage_color) and
+> [points/xyzrgba](#pointsxyzrgba) topics. Please see the Zivid knowledge base on
+> [2D Color Spaces and Output Formats](https://support.zivid.com/en/latest/reference-articles/color-spaces-and-output-formats.html)
+> for more details.
+
 ## Configuration
 
 The capture settings used by the `zivid_camera` ROS driver must be configured using YAML,
@@ -711,11 +727,23 @@ See section [Configuration](#configuration) for more details.
 ros2 run zivid_camera zivid_camera --ros-args -p settings_file_path:=/path/to/settings.yml -p settings_2d_file_path:=/path/to/settings2D.yml
 ```
 
+### How to start the driver using the sRGB color space set
+
+```bash
+ros2 run zivid_camera zivid_camera --ros-args -p color_space:=srgb
+```
 ### How to trigger 3D/2D capture via terminal
 
 ```bash
 ros2 service call /capture std_srvs/srv/Trigger
 ros2 service call /capture_2d std_srvs/srv/Trigger
+```
+
+### How to change the color space via terminal
+
+```bash
+ros2 param set zivid_camera color_space srgb
+ros2 param set zivid_camera color_space linear_rgb
 ```
 
 ### How to use a file camera

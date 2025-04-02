@@ -48,6 +48,8 @@ class Application;
 class Camera;
 class CameraIntrinsics;
 struct ColorRGBA;
+struct ColorSRGB;
+using ColorRGBA_SRGB = ColorSRGB;
 class Frame;
 template <typename T>
 class Image;
@@ -63,6 +65,11 @@ enum class CameraStatus
   Idle,
   Connected,
   Disconnected
+};
+enum class ColorSpace
+{
+  sRGB,
+  LinearRGB,
 };
 template <typename SettingsType>
 class CaptureSettingsController;
@@ -124,15 +131,20 @@ private:
   void publishPointCloudXYZ(
     const std_msgs::msg::Header & header, const Zivid::PointCloud & point_cloud);
   void publishPointCloudXYZRGBA(
-    const std_msgs::msg::Header & header, const Zivid::PointCloud & point_cloud);
+    const std_msgs::msg::Header & header, const Zivid::PointCloud & point_cloud,
+    ColorSpace color_space);
   void publishColorImage(
     const std_msgs::msg::Header & header,
     const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info,
-    const Zivid::PointCloud & point_cloud);
+    const Zivid::PointCloud & point_cloud, ColorSpace color_space);
   void publishColorImage(
     const std_msgs::msg::Header & header,
     const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info,
     const Zivid::Image<Zivid::ColorRGBA> & image);
+  void publishColorImage(
+    const std_msgs::msg::Header & header,
+    const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info,
+    const Zivid::Image<Zivid::ColorRGBA_SRGB> & image);
   void publishDepthImage(
     const std_msgs::msg::Header & header,
     const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info,
@@ -147,9 +159,11 @@ private:
     const std_msgs::msg::Header & header, std::size_t width, std::size_t height,
     const Zivid::CameraIntrinsics & intrinsics);
   [[noreturn]] void logErrorAndThrowRuntimeException(const std::string & message);
+  ColorSpace colorSpace() const;
 
   friend class ControllerInterface;
 
+  std::map<std::string, ColorSpace> color_space_name_value_map_;
   rclcpp::TimerBase::SharedPtr camera_connection_keepalive_timer_;
   bool use_latched_publisher_for_points_xyz_{false};
   bool use_latched_publisher_for_points_xyzrgba_{false};

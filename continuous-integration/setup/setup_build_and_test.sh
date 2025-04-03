@@ -84,9 +84,6 @@ ZIVID_RELEASE_DIR="https://downloads.zivid.com/sdk/releases/$CI_TEST_ZIVID_VERSI
 
 if [[ "$UBUNTU_VERSION" == "20.04" || "$UBUNTU_VERSION" == "22.04" || "$UBUNTU_VERSION" == "24.04" ]]; then
 
-    if [[ "$CI_TEST_DOWNLOAD_TELICAM" == 1 ]]; then
-        install_www_deb "$ZIVID_RELEASE_DIR/u20/zivid-telicam-driver_3.0.1.1-3_amd64.deb" || exit $?
-    fi
     install_www_deb "$ZIVID_RELEASE_DIR/u20/zivid_${CI_TEST_ZIVID_VERSION}_amd64.deb" || exit $?
 
 else

@@ -9,11 +9,14 @@ cd ~/ros2_ws || exit $?
 echo "Installing Zivid API config file"
 install -D "$SCRIPT_DIR"/ZividAPIConfigCPU.yml "$HOME"/.config/Zivid/API/Config.yml || exit $?
 
-echo "Download and install zivid sample data (file camera)"
-wget -q https://www.zivid.com/software/FileCameraZivid2M70.zip || exit $?
-mkdir -p /usr/share/Zivid/data/ || exit $?
-unzip ./FileCameraZivid2M70.zip -d /usr/share/Zivid/data/ || exit $?
-rm ./FileCameraZivid2M70.zip || exit $?
+echo "Download and install zivid sample data"
+for sample in "FileCameraZivid2M70.zip" "BinWithCalibrationBoard.zip"; do
+    echo "Downloading ${sample}"
+    wget -q "https://www.zivid.com/software/${sample}" || exit $?
+    mkdir -p /usr/share/Zivid/data/ || exit $?
+    unzip "./${sample}" -d /usr/share/Zivid/data/ || exit $?
+    rm "./${sample}" || exit $?
+done
 
 echo "Running tests"
 

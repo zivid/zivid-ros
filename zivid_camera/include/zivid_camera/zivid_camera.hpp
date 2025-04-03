@@ -66,6 +66,9 @@ enum class CameraStatus
 };
 template <typename SettingsType>
 class CaptureSettingsController;
+class HandEyeCalibrationController;
+class InfieldCorrectionController;
+class ControllerInterface;
 
 class ZividCamera : public rclcpp::Node
 {
@@ -145,6 +148,8 @@ private:
     const Zivid::CameraIntrinsics & intrinsics);
   [[noreturn]] void logErrorAndThrowRuntimeException(const std::string & message);
 
+  friend class ControllerInterface;
+
   rclcpp::TimerBase::SharedPtr camera_connection_keepalive_timer_;
   bool use_latched_publisher_for_points_xyz_{false};
   bool use_latched_publisher_for_points_xyzrgba_{false};
@@ -168,6 +173,9 @@ private:
   rclcpp::Service<zivid_interfaces::srv::CaptureAssistantSuggestSettings>::SharedPtr
     capture_assistant_suggest_settings_service_;
   rclcpp::Service<zivid_interfaces::srv::IsConnected>::SharedPtr is_connected_service_;
+
+  std::unique_ptr<InfieldCorrectionController> infield_correction_controller_;
+  std::unique_ptr<HandEyeCalibrationController> hand_eye_calibration_controller_;
 
   std::unique_ptr<Zivid::Application> zivid_;
   CameraStatus camera_status_{CameraStatus::Idle};

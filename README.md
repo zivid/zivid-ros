@@ -37,7 +37,7 @@ Zivid SDK 2.13 or older, or use the [`ros1-sdk-2.14.0` branch](https://github.co
 
 ### Zivid SDK
 
-To use the ROS driver you need to download and install the "Zivid Core" package. Zivid SDK version 2.9.0 to 2.14.2 is
+To use the ROS driver you need to download and install the "Zivid Core" package. Zivid SDK version 2.9.0 to 2.15.0 is
 supported. See [releases](https://github.com/zivid/zivid-ros/releases) for older ROS driver releases
 that supports older SDK versions.
 

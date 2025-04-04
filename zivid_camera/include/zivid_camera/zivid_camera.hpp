@@ -66,6 +66,7 @@ enum class CameraStatus
 };
 template <typename SettingsType>
 class CaptureSettingsController;
+class DetectorController;
 class HandEyeCalibrationController;
 class InfieldCorrectionController;
 class ControllerInterface;
@@ -174,6 +175,7 @@ private:
     capture_assistant_suggest_settings_service_;
   rclcpp::Service<zivid_interfaces::srv::IsConnected>::SharedPtr is_connected_service_;
 
+  std::unique_ptr<DetectorController> detector_controller_;
   std::unique_ptr<InfieldCorrectionController> infield_correction_controller_;
   std::unique_ptr<HandEyeCalibrationController> hand_eye_calibration_controller_;
 

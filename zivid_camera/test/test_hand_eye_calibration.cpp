@@ -317,11 +317,13 @@ TEST_F(TestHandEyeWithCalibrationBoard, testHandEyeCaptureSuccessCalibrationBoar
   verifyTriggerResponseSuccess(response);
   all_capture_topics_subscriber.assert_num_topics_received(1);
   ASSERT_EQ(response->capture_handle, 0);
+  verifyCalibrationBoardFromFileCamera(response->detection_result_calibration_board);
 
   response = handEyeCapture({1, 2, 3});
   verifyTriggerResponseSuccess(response);
   all_capture_topics_subscriber.assert_num_topics_received(2);
   ASSERT_EQ(response->capture_handle, 1);
+  verifyCalibrationBoardFromFileCamera(response->detection_result_calibration_board);
 }
 
 TEST_F(TestHandEyeWithCalibrationBoard, testHandEyeCaptureSuccessMarkers)
@@ -329,16 +331,21 @@ TEST_F(TestHandEyeWithCalibrationBoard, testHandEyeCaptureSuccessMarkers)
   AllCaptureTopicsSubscriber all_capture_topics_subscriber(*this);
   all_capture_topics_subscriber.assert_num_topics_received(0);
 
-  startWithMarkers({1}, "aruco4x4_50");
+  const std::vector<int> marker_ids = {1};
+  startWithMarkers(marker_ids, "aruco4x4_50");
   auto response = handEyeCapture({});
   verifyTriggerResponseSuccess(response);
   all_capture_topics_subscriber.assert_num_topics_received(1);
   ASSERT_EQ(response->capture_handle, 0);
+  verifyMarkersFromCalibrationBoardFileCamera(
+    marker_ids, response->detection_result_fiducial_markers);
 
   response = handEyeCapture({1, 2, 3});
   verifyTriggerResponseSuccess(response);
   all_capture_topics_subscriber.assert_num_topics_received(2);
   ASSERT_EQ(response->capture_handle, 1);
+  verifyMarkersFromCalibrationBoardFileCamera(
+    marker_ids, response->detection_result_fiducial_markers);
 }
 
 TEST_F(ZividNodeTest, testHandEyeCaptureNoCalibrationBoard)

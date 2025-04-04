@@ -403,6 +403,8 @@ void HandEyeCalibrationController::captureServiceHandler(
                 working_directory.value(), capture_handle, frame, robot_pose,
                 valid_detection.pose());
             }
+            response->detection_result_calibration_board =
+              toZividMsgDetectionResult(valid_detection);
             state_->input.emplace_back(robot_pose, valid_detection);
           },
           [&](const Zivid::Calibration::DetectionResultFiducialMarkers & valid_detection) {
@@ -410,6 +412,8 @@ void HandEyeCalibrationController::captureServiceHandler(
               saveHandEyeCaptureInWorkingDirectory(
                 working_directory.value(), capture_handle, frame, robot_pose, std::nullopt);
             }
+            response->detection_result_fiducial_markers =
+              toZividMsgDetectionResult(valid_detection);
             state_->input.emplace_back(robot_pose, valid_detection);
           },
           [&](const std::string & /*error_message*/) {

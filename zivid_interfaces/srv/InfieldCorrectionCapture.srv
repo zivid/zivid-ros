@@ -14,3 +14,6 @@ uint8 status
 
 # Number of successful infield correction captures. We recommend multiple captures with different board positions.
 int32 number_of_captures
+
+# The result of the calibration board detection.
+DetectionResultCalibrationBoard detection_result

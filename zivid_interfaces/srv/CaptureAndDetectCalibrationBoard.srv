@@ -1,0 +1,6 @@
+---
+bool success
+string message
+
+# The result of the calibration board detection.
+DetectionResultCalibrationBoard detection_result

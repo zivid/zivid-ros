@@ -42,6 +42,24 @@ void set_settings(const std::shared_ptr<rclcpp::Node> & node)
   }
 }
 
+void set_srgb(const std::shared_ptr<rclcpp::Node> & node)
+{
+  auto param_client = std::make_shared<rclcpp::AsyncParametersClient>(node, "zivid_camera");
+  while (!param_client->wait_for_service(std::chrono::seconds(3))) {
+    if (!rclcpp::ok()) {
+      fatal_error(node->get_logger(), "Client interrupted while waiting for service to appear.");
+    }
+    RCLCPP_INFO(node->get_logger(), "Waiting for the parameters client to appear...");
+  }
+
+  auto result = param_client->set_parameters({rclcpp::Parameter("color_space", "srgb")});
+  if (
+    rclcpp::spin_until_future_complete(node, result, std::chrono::seconds(30)) !=
+    rclcpp::FutureReturnCode::SUCCESS) {
+    fatal_error(node->get_logger(), "Failed to set `color_space` parameter");
+  }
+}
+
 auto create_capture_client(std::shared_ptr<rclcpp::Node> & node)
 {
   auto client = node->create_client<std_srvs::srv::Trigger>("capture");
@@ -61,6 +79,7 @@ int main(int argc, char * argv[])
   rclcpp::init(argc, argv);
   auto node = rclcpp::Node::make_shared("sample_capture_with_settings_from_file");
   RCLCPP_INFO(node->get_logger(), "Started the sample node");
+  set_srgb(node);
 
   auto points_xyzrgba_subscription = node->create_subscription<sensor_msgs::msg::PointCloud2>(
     "points/xyzrgba", 10, [&](sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) -> void {

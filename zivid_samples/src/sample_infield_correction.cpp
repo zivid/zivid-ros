@@ -93,6 +93,24 @@ bool request_trigger_and_print_response(
   return result->success;
 }
 
+void set_srgb(const std::shared_ptr<rclcpp::Node> & node)
+{
+  auto param_client = std::make_shared<rclcpp::AsyncParametersClient>(node, "zivid_camera");
+  while (!param_client->wait_for_service(std::chrono::seconds(3))) {
+    if (!rclcpp::ok()) {
+      fatal_error(node->get_logger(), "Client interrupted while waiting for service to appear.");
+    }
+    RCLCPP_INFO(node->get_logger(), "Waiting for the parameters client to appear...");
+  }
+
+  auto result = param_client->set_parameters({rclcpp::Parameter("color_space", "srgb")});
+  if (
+    rclcpp::spin_until_future_complete(node, result, std::chrono::seconds(30)) !=
+    rclcpp::FutureReturnCode::SUCCESS) {
+    fatal_error(node->get_logger(), "Failed to set `color_space` parameter");
+  }
+}
+
 std::string capture_status_to_string(
   const std::shared_ptr<rclcpp::Node> & node,
   const zivid_interfaces::srv::InfieldCorrectionCapture::Response & response)
@@ -202,6 +220,7 @@ int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
   auto node = std::make_shared<rclcpp::Node>("sample_infield_correction");
+  set_srgb(node);
 
   const InfieldCorrectionOperation operation =
     get_parameter_enum(*node, "operation", infield_correction_operation_map);

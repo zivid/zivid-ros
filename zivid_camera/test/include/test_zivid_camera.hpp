@@ -184,6 +184,7 @@ protected:
   static constexpr auto parameter_settings_yaml = "settings_yaml";
   static constexpr auto parameter_settings_2d_file_path = "settings_2d_file_path";
   static constexpr auto parameter_settings_2d_yaml = "settings_2d_yaml";
+  static constexpr auto parameter_color_space = "color_space";
 
   ZividNodeTest(
     FileCameraMode file_camera_mode = FileCameraMode::Default,
@@ -199,6 +200,7 @@ protected:
     setNodeParameter(parameter_settings_yaml, "");
     setNodeParameter(parameter_settings_2d_file_path, "");
     setNodeParameter(parameter_settings_2d_yaml, "");
+    setNodeColorSpaceSRGB();
   }
 
   template <typename SrvType>
@@ -354,6 +356,10 @@ Settings2D:
     setNodeParameter(parameter_settings_file_path, "");
   }
 
+  void setNodeColorSpaceSRGB() { setNodeParameter(parameter_color_space, "srgb"); }
+
+  void setNodeColorSpaceLinearRGB() { setNodeParameter(parameter_color_space, "linear_rgb"); }
+
   template <typename ZividDataModel>
   auto serializeZividDataModel(const ZividDataModel & dm)
   {
@@ -493,9 +499,13 @@ Settings2D:
     ASSERT_EQ(image.is_bigendian, false);
   }
 
+  template <typename ZividColorType>
   void assertSensorMsgsImageContents(
-    const sensor_msgs::msg::Image & image, const Zivid::Array2D<Zivid::ColorRGBA> & expected_rgba)
+    const sensor_msgs::msg::Image & image, const Zivid::Array2D<ZividColorType> & expected_rgba)
   {
+    static_assert(
+      std::is_same_v<ZividColorType, Zivid::ColorRGBA> ||
+      std::is_same_v<ZividColorType, Zivid::ColorRGBA_SRGB>);
     ASSERT_EQ(image.width, expected_rgba.width());
     ASSERT_EQ(image.height, expected_rgba.height());
     for (std::size_t i = 0; i < expected_rgba.size(); i++) {

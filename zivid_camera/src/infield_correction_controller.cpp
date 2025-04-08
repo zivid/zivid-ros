@@ -165,7 +165,7 @@ void InfieldCorrectionController::readServiceHandler(
 {
   RCLCPP_INFO_STREAM(node_.get_logger(), __func__);
 
-  runFunctionAndCatchExceptions(
+  runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
       if (Zivid::Experimental::Calibration::hasCameraCorrection(camera_)) {
         const auto timestamp = Zivid::Experimental::Calibration::cameraCorrectionTimestamp(camera_);
@@ -192,7 +192,7 @@ void InfieldCorrectionController::resetServiceHandler(
 {
   RCLCPP_INFO_STREAM(node_.get_logger(), __func__);
 
-  runFunctionAndCatchExceptions(
+  runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() { Zivid::Experimental::Calibration::resetCameraCorrection(camera_); }, response,
     node_.get_logger(), "InfieldCorrectionReset");
 }
@@ -204,7 +204,7 @@ void InfieldCorrectionController::removeLastCaptureServiceHandler(
 {
   RCLCPP_INFO_STREAM(node_.get_logger(), __func__);
 
-  runFunctionAndCatchExceptions(
+  runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
       ensureStarted();
       if (state_->dataset.empty()) {
@@ -222,7 +222,7 @@ void InfieldCorrectionController::startServiceHandler(
 {
   RCLCPP_INFO_STREAM(node_.get_logger(), __func__);
 
-  runFunctionAndCatchExceptions(
+  runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
       *state_ = {};
       state_->state = InfieldCorrectionState::State::Started;
@@ -237,7 +237,7 @@ void InfieldCorrectionController::captureServiceHandler(
 {
   RCLCPP_INFO_STREAM(node_.get_logger(), __func__);
 
-  runFunctionAndCatchExceptions(
+  runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
       auto & dataset = state_->dataset;
       response->number_of_captures = safeCast<int>(dataset.size());
@@ -293,7 +293,7 @@ void InfieldCorrectionController::computeServiceHandler(
 {
   RCLCPP_INFO_STREAM(node_.get_logger(), __func__);
 
-  runFunctionAndCatchExceptions(
+  runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
       const auto & dataset = state_->dataset;
       // Set started & number of captures before computing, so that it is reported regardless of any exceptions.
@@ -323,7 +323,7 @@ void InfieldCorrectionController::computeAndWriteServiceHandler(
 {
   RCLCPP_INFO_STREAM(node_.get_logger(), __func__);
 
-  runFunctionAndCatchExceptions(
+  runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
       auto & dataset = state_->dataset;
       response->infield_correction_started =

@@ -292,7 +292,7 @@ void HandEyeCalibrationController::startServiceHandler(
 {
   RCLCPP_INFO_STREAM(node_.get_logger(), __func__);
 
-  runFunctionAndCatchExceptions(
+  runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
       *state_ = {};
 
@@ -322,7 +322,7 @@ void HandEyeCalibrationController::loadServiceHandler(
 {
   RCLCPP_INFO_STREAM(node_.get_logger(), __func__);
 
-  runFunctionAndCatchExceptions(
+  runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
       *state_ = {};
       RCLCPP_INFO_STREAM(
@@ -363,7 +363,7 @@ void HandEyeCalibrationController::captureServiceHandler(
 {
   RCLCPP_INFO_STREAM(node_.get_logger(), __func__);
 
-  runFunctionAndCatchExceptions(
+  runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
       switch (state_->state) {
         case HandEyeCalibrationState::State::Uninitialized:
@@ -441,7 +441,7 @@ void HandEyeCalibrationController::calibrateServiceHandler(
 {
   RCLCPP_INFO_STREAM(node_.get_logger(), __func__);
 
-  runFunctionAndCatchExceptions(
+  runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
       switch (state_->state) {
         case HandEyeCalibrationState::State::Uninitialized:

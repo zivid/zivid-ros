@@ -89,7 +89,7 @@ auto deserializeZividDataModel(const std::string & serialized)
 }
 
 template <typename Function, typename ResponseSharedPtr, typename Logger>
-void runFunctionAndCatchExceptions(
+void runFunctionAndCatchExceptionsForTriggerResponse(
   Function && function, ResponseSharedPtr & response, const Logger & logger,
   const std::string & operation)
 {

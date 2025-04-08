@@ -499,7 +499,7 @@ void ZividCamera::captureServiceHandler(
 {
   RCLCPP_INFO_STREAM(get_logger(), __func__);
 
-  runFunctionAndCatchExceptions(
+  runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
       const auto settings = settings_controller_->currentSettings();
       invokeCaptureAndPublishFrame(settings);
@@ -514,7 +514,7 @@ void ZividCamera::captureAndSaveServiceHandler(
 {
   RCLCPP_INFO_STREAM(get_logger(), __func__);
 
-  runFunctionAndCatchExceptions(
+  runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
       const auto settings = settings_controller_->currentSettings();
       const auto frame = invokeCaptureAndPublishFrame(settings);
@@ -533,7 +533,7 @@ void ZividCamera::capture2DServiceHandler(
 
   serviceHandlerHandleCameraConnectionLoss();
 
-  runFunctionAndCatchExceptions(
+  runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
       const auto color_space = colorSpace();
       const auto settings2D = settings_2d_controller_->currentSettings();
@@ -574,7 +574,7 @@ void ZividCamera::captureAssistantSuggestSettingsServiceHandler(
 
   serviceHandlerHandleCameraConnectionLoss();
 
-  runFunctionAndCatchExceptions(
+  runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
       using SuggestSettingsParameters = Zivid::CaptureAssistant::SuggestSettingsParameters;
 

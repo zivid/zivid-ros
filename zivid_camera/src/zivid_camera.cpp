@@ -49,6 +49,7 @@
 #include <zivid_camera/detector_controller.hpp>
 #include <zivid_camera/hand_eye_calibration_controller.hpp>
 #include <zivid_camera/infield_correction_controller.hpp>
+#include <zivid_camera/projection_controller.hpp>
 #include <zivid_camera/utility.hpp>
 #include <zivid_camera/zivid_camera.hpp>
 
@@ -407,6 +408,8 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
     std::make_unique<InfieldCorrectionController>(*this, *camera_, ControllerInterface{*this});
   hand_eye_calibration_controller_ = std::make_unique<HandEyeCalibrationController>(
     *this, *camera_, *settings_controller_, ControllerInterface{*this});
+  projection_controller_ = std::make_unique<ProjectionController>(
+    *this, *camera_, *settings_2d_controller_, ControllerInterface{*this});
 
   RCLCPP_INFO(get_logger(), "Zivid camera driver is now ready!");
 }

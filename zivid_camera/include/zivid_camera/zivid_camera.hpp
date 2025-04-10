@@ -82,6 +82,7 @@ class CaptureSettingsController;
 class DetectorController;
 class HandEyeCalibrationController;
 class InfieldCorrectionController;
+class ProjectionController;
 class ControllerInterface;
 
 class ZividCamera : public rclcpp::Node
@@ -201,6 +202,7 @@ private:
   std::unique_ptr<DetectorController> detector_controller_;
   std::unique_ptr<InfieldCorrectionController> infield_correction_controller_;
   std::unique_ptr<HandEyeCalibrationController> hand_eye_calibration_controller_;
+  std::unique_ptr<ProjectionController> projection_controller_;
 
   std::unique_ptr<Zivid::Application> zivid_;
   CameraStatus camera_status_{CameraStatus::Idle};

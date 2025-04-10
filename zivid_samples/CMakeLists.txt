@@ -48,6 +48,8 @@ zivid_add_cpp_sample(sample_capture_and_detect_markers DEPENDENCIES rclcpp zivid
 zivid_add_cpp_sample(sample_hand_eye_calibration DEPENDENCIES rclcpp std_srvs zivid_interfaces tf2 tf2_ros tf2_geometry_msgs)
 zivid_add_cpp_sample(sample_infield_correction DEPENDENCIES rclcpp std_srvs zivid_interfaces)
 zivid_add_cpp_sample(sample_intrinsics DEPENDENCIES rclcpp sensor_msgs std_srvs)
+zivid_add_cpp_sample(sample_projection DEPENDENCIES rclcpp std_srvs zivid_interfaces)
+zivid_add_cpp_sample(sample_project_and_capture DEPENDENCIES rclcpp std_srvs sensor_msgs zivid_interfaces)
 
 zivid_add_cpp_sample(sample_with_sdk_capture_and_load_frame
   DEPENDENCIES
@@ -63,6 +65,8 @@ zivid_add_python_sample(sample_capture_assistant)
 zivid_add_python_sample(sample_capture_with_settings_from_file)
 zivid_add_python_sample(sample_hand_eye_calibration)
 zivid_add_python_sample(sample_infield_correction)
+zivid_add_python_sample(sample_projection)
+zivid_add_python_sample(sample_project_and_capture)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

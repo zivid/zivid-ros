@@ -77,6 +77,7 @@ class CaptureSettingsController;
 class DetectorController;
 class HandEyeCalibrationController;
 class InfieldCorrectionController;
+class ProjectionController;
 class ControllerInterface;
 
 class ZividCamera : public rclcpp::Node
@@ -114,6 +115,8 @@ private:
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response);
   void capture2DInner(const Capture2DFunction & function);
+  void capture2DWithCallback(
+    const Capture2DFunction & function, std::shared_ptr<std_srvs::srv::Trigger::Response> response);
   void captureAssistantSuggestSettingsServiceHandler(
     const std::shared_ptr<rmw_request_id_t> request_header,
     const std::shared_ptr<zivid_interfaces::srv::CaptureAssistantSuggestSettings::Request> request,
@@ -166,6 +169,7 @@ private:
   ColorSpace colorSpace() const;
 
   friend class ControllerInterface;
+  friend class ProjectionController;
 
   std::map<std::string, ColorSpace> color_space_name_value_map_;
   rclcpp::TimerBase::SharedPtr camera_connection_keepalive_timer_;
@@ -195,6 +199,7 @@ private:
   std::unique_ptr<DetectorController> detector_controller_;
   std::unique_ptr<InfieldCorrectionController> infield_correction_controller_;
   std::unique_ptr<HandEyeCalibrationController> hand_eye_calibration_controller_;
+  std::unique_ptr<ProjectionController> projection_controller_;
 
   std::unique_ptr<Zivid::Application> zivid_;
   CameraStatus camera_status_{CameraStatus::Idle};

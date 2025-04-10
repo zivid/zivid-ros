@@ -49,6 +49,7 @@
 #include <zivid_camera/detector_controller.hpp>
 #include <zivid_camera/hand_eye_calibration_controller.hpp>
 #include <zivid_camera/infield_correction_controller.hpp>
+#include <zivid_camera/projection_controller.hpp>
 #include <zivid_camera/utility.hpp>
 #include <zivid_camera/zivid_camera.hpp>
 
@@ -401,6 +402,7 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
     std::make_unique<InfieldCorrectionController>(*this, *camera_, ControllerInterface{*this});
   hand_eye_calibration_controller_ = std::make_unique<HandEyeCalibrationController>(
     *this, *camera_, *settings_controller_, ControllerInterface{*this});
+  projection_controller_ = std::make_unique<ProjectionController>(*this, *camera_);
 
   RCLCPP_INFO(get_logger(), "Zivid camera driver is now ready!");
 }
@@ -567,6 +569,17 @@ void ZividCamera::capture2DServiceHandler(
   runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() { capture2DInner([&](Zivid::Settings2D const & s) { return camera_->capture2D(s); }); },
     response, get_logger(), "Capture2D");
+}
+
+void ZividCamera::capture2DWithCallback(
+  const Capture2DFunction & function, std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+{
+  RCLCPP_INFO_STREAM(get_logger(), __func__);
+
+  serviceHandlerHandleCameraConnectionLoss();
+
+  runFunctionAndCatchExceptionsForTriggerResponse(
+    [&]() { capture2DInner(function); }, response, get_logger(), "Capture2DWithCallback");
 }
 
 void ZividCamera::captureAssistantSuggestSettingsServiceHandler(

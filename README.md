@@ -466,6 +466,33 @@ correction.
 
 Removes the last infield correction capture gathered in the `zivid_camera` node.
 
+### projector/resolution
+[zivid_interfaces/srv/ProjectionResolution.srv](./zivid_interfaces/srv/ProjectionResolution.srv)
+
+Returns the width and height of the projector.
+
+### projection/status
+[zivid_interfaces/srv/ProjectionStatus.srv](./zivid_interfaces/srv/ProjectionStatus.srv)
+
+Returns whether the projector is turned on or not.
+
+### projection/start
+[zivid_interfaces/srv/ProjectionStart.srv](./zivid_interfaces/srv/ProjectionStart.srv)
+
+Start the projector. This service takes _either_ a path _or_ raw pixel values in BGRA format to specify what to project.
+The specified file or data must match the resolution of the projector.
+
+### projection/stop
+[zivid_interfaces/srv/ProjectionStop.srv](./zivid_interfaces/srv/ProjectionStop.srv)
+
+Stops the current projection, if any.
+
+### projection/capture_2d
+[std_srvs/srv/Trigger](https://docs.ros2.org/latest/api/std_srvs/srv/Trigger.html)
+
+Invoke this service to trigger a 2D capture while the projector is turned on. See section [capture_2d](#capture_2d) for
+details. Note that while the projector is turned on the acceptable capture settings are more strict.
+
 ## Topics
 
 The Zivid ROS driver provides several topics providing 3D, color, SNR and camera calibration
@@ -752,6 +779,21 @@ With the following arguments:
 > A non-empty value must specify an absolute path to an empty directory.
 
 For more information on performing the calibration, please see the [Zivid hand-eye calibration documentation](https://support.zivid.com/en/latest/academy/applications/hand-eye.html).
+
+### Sample Project
+
+This sample shows how to use the various [projection/[...]](#ProjectionStart) services. It takes one optional argument
+which is a path to a image to be projected:
+
+```
+ros2 run zivid_samples sample_project --ros-args -p file_path:=<image>
+```
+If the argument is not given the sample will project a generated image generate with color gradients.
+
+### Sample Project and Capture
+
+This sample shows how to perform a capture while the projector is on. A simple crosshair is projected and a capture
+performed.
 
 ## RViz Plugin
 

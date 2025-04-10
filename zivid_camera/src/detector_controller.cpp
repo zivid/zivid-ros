@@ -72,6 +72,7 @@ void DetectorController::detectCalibrationBoardHandler(
   runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
       auto frame = Zivid::Calibration::captureCalibrationBoard(camera_);
+      ensureIdentityOrThrow(frame.pointCloud().transformationMatrix());
       auto detection = Zivid::Calibration::detectCalibrationBoard(frame);
       response->detection_result = toZividMsgDetectionResult(detection);
       if (
@@ -102,6 +103,7 @@ void DetectorController::detectMarkersHandler(
         node_.get_logger(), "Capturing with %zd acquisition(s)", settings.acquisitions().size());
       RCLCPP_DEBUG_STREAM(node_.get_logger(), settings);
       const auto frame = camera_.capture(settings);
+      ensureIdentityOrThrow(frame.pointCloud().transformationMatrix());
       const auto detection = Zivid::Calibration::detectMarkers(
         frame, request->marker_ids,
         Zivid::Calibration::MarkerDictionary::fromString(request->marker_dictionary));

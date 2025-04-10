@@ -51,6 +51,15 @@ Zivid::Matrix4x4 transposeMatrix(const Zivid::Matrix4x4 & value)
 }
 }  // namespace
 
+void ensureIdentityOrThrow(const Zivid::Matrix4x4 & matrix)
+{
+  const auto identity = Zivid::Matrix4x4::identity();
+  if (!std::equal(matrix.begin(), matrix.end(), identity.begin())) {
+    throw std::runtime_error{
+      "Expected identity transformation matrix but got " + matrix.toString()};
+  }
+}
+
 Zivid::Calibration::Pose toZividPose(const geometry_msgs::msg::Pose & pose)
 {
   tf2::Transform tf2Transform;

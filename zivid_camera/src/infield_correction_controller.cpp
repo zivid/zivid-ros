@@ -243,6 +243,7 @@ void InfieldCorrectionController::captureServiceHandler(
       response->number_of_captures = safeCast<int>(dataset.size());
       ensureStarted();
       const auto frame = Zivid::Calibration::captureCalibrationBoard(camera_);
+      ensureIdentityOrThrow(frame.pointCloud().transformationMatrix());
       const auto detectionResult = Zivid::Calibration::detectCalibrationBoard(frame);
       const auto input = Zivid::Experimental::Calibration::InfieldCorrectionInput{detectionResult};
 

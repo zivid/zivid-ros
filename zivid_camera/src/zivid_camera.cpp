@@ -653,6 +653,7 @@ void ZividCamera::publishFrame(const Zivid::Frame & frame)
     const auto color_space = colorSpace();
     const auto header = makeHeader();
     auto point_cloud = frame.pointCloud();
+    ensureIdentityOrThrow(point_cloud.transformationMatrix());
 
     // Transform point cloud from millimeters (Zivid SDK) to meter (ROS).
     const float scale = 0.001f;

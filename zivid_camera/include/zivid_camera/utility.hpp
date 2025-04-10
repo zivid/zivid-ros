@@ -129,6 +129,8 @@ constexpr double zividLengthToRos(float value)
   return static_cast<double>(value) / meterToMillimeterFactor;
 }
 
+void ensureIdentityOrThrow(const Zivid::Matrix4x4 & matrix);
+
 Zivid::Calibration::Pose toZividPose(const geometry_msgs::msg::Pose & pose);
 
 Zivid::PointXYZ toZividPoint(const geometry_msgs::msg::Point & point);

@@ -135,6 +135,7 @@ using HandEyeDetectionResult = std::variant<
 HandEyeDetectionResult detectHandEyeCalibrationObject(
   const HandEyeCalibrationObjects & calibration_object, const Zivid::Frame frame)
 {
+  ensureIdentityOrThrow(frame.pointCloud().transformationMatrix());
   return std::visit(
     Overloaded{
       [&](const CalibrationBoard &) -> HandEyeDetectionResult {

@@ -11,3 +11,11 @@ string message
 # Capture handle which uniquely identifies this hand-eye capture for the current session. Returns -1 if the capture was
 # not successful. Existing handles are invalidated when a new session is started.
 int32 capture_handle -1
+
+# The result of any calibration board detection. Only filled if the current hand-eye calibration session was started
+# with a calibration board as the calibration object.
+DetectionResultCalibrationBoard detection_result_calibration_board
+
+# The result of any fiducial markers detection. Only filled if the current hand-eye calibration session was started
+# with fiducial markers as the calibration objects.
+DetectionResultFiducialMarkers detection_result_fiducial_markers

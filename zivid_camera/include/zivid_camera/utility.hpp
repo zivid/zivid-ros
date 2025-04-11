@@ -28,6 +28,8 @@
 
 #pragma once
 
+#include <Zivid/Calibration/DetectionResult.h>
+#include <Zivid/Calibration/DetectionResultFiducialMarkers.h>
 #include <Zivid/Calibration/Pose.h>
 #include <Zivid/Exception.h>
 #include <Zivid/Matrix.h>
@@ -38,6 +40,8 @@
 #include <geometry_msgs/msg/transform.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <string>
+#include <zivid_interfaces/msg/detection_result_calibration_board.hpp>
+#include <zivid_interfaces/msg/detection_result_fiducial_markers.hpp>
 
 namespace zivid_camera
 {
@@ -89,7 +93,7 @@ auto deserializeZividDataModel(const std::string & serialized)
 }
 
 template <typename Function, typename ResponseSharedPtr, typename Logger>
-void runFunctionAndCatchExceptions(
+void runFunctionAndCatchExceptionsForTriggerResponse(
   Function && function, ResponseSharedPtr & response, const Logger & logger,
   const std::string & operation)
 {
@@ -125,10 +129,25 @@ constexpr double zividLengthToRos(float value)
   return static_cast<double>(value) / meterToMillimeterFactor;
 }
 
+void ensureIdentityOrThrow(const Zivid::Matrix4x4 & matrix);
+
 Zivid::Calibration::Pose toZividPose(const geometry_msgs::msg::Pose & pose);
 
 Zivid::PointXYZ toZividPoint(const geometry_msgs::msg::Point & point);
 
+geometry_msgs::msg::Point pixelCoordinatesToGeometryMsgPoint(
+  const Zivid::PointXY & pixel_coordinates);
+
 geometry_msgs::msg::Transform toGeometryMsgTransform(const Zivid::Matrix4x4 & transform);
+
+geometry_msgs::msg::Pose toGeometryMsgPose(const Zivid::Calibration::Pose & pose);
+
+geometry_msgs::msg::Point toGeometryMsgPoint(const Zivid::PointXYZ & point);
+
+zivid_interfaces::msg::DetectionResultCalibrationBoard toZividMsgDetectionResult(
+  const Zivid::Calibration::DetectionResult & detection);
+
+zivid_interfaces::msg::DetectionResultFiducialMarkers toZividMsgDetectionResult(
+  const Zivid::Calibration::DetectionResultFiducialMarkers & detection);
 
 }  // namespace zivid_camera

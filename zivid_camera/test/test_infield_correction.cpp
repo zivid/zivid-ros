@@ -141,6 +141,7 @@ TEST_F(TestWithCalibrationBoardFreshNode, testInfieldCorrectionCaptureOk)
   ASSERT_TRUE(capture->success);
   ASSERT_EQ(capture->status, zivid_interfaces::srv::InfieldCorrectionCapture::Response::STATUS_OK);
   ASSERT_EQ(capture->number_of_captures, 1);
+  verifyCalibrationBoardFromFileCamera(capture->detection_result);
 }
 
 TEST_F(TestWithCalibrationBoard, testInfieldCorrectionStart)

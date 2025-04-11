@@ -135,6 +135,7 @@ using HandEyeDetectionResult = std::variant<
 HandEyeDetectionResult detectHandEyeCalibrationObject(
   const HandEyeCalibrationObjects & calibration_object, const Zivid::Frame frame)
 {
+  ensureIdentityOrThrow(frame.pointCloud().transformationMatrix());
   return std::visit(
     Overloaded{
       [&](const CalibrationBoard &) -> HandEyeDetectionResult {
@@ -292,7 +293,7 @@ void HandEyeCalibrationController::startServiceHandler(
 {
   RCLCPP_INFO_STREAM(node_.get_logger(), __func__);
 
-  runFunctionAndCatchExceptions(
+  runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
       *state_ = {};
 
@@ -322,7 +323,7 @@ void HandEyeCalibrationController::loadServiceHandler(
 {
   RCLCPP_INFO_STREAM(node_.get_logger(), __func__);
 
-  runFunctionAndCatchExceptions(
+  runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
       *state_ = {};
       RCLCPP_INFO_STREAM(
@@ -363,7 +364,7 @@ void HandEyeCalibrationController::captureServiceHandler(
 {
   RCLCPP_INFO_STREAM(node_.get_logger(), __func__);
 
-  runFunctionAndCatchExceptions(
+  runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
       switch (state_->state) {
         case HandEyeCalibrationState::State::Uninitialized:
@@ -403,6 +404,8 @@ void HandEyeCalibrationController::captureServiceHandler(
                 working_directory.value(), capture_handle, frame, robot_pose,
                 valid_detection.pose());
             }
+            response->detection_result_calibration_board =
+              toZividMsgDetectionResult(valid_detection);
             state_->input.emplace_back(robot_pose, valid_detection);
           },
           [&](const Zivid::Calibration::DetectionResultFiducialMarkers & valid_detection) {
@@ -410,6 +413,8 @@ void HandEyeCalibrationController::captureServiceHandler(
               saveHandEyeCaptureInWorkingDirectory(
                 working_directory.value(), capture_handle, frame, robot_pose, std::nullopt);
             }
+            response->detection_result_fiducial_markers =
+              toZividMsgDetectionResult(valid_detection);
             state_->input.emplace_back(robot_pose, valid_detection);
           },
           [&](const std::string & /*error_message*/) {
@@ -441,7 +446,7 @@ void HandEyeCalibrationController::calibrateServiceHandler(
 {
   RCLCPP_INFO_STREAM(node_.get_logger(), __func__);
 
-  runFunctionAndCatchExceptions(
+  runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
       switch (state_->state) {
         case HandEyeCalibrationState::State::Uninitialized:

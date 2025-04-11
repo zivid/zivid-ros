@@ -34,13 +34,17 @@
 #include <Zivid/Frame.h>
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <geometry_msgs/msg/pose.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <std_srvs/srv/trigger.hpp>
 #include <zivid_camera/zivid_camera.hpp>
+#include <zivid_interfaces/msg/detection_result_calibration_board.hpp>
+#include <zivid_interfaces/msg/detection_result_fiducial_markers.hpp>
 
 enum class FileCameraMode
 {
@@ -554,6 +558,87 @@ Settings2D:
       ci.p, std::array<double, 12>{
               1781.447998046875, 0, 990.49267578125, 0, 0, 1781.5296630859375, 585.81781005859375,
               0, 0, 0, 1, 0});
+  }
+
+  void verifyPoint(const geometry_msgs::msg::Point & point, std::array<double, 3> expect_position)
+  {
+    constexpr double margin = 0.01;
+    EXPECT_NEAR(point.x, expect_position[0], margin);
+    EXPECT_NEAR(point.y, expect_position[1], margin);
+    EXPECT_NEAR(point.z, expect_position[2], margin);
+  }
+
+  void verifyQuaternion(
+    const geometry_msgs::msg::Quaternion & pose, std::array<double, 4> expect_quaternion)
+  {
+    constexpr double margin = 0.01;
+    EXPECT_NEAR(pose.x, expect_quaternion[0], margin);
+    EXPECT_NEAR(pose.y, expect_quaternion[1], margin);
+    EXPECT_NEAR(pose.z, expect_quaternion[2], margin);
+    EXPECT_NEAR(pose.w, expect_quaternion[3], margin);
+  }
+
+  void verifyPose(
+    const geometry_msgs::msg::Pose & pose, std::array<double, 3> expect_position,
+    std::array<double, 4> expect_orientation)
+  {
+    verifyPoint(pose.position, expect_position);
+    verifyQuaternion(pose.orientation, expect_orientation);
+  }
+
+  void verifyCalibrationBoardFromFileCamera(
+    const zivid_interfaces::msg::DetectionResultCalibrationBoard & detection)
+  {
+    ASSERT_EQ(detection.status, zivid_interfaces::msg::DetectionResultCalibrationBoard::STATUS_OK);
+    ASSERT_EQ(detection.status_description, "Detection OK");
+    verifyPoint(
+      detection.centroid, {0.14012290954589843, -0.048763576507568358, 1.0822154541015625});
+    verifyPose(
+      detection.pose, {0.049661956787109378, -0.12114323425292969, 1.0999824218750001},
+      {-0.020171668909252427, 0.081601681954225944, -0.012692719722171578, 0.99638002807081683});
+    // Considering a Zivid calibration board (ZVDA-CB01)
+    ASSERT_EQ(detection.feature_points.size(), 30);
+    ASSERT_EQ(detection.feature_points_2d.size(), 30);
+    ASSERT_EQ(detection.feature_points_width, 6);
+    ASSERT_EQ(detection.feature_points_height, 5);
+    verifyPoint(
+      detection.feature_points.at(0),
+      {0.064807960510253906, -0.10655675506591797, 1.0969698486328125});
+    verifyPoint(detection.feature_points_2d.at(0), {1085.71337890625, 438.6663818359375, 0.0});
+  }
+
+  void verifyMarkersFromCalibrationBoardFileCamera(
+    const std::vector<int> & allowed_marker_ids,
+    const zivid_interfaces::msg::DetectionResultFiducialMarkers & detection)
+  {
+    ASSERT_TRUE(
+      std::find(allowed_marker_ids.begin(), allowed_marker_ids.end(), 1) !=
+      allowed_marker_ids.end());
+    ASSERT_EQ(detection.allowed_marker_ids, allowed_marker_ids);
+    ASSERT_EQ(detection.detected_markers.size(), 1);
+
+    const auto & marker = detection.detected_markers.at(0);
+    ASSERT_EQ(marker.id, 1);
+    verifyPoint(
+      marker.corners_in_camera_coordinates.at(0),
+      {0.032310562133789064, 0.087155715942382819, 1.0942862548828125});
+    verifyPoint(
+      marker.corners_in_camera_coordinates.at(1),
+      {0.066284042358398437, 0.086084678649902338, 1.0883992919921874});
+    verifyPoint(
+      marker.corners_in_camera_coordinates.at(2),
+      {0.06675884246826172, 0.12080679321289063, 1.0874226074218749});
+    verifyPoint(
+      marker.corners_in_camera_coordinates.at(3),
+      {0.033509552001953123, 0.12145480346679688, 1.09333349609375});
+
+    verifyPoint(marker.corners_in_pixel_coordinates.at(0), {1033, 754, 0});
+    verifyPoint(marker.corners_in_pixel_coordinates.at(1), {1089, 753, 0});
+    verifyPoint(marker.corners_in_pixel_coordinates.at(2), {1090, 810, 0});
+    verifyPoint(marker.corners_in_pixel_coordinates.at(3), {1035, 810, 0});
+    verifyPose(
+      marker.pose, {0.049614048004150389, 0.10405548858642578, 1.0907738037109376},
+      {-0.012788087396707287, 0.086880234345879909, -0.012413830222117152, 0.99605932737224467});
   }
 };
 

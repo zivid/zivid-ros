@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<robot name="zivid_camera_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <!-- Specify the Zivid camera model. See available options in `README.md`. -->
+    <xacro:arg name="model" default="ZIVID_2_M70" />
+
+    <!-- Specify the visibility of the field of view frustum mush for the camera model. -->
+    <xacro:arg name="field_of_view" default="false" />
+
+    <!-- Import and load Zivid camera -->
+    <xacro:include filename="macros/zivid_camera.xacro"/>
+    <xacro:zivid_camera prefix="zivid_" model="$(arg model)" field_of_view="$(arg field_of_view)"/>
+</robot>

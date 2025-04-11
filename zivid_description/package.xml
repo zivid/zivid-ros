@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>zivid_description</name>
+  <version>3.1.0</version>
+  <description>Descriptions for Zivid 3D Cameras with visual and collision geometry</description>
+  <maintainer email="customersuccess@zivid.com">Zivid</maintainer>
+  <license>BSD3</license>
+  <url type="website">https://zivid.com</url>
+  <url type="repository">https://github.com/zivid/zivid-ros</url>
+  <url type="bugtracker">https://github.com/zivid/zivid-ros/issues</url>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

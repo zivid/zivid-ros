@@ -678,14 +678,16 @@ ros2 run zivid_samples sample_capture_with_settings_from_file.py
 
 This sample shows how to invoke the various [infield_correction/[...]](#infield_correctionread) services to perform infield correction on Zivid cameras.
 
-Source code: [C++](./zivid_samples/src/sample_infield_correction.cpp)
+Source code: [C++](./zivid_samples/src/sample_infield_correction.cpp) [Python](./zivid_samples/scripts/sample_infield_correction.py)
 
 ```bash
 ros2 launch zivid_samples sample.launch sample:=sample_infield_correction_cpp operation:=<operation>
+ros2 launch zivid_samples sample.launch sample:=sample_infield_correction.py operation:=<operation>
 ```
 Using ros2 run (when `zivid_camera` node is already running):
 ```bash
 ros2 run zivid_samples sample_infield_correction_cpp --ros-args -p operation:=<operation>
+ros2 run zivid_samples sample_infield_correction.py --ros-args -p operation:=<operation>
 ```
 
 With the following argument:
@@ -720,15 +722,17 @@ The sample begins by preparing the camera node for hand-eye calibration. Then a 
 a fixed duration between captures, using a simulated robot pose. Finally, hand-eye calibration is run using the gathered
 data.
 
-Source code: [C++](./zivid_samples/src/sample_hand_eye_calibration.cpp)
+Source code: [C++](./zivid_samples/src/sample_hand_eye_calibration.cpp) [Python](./zivid_samples/scripts/sample_hand_eye_calibration.py)
 
 ```bash
 ros2 launch zivid_samples sample.launch sample:=sample_hand_eye_calibration_cpp configuration:=<configuration> marker_ids:=<marker_ids> working_directory:=<working_directory>
+ros2 launch zivid_samples sample.launch sample:=sample_hand_eye_calibration.py configuration:=<configuration> marker_ids:=<marker_ids> working_directory:=<working_directory>
 ```
 
 Using ros2 run (when `zivid_camera` node is already running):
 ```bash
 ros2 run zivid_samples sample_hand_eye_calibration_cpp --ros-args -p configuration:=<configuration> -p marker_ids:=<marker_ids> -p working_directory:=<working_directory>
+ros2 run zivid_samples sample_hand_eye_calibration.py --ros-args -p configuration:=<configuration> -p marker_ids:=<marker_ids> -p working_directory:=<working_directory>
 ```
 
 With the following arguments:

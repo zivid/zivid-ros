@@ -528,6 +528,34 @@ void ZividCamera::captureAndSaveServiceHandler(
     response, get_logger(), "CaptureAndSave");
 }
 
+void ZividCamera::capture2DInner(const Capture2DFunction & function)
+{
+  const auto color_space = colorSpace();
+  const auto settings2D = settings_2d_controller_->currentSettings();
+  auto frame2D = function(settings2D);
+  if (shouldPublishColorImg()) {
+    const auto header = makeHeader();
+    const auto intrinsics = Zivid::Experimental::Calibration::intrinsics(*camera_);
+
+    switch (color_space) {
+      case ColorSpace::sRGB: {
+        auto image = frame2D.imageRGBA_SRGB();
+        const auto camera_info = makeCameraInfo(header, image.width(), image.height(), intrinsics);
+        publishColorImage(header, camera_info, image);
+      } break;
+      case ColorSpace::LinearRGB: {
+        auto image = frame2D.imageRGBA();
+        const auto camera_info = makeCameraInfo(header, image.width(), image.height(), intrinsics);
+        publishColorImage(header, camera_info, image);
+      } break;
+      default:
+        throw std::runtime_error(
+          "Internal error: Unknown color space value " +
+          std::to_string(static_cast<int>(color_space)));
+    }
+  }
+}
+
 void ZividCamera::capture2DServiceHandler(
   const std::shared_ptr<rmw_request_id_t>, const std::shared_ptr<std_srvs::srv::Trigger::Request>,
   std::shared_ptr<std_srvs::srv::Trigger::Response> response)
@@ -537,34 +565,7 @@ void ZividCamera::capture2DServiceHandler(
   serviceHandlerHandleCameraConnectionLoss();
 
   runFunctionAndCatchExceptionsForTriggerResponse(
-    [&]() {
-      const auto color_space = colorSpace();
-      const auto settings2D = settings_2d_controller_->currentSettings();
-      auto frame2D = camera_->capture(settings2D);
-      if (shouldPublishColorImg()) {
-        const auto header = makeHeader();
-        const auto intrinsics = Zivid::Experimental::Calibration::intrinsics(*camera_);
-
-        switch (color_space) {
-          case ColorSpace::sRGB: {
-            auto image = frame2D.imageRGBA_SRGB();
-            const auto camera_info =
-              makeCameraInfo(header, image.width(), image.height(), intrinsics);
-            publishColorImage(header, camera_info, image);
-          } break;
-          case ColorSpace::LinearRGB: {
-            auto image = frame2D.imageRGBA();
-            const auto camera_info =
-              makeCameraInfo(header, image.width(), image.height(), intrinsics);
-            publishColorImage(header, camera_info, image);
-          } break;
-          default:
-            throw std::runtime_error(
-              "Internal error: Unknown color space value " +
-              std::to_string(static_cast<int>(color_space)));
-        }
-      }
-    },
+    [&]() { capture2DInner([&](Zivid::Settings2D const & s) { return camera_->capture2D(s); }); },
     response, get_logger(), "Capture2D");
 }
 

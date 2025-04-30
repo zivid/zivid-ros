@@ -51,6 +51,7 @@ struct ColorRGBA;
 struct ColorSRGB;
 using ColorRGBA_SRGB = ColorSRGB;
 class Frame;
+class Frame2D;
 template <typename T>
 class Image;
 class PointCloud;
@@ -86,6 +87,7 @@ public:
   ZIVID_CAMERA_ROS_PUBLIC Zivid::Application & zividApplication();
 
 private:
+  using Capture2DFunction = std::function<Zivid::Frame2D(const Zivid::Settings2D &)>;
   void onCameraConnectionKeepAliveTimeout();
   void reconnectToCameraIfNecessary();
   void setCameraStatus(CameraStatus camera_status);
@@ -111,6 +113,7 @@ private:
     const std::shared_ptr<rmw_request_id_t> request_header,
     const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
     std::shared_ptr<std_srvs::srv::Trigger::Response> response);
+  void capture2DInner(const Capture2DFunction & function);
   void captureAssistantSuggestSettingsServiceHandler(
     const std::shared_ptr<rmw_request_id_t> request_header,
     const std::shared_ptr<zivid_interfaces::srv::CaptureAssistantSuggestSettings::Request> request,

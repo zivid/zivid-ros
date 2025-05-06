@@ -226,9 +226,10 @@ The service `capture_assistant/suggest_settings` will modify the settings parame
 
 Invoke this service to trigger a 3D capture. See section [Configuration](#configuration) for how to
 configure the 3D capture settings. The resulting point cloud is published on topics [points/xyz](#pointsxyz) and
-[points/xyzrgba](#pointsxyzrgba), color image is published on topic [color/image_color](#colorimage_color),
-and depth image is published on topic [depth/image](#depthimage). Camera calibration is published on
-topics [color/camera_info](#colorcamera_info) and [depth/camera_info](#depthcamera_info).
+[points/xyzrgba](#pointsxyzrgba), color image is published on topic [color/image_color](#colorimage_color), depth image
+is published on topic [depth/image](#depthimage), and signal-to-noise ratio (SNR) image is published on topic
+[snr/image](#snrimage). Camera calibration is published on topics [color/camera_info](#colorcamera_info),
+[depth/camera_info](#depthcamera_info), and [snr/camera_info](#snrcamera_info).
 
 See [Sample Capture](#sample-capture) for code example.
 

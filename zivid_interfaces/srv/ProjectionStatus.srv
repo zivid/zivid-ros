@@ -1,0 +1,4 @@
+---
+bool projecting
+bool success
+string message

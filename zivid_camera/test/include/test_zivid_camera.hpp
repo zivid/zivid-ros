@@ -174,6 +174,12 @@ protected:
     "capture_assistant/"
     "suggest_settings";
 
+  static constexpr auto projection_capture_2d = "projection/capture_2d";
+  static constexpr auto projection_resolution = "projection/resolution";
+  static constexpr auto projection_start = "projection/start";
+  static constexpr auto projection_status = "projection/status";
+  static constexpr auto projection_stop = "projection/stop";
+
   static constexpr auto color_camera_info_topic_name = "color/camera_info";
   static constexpr auto color_image_color_topic_name = "color/image_color";
   static constexpr auto depth_camera_info_topic_name = "depth/camera_info";

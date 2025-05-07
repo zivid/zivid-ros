@@ -480,7 +480,10 @@ Returns whether the projector is turned on or not.
 [zivid_interfaces/srv/ProjectionStart.srv](./zivid_interfaces/srv/ProjectionStart.srv)
 
 Start the projector. This service takes _either_ a path _or_ raw pixel values in BGRA format to specify what to project.
-The specified file or data must match the resolution of the projector.
+The specified file or data must match the resolution of the projector, which can be obtained using the
+[resolution service](#projection/resolution).
+
+If a capture is performed using [capture_2d](#capture_2d) or [capture](#capture) the projector will be turned off.
 
 ### projection/stop
 [std_srvs/srv/Trigger](https://docs.ros2.org/latest/api/std_srvs/srv/Trigger.html)

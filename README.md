@@ -788,7 +788,7 @@ which is a path to an image to be projected:
 ```
 ros2 run zivid_samples sample_project --ros-args -p image_path:=<image>
 ```
-If the argument is not given the sample will project a generated image generate with color gradients.
+If the argument is not given the sample will project a generated image with color gradients.
 
 ### Sample Project and Capture
 

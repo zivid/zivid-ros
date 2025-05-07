@@ -786,7 +786,7 @@ This sample shows how to use the various [projection/[...]](#ProjectionStart) se
 which is a path to a image to be projected:
 
 ```
-ros2 run zivid_samples sample_project --ros-args -p file_path:=<image>
+ros2 run zivid_samples sample_project --ros-args -p image_path:=<image>
 ```
 If the argument is not given the sample will project a generated image generate with color gradients.
 

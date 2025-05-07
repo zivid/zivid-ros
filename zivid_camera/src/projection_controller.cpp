@@ -42,20 +42,20 @@ Zivid::Image<Zivid::ColorBGRA> createImage(
   const Logger & logger, zivid_interfaces::srv::ProjectionStart::Request const & request,
   const Zivid::Resolution & resolution)
 {
-  if (!request.file_path.empty() && !request.data.empty()) {
+  if (!request.image_path.empty() && !request.data.empty()) {
     const std::string message(
-      "Both 'file_path' and 'data' are non-empty! Please set only one of the parameters.");
+      "Both 'image_path' and 'data' are non-empty! Please set only one of the parameters.");
     RCLCPP_ERROR(logger, "%s", message.c_str());
     throw std::runtime_error(message);
-  } else if (request.file_path.empty() && request.data.empty()) {
+  } else if (request.image_path.empty() && request.data.empty()) {
     const std::string message(
-      "Both 'file_path' and 'data' are non-empty! Please set only one of the parameters.");
+      "Both 'image_path' and 'data' are empty! Please set only one of the parameters.");
     RCLCPP_ERROR(logger, "%s", message.c_str());
     throw std::runtime_error(message);
   }
 
-  if (!request.file_path.empty()) {
-    return Zivid::Image<Zivid::ColorBGRA>(request.file_path);
+  if (!request.image_path.empty()) {
+    return Zivid::Image<Zivid::ColorBGRA>(request.image_path);
   }
 
   const auto * begin = request.data.data();

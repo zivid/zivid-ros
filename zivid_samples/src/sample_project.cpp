@@ -79,7 +79,7 @@ int main(int argc, char * argv[])
   auto node = rclcpp::Node::make_shared("sample_project");
   RCLCPP_INFO(node->get_logger(), "Started the sample_project node");
 
-  const auto file_path = node->declare_parameter<std::string>("file_path", "", read_only_parameter);
+  const auto image_path = node->declare_parameter<std::string>("image_path", "", read_only_parameter);
 
   auto resolution_client = create_resolution_client(node);
   auto get_projection_resolution = [&]() {
@@ -94,11 +94,11 @@ int main(int argc, char * argv[])
     RCLCPP_INFO(node->get_logger(), "Starting projection");
     auto req = std::make_shared<zivid_interfaces::srv::ProjectionStart::Request>();
 
-    if (file_path.empty()) {
+    if (image_path.empty()) {
       const auto resolution = get_projection_resolution();
       generate_image(req->data, resolution->width, resolution->height);
     } else {
-      req->file_path = file_path;
+      req->image_path = image_path;
     }
     project_client->async_send_request(req);
   };

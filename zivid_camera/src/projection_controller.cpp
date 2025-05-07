@@ -116,8 +116,7 @@ void ProjectionController::capture2DServiceHandler(
           [&](const Zivid::Settings2D & s) { return state_->projected_image->capture2D(s); },
           response);
       } else {
-        response->success = false;
-        response->message = "Camera is not projecting";
+        throw std::runtime_error("Camera is not projecting");
       }
       RCLCPP_INFO_STREAM(node_.get_logger(), "Query done");
     },
@@ -160,8 +159,6 @@ void ProjectionController::startServiceHandler(
       const auto image = createImage(node_.get_logger(), *request, res);
 
       state_->projected_image = Zivid::Projection::showImage(camera_, image);
-
-      response->success = true;
     },
     response, node_.get_logger(), "ProjectionStart");
 }
@@ -178,7 +175,6 @@ void ProjectionController::stopServiceHandler(
       RCLCPP_INFO_STREAM(node_.get_logger(), "Stopping projection");
 
       *state_ = {};
-      response->success = true;
 
       RCLCPP_INFO_STREAM(node_.get_logger(), "Stopped projection");
     },

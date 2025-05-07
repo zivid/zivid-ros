@@ -783,7 +783,7 @@ For more information on performing the calibration, please see the [Zivid hand-e
 ### Sample Project
 
 This sample shows how to use the various [projection/[...]](#ProjectionStart) services. It takes one optional argument
-which is a path to a image to be projected:
+which is a path to an image to be projected:
 
 ```
 ros2 run zivid_samples sample_project --ros-args -p image_path:=<image>

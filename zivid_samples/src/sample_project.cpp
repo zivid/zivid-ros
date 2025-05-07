@@ -1,7 +1,7 @@
 #include <filesystem>
 #include <rclcpp/rclcpp.hpp>
-#include <stdexcept>
 #include <std_srvs/srv/trigger.hpp>
+#include <stdexcept>
 #include <zivid_interfaces/srv/projection_resolution.hpp>
 #include <zivid_interfaces/srv/projection_start.hpp>
 
@@ -79,7 +79,8 @@ int main(int argc, char * argv[])
   auto node = rclcpp::Node::make_shared("sample_project");
   RCLCPP_INFO(node->get_logger(), "Started the sample_project node");
 
-  const auto image_path = node->declare_parameter<std::string>("image_path", "", read_only_parameter);
+  const auto image_path =
+    node->declare_parameter<std::string>("image_path", "", read_only_parameter);
 
   auto resolution_client = create_resolution_client(node);
   auto get_projection_resolution = [&]() {
@@ -106,8 +107,7 @@ int main(int argc, char * argv[])
   auto stop_client = create_stop_client(node);
   auto stop_projection = [&]() {
     RCLCPP_INFO(node->get_logger(), "Stopping projection");
-    stop_client->async_send_request(
-      std::make_shared<std_srvs::srv::Trigger::Request>());
+    stop_client->async_send_request(std::make_shared<std_srvs::srv::Trigger::Request>());
   };
 
   start_projection();

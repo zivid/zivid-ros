@@ -159,9 +159,7 @@ void ProjectionController::startServiceHandler(
       const auto res = Zivid::Projection::projectorResolution(camera_);
       const auto image = createImage(node_.get_logger(), *request, res);
 
-      auto p = Zivid::Projection::showImage(camera_, image);
-
-      state_->projected_image = std::move(p);
+      state_->projected_image = Zivid::Projection::showImage(camera_, image);
 
       response->success = true;
     },

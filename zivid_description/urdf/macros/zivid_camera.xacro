@@ -1,0 +1,109 @@
+<?xml version="1.0"?>
+
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <!-- Import Rviz colors -->
+    <xacro:include filename="../zivid_materials.xacro" />
+
+    <xacro:macro name="zivid_camera" params="prefix model field_of_view">
+        <xacro:property name="fov_filename" value="" />
+
+        <xacro:if value="${model == 'ZIVID_2_M70'}">
+            <xacro:property name="optical_center" value="0.04802 0.03084 0.0295" />
+            <xacro:property name="optical_angle_deg" value="3.0" />
+            <xacro:property name="fov_filename" value="zivid_2_m70_fov" />
+        </xacro:if>
+        <xacro:if value="${model == 'ZIVID_2_L100'}">
+            <xacro:property name="optical_center" value="0.04802 0.03084 0.0295" />
+            <xacro:property name="optical_angle_deg" value="3.0" />
+            <xacro:property name="fov_filename" value="zivid_2_l100_fov" />
+        </xacro:if>
+        <xacro:if value="${model == 'ZIVID_2_PLUS_M60'}">
+            <xacro:property name="optical_center" value="0.049 0.03202 0.0295" />
+            <xacro:property name="optical_angle_deg" value="2.5" />
+            <xacro:property name="fov_filename" value="zivid_2_plus_m60_fov" />
+        </xacro:if>
+        <xacro:if value="${model == 'ZIVID_2_PLUS_L110'}">
+            <xacro:property name="optical_center" value="0.049 0.03202 0.0295" />
+            <xacro:property name="optical_angle_deg" value="2.5" />
+            <xacro:property name="fov_filename" value="zivid_2_plus_l110_fov" />
+        </xacro:if>
+        <xacro:if value="${model == 'ZIVID_2_PLUS_M130'}">
+            <xacro:property name="optical_center" value="0.040 0.031 0.0295" />
+            <xacro:property name="optical_angle_deg" value="0.0" />
+            <xacro:property name="fov_filename" value="zivid_2_plus_m130_fov" />
+        </xacro:if>
+        <xacro:if value="${model == 'ZIVID_2_PLUS_MR60'}">
+            <xacro:property name="optical_center" value="0.049 0.03202 0.0295" />
+            <xacro:property name="optical_angle_deg" value="2.5" />
+            <xacro:property name="fov_filename" value="zivid_2_plus_m60_fov" />
+        </xacro:if>
+        <xacro:if value="${model == 'ZIVID_2_PLUS_LR110'}">
+            <xacro:property name="optical_center" value="0.049 0.03202 0.0295" />
+            <xacro:property name="optical_angle_deg" value="2.5" />
+            <xacro:property name="fov_filename" value="zivid_2_plus_l110_fov" />
+        </xacro:if>
+        <xacro:if value="${model == 'ZIVID_2_PLUS_MR130'}">
+            <xacro:property name="optical_center" value="0.040 0.031 0.0295" />
+            <xacro:property name="optical_angle_deg" value="0.0" />
+            <xacro:property name="fov_filename" value="zivid_2_plus_m130_fov" />
+        </xacro:if>
+
+        <!-- Make xacro error out if the provided camera model was not recognized -->
+        <xacro:if value="${fov_filename == ''}">
+            <xacro:if value="${'ERROR: INVALID ZIVID CAMERA MODEL: ' + model}"/>
+        </xacro:if>
+
+        <!-- Zivid base link -->
+        <link name="${prefix}base_link">
+            <!-- Visuals -->
+            <visual>
+                <origin xyz="0 0 0" rpy="0 0 ${0.5*pi}"/>
+                <geometry>
+                    <mesh filename="package://zivid_description/meshes/visual/zivid_2_plus.stl"/>
+                </geometry>
+                <material name="zivid_gray"/>
+            </visual>
+
+            <!-- Collisions -->
+            <collision>
+                <origin xyz="0 0 0" rpy="0 0 ${0.5*pi}"/>
+                <geometry>
+                    <mesh filename="package://zivid_description/meshes/collision/zivid_2_plus_convex_hull.stl"/>
+                </geometry>
+            </collision>
+        </link>
+
+        <!-- Zivid optical frame (measurement frame)-->
+        <link name="${prefix}optical_frame"/>
+
+        <!-- Zivid optical (measurement) joint. This joint is based on uncalibrated values from the specifications,
+        expect some real-world differences. Hand-eye calibration should be performed for accurate placement of the point
+        cloud in a target coordinate frame.  -->
+        <joint name="${prefix}uncalibrated_optical_joint" type="fixed">
+            <origin xyz="${optical_center}" rpy="-${0.5*pi} 0 -${0.5*pi + float(optical_angle_deg)*pi/180.0}" />
+            <parent link="${prefix}base_link"/>
+            <child link="${prefix}optical_frame"/>
+        </joint>
+
+        <!-- Zivid FOV mesh frame -->
+        <xacro:if value="${field_of_view}">
+            <link name="${prefix}fov_mesh_frame">
+                <!-- FOV mesh -->
+                <visual>
+                    <origin xyz="0 0 0" rpy="0 0 ${0.5*pi}"/>
+                    <geometry>
+                        <mesh filename="package://zivid_description/meshes/field_of_view/${fov_filename}.stl"/>
+                    </geometry>
+                    <material name="zivid_fov"/>
+                </visual>
+            </link>
+
+            <!-- Zivid FOV mesh joint -->
+            <joint name="${prefix}fov_mesh_frame" type="fixed">
+                <parent link="${prefix}base_link"/>
+                <child link="${prefix}fov_mesh_frame"/>
+            </joint>
+        </xacro:if>
+    </xacro:macro>
+</robot>

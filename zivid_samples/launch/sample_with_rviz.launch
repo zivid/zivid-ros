@@ -1,6 +1,36 @@
 <launch>
-  <arg name="sample" default=""/>
-  <node pkg="zivid_camera" exec="zivid_camera" name="zivid_camera" />
-  <node pkg="zivid_samples" exec="$(var sample)" name="$(var sample)" />
+  <arg name="sample"/>
+  <arg name="serial_number" default="" description="Serial number of camera to connect to"/>
+
+  <!-- For infield correction -->
+  <arg name="operation" default=""/>
+
+  <!-- For hand-eye calibration -->
+  <arg name="configuration" default=""/>
+  <arg name="marker_ids" default="[-1]"/> <!-- Empty integer arrays cannot be specified, using -1 as a placeholder. -->
+  <arg name="working_directory" default=""/>
+
+  <node pkg="zivid_camera" exec="zivid_camera" name="zivid_camera">
+    <param name="serial_number" value="$(var serial_number)"/>
+  </node>
+
+  <node pkg="zivid_samples" exec="$(var sample)" name="zivid_sample">
+    <param name="operation" value="$(var operation)"/>
+    <param name="configuration" value="$(var configuration)"/>
+    <param name="marker_ids" value="$(var marker_ids)"/>
+    <param name="working_directory" value="$(var working_directory)"/>
+  </node>
+
   <node pkg="rviz2" exec="rviz2" args="-d $(find-pkg-share zivid_camera)/config/rviz/zivid.rviz" />
+
+  <!-- Specify the Zivid camera model for the URDF. See available options in `README.md`. -->
+  <arg name="model" default="ZIVID_2_M70" />
+  <!-- Specify the visibility of the field of view of the camera model for the URDF. -->
+  <arg name="field_of_view" default="false" />
+  <node pkg="robot_state_publisher" name="robot_state_publisher" exec="robot_state_publisher">
+    <param
+      name="robot_description"
+      value="$(command '$(find-exec xacro) $(find-pkg-share zivid_description)/urdf/zivid_camera.urdf.xacro model:=$(var model) field_of_view:=$(var field_of_view)')"
+    />
+  </node>
 </launch>

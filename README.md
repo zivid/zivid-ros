@@ -21,7 +21,9 @@ are using Zivid SDK 2.14 or newer.
 [**Services**](#services) |
 [**Topics**](#topics) |
 [**Samples**](#samples) |
+[**Launch Files**](#launch-files) |
 [**RViz Plugin**](#rviz-plugin) |
+[**URDF**](#urdf) |
 [**FAQ**](#frequently-asked-questions)
 
 ---
@@ -142,11 +144,10 @@ For example, to run the zivid_camera driver with a specific `serial_number` spec
 ros2 run zivid_camera zivid_camera --ros-args -p serial_number:=ABCD1234
 ```
 
-Or you can use a [launch file](./zivid_samples/launch/zivid_camera_with_serial_number.launch)
-and invoke it as:
+Or you can use a [launch file](#launch-files) and invoke it as:
 
 ```bash
-ros2 launch zivid_samples zivid_camera_with_serial_number.launch serial_number:=ABCD1234
+ros2 launch zivid_samples zivid_camera.launch serial_number:=ABCD1234
 ```
 
 `file_camera_path` (string, default: "")
@@ -753,6 +754,56 @@ With the following arguments:
 
 For more information on performing the calibration, please see the [Zivid hand-eye calibration documentation](https://support.zivid.com/en/latest/academy/applications/hand-eye.html).
 
+## Launch Files
+
+Several sample launch files are provided for the Zivid camera driver and samples. Common to all of them is that they
+start a node for the Zivid camera driver and another one for the [robot description for the camera (URDF)](#urdf).
+
+### Common Arguments
+
+Common arguments to all launch files:
+- `serial_number` (string, default *empty*). Connect to a specific camera by its serial number, empty means connect to
+  the first available camera.
+- `model` (string, default `ZIVID_2_M70`). Choose from the list of [available camera models](#available-models) for the
+  [URDF](#urdf).
+- `field_of_view` (boolean, default `false`). Enable to include a mesh of the camera field of view in the [URDF](#urdf).
+
+### Launch Sample
+
+[`sample.launch`](./zivid_samples/launch/sample.launch)
+: Launches a camera node with its description and a sample.
+
+Arguments:
+- `sample`: (string, required). Specify the name of the [sample](#samples).
+
+See also the [common arguments](#common-arguments) above. There are also additional arguments for specific samples, see
+any arguments listed in the description of a given sample.
+
+### Launch Sample with RViz
+
+[`sample_with_rviz.launch`](./zivid_samples/launch/sample_with_rviz.launch)
+: Launches a camera node with its description and a sample, and opens RViz with the Zivid configuration.
+
+Arguments:
+- `sample`: (string, required). Specify the name of the [sample](#samples).
+
+See also the [common arguments](#common-arguments) above. There are also additional arguments for specific samples, see
+any arguments listed in the description of a given sample.
+
+### Launch Zivid Camera
+
+[`zivid_camera.launch`](./zivid_samples/launch/zivid_camera.launch)
+: Launches a camera node with its description.
+
+See the [common arguments](#common-arguments) above.
+
+### Launch Zivid Camera with RViz
+
+[`zivid_camera_with_rviz.launch`](./zivid_samples/launch/zivid_camera_with_rviz.launch)
+: Launches a camera node with its description, and opens RViz with the Zivid configuration.
+
+See the [common arguments](#common-arguments) above.
+
 ## RViz Plugin
 
 ### Infield Correction Panel
@@ -762,20 +813,59 @@ The Zivid RViz plugin provides a panel to interactively perform infield correcti
 To see the panel in RViz, go to `Panels -> Add New Panel`, then select `Zivid Infield Correction` and click `OK`.
 Infield correction can now be performed by interacting with the newly added panel.
 
-The panel is also visible when launching a Zivid sample with RViz, e.g.:
+The panel is also visible when [launching](#launch-zivid-camera-with-rviz) the Zivid camera node with RViz, e.g.:
 ```
-ros2 launch zivid_samples sample_with_rviz.launch sample:=sample_capture_with_settings_from_file_cpp
-```
-
-When the `zivid_camera` node is already running, RViz can also be started directly with the panel visible by using the
-Zivid RViz display configuration:
-```
-rviz2 -d $(ros2 pkg prefix zivid_camera)/share/zivid_camera/config/rviz/zivid.rviz
+ros2 launch zivid_samples zivid_camera_with_rviz.launch
 ```
 
 Please see the [infield correction documentation](https://support.zivid.com/en/latest/academy/camera/infield-correction.html)
 for prerequisites and guidelines on how to perform the correction.
 
+## URDF
+
+The Zivid description package provides a [Unified Robotics Description Format
+(URDF)](https://docs.ros.org/en/jazzy/Tutorials/Intermediate/URDF/URDF-Main.html) for Zivid cameras. Visual and
+collision models are provided for the Zivid cameras, and a visual model of their field-of-view (FOV) can optionally be
+included. The description specifies the coordinate frame of the point cloud (`zivid_optical_frame` by default) in
+relation to the base of the camera (`zivid_base_link` by default).
+
+The position and orientation of the optical frame are different between camera models, as well as their FOV. To model
+these differences, the description is specified in a [Xacro
+macro](https://docs.ros.org/en/jazzy/Tutorials/Intermediate/URDF/Using-Xacro-to-Clean-Up-a-URDF-File.html) which is used
+to generate the URDF. Ensure that the appropriate [camera model](#available-models) is provided. This is particularly
+important when visualizing the FOV, as that has large variations between models.
+
+The provided relation between the Zivid optical frame and base link is based on uncalibrated values, expect certain
+real-world differences. [Hand-eye calibration](#sample-hand-eye-calibration) should be performed for accurate placement
+of the point cloud in a target coordinate frame.
+
+### Usage
+
+The URDF or the underlying macro can be included in your own project.
+
+To view the Zivid 2, Zivid 2+, or Zivid 2+R cameras in RViz:
+```
+ros2 launch zivid_samples zivid_camera_with_rviz.launch model:=ZIVID_2_M70 field_of_view:=true
+```
+Please see the [available models](#available-models) below.
+
+To view the camera in RViz and start a sample:
+```
+ros2 launch zivid_samples sample_with_rviz.launch model:=ZIVID_2_M70 field_of_view:=true sample:=sample_capture_cpp
+```
+
+### Available Models
+
+The available Zivid camera models are:
+
+- `ZIVID_2_M70` (default)
+- `ZIVID_2_L100`
+- `ZIVID_2_PLUS_L110`
+- `ZIVID_2_PLUS_M60`
+- `ZIVID_2_PLUS_M130`
+- `ZIVID_2_PLUS_LR110`
+- `ZIVID_2_PLUS_MR130`
+- `ZIVID_2_PLUS_MR60`
 
 ## Frequently Asked Questions
 

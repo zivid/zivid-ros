@@ -39,7 +39,7 @@ namespace
 
 template <typename Logger>
 Zivid::Image<Zivid::ColorBGRA> createImage(
-  const Logger & logger, zivid_interfaces::srv::ProjectionStart::Request const & request,
+  const Logger & logger, const zivid_interfaces::srv::ProjectionStart::Request & request,
   const Zivid::Resolution & resolution)
 {
   if (!request.image_path.empty() && !request.data.empty()) {

@@ -5,7 +5,6 @@
 #include <stdexcept>
 #include <zivid_interfaces/srv/projection_resolution.hpp>
 #include <zivid_interfaces/srv/projection_start.hpp>
-#include <zivid_interfaces/srv/projection_stop.hpp>
 
 void fatal_error(const rclcpp::Logger & logger, const std::string & message)
 {

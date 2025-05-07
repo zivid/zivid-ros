@@ -50,7 +50,6 @@
 #include <zivid_interfaces/srv/projection_resolution.hpp>
 #include <zivid_interfaces/srv/projection_start.hpp>
 #include <zivid_interfaces/srv/projection_status.hpp>
-#include <zivid_interfaces/srv/projection_stop.hpp>
 
 #ifdef _WIN32
 #define ZIVID_SAMPLE_DATA_DIR "C:\\ProgramData\\Zivid\\"
@@ -1037,7 +1036,7 @@ TEST_F(TestWithFileCamera, testProjectionServices)
   verifyTriggerResponseSuccess(status_response);
   ASSERT_EQ(status_response->projecting, false);
 
-  auto stop_response = doEmptySrvRequest<zivid_interfaces::srv::ProjectionStop>(projection_stop);
+  auto stop_response = doEmptySrvRequest<std_srvs::srv::Trigger>(projection_stop);
   verifyTriggerResponseSuccess(stop_response);
 }
 

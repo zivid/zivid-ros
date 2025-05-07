@@ -1,9 +1,9 @@
 #include <filesystem>
 #include <rclcpp/rclcpp.hpp>
 #include <stdexcept>
+#include <std_srvs/srv/trigger.hpp>
 #include <zivid_interfaces/srv/projection_resolution.hpp>
 #include <zivid_interfaces/srv/projection_start.hpp>
-#include <zivid_interfaces/srv/projection_stop.hpp>
 
 static const auto read_only_parameter =
   rcl_interfaces::msg::ParameterDescriptor{}.set__read_only(true);
@@ -45,7 +45,7 @@ auto create_resolution_client(std::shared_ptr<rclcpp::Node> & node)
 
 auto create_stop_client(std::shared_ptr<rclcpp::Node> & node)
 {
-  auto client = node->create_client<zivid_interfaces::srv::ProjectionStop>("projection/stop");
+  auto client = node->create_client<std_srvs::srv::Trigger>("projection/stop");
   while (!client->wait_for_service(std::chrono::seconds(3))) {
     if (!rclcpp::ok()) {
       fatal_error(node->get_logger(), "Client interrupted while waiting for service to appear.");
@@ -107,7 +107,7 @@ int main(int argc, char * argv[])
   auto stop_projection = [&]() {
     RCLCPP_INFO(node->get_logger(), "Stopping projection");
     stop_client->async_send_request(
-      std::make_shared<zivid_interfaces::srv::ProjectionStop::Request>());
+      std::make_shared<std_srvs::srv::Trigger::Request>());
   };
 
   start_projection();

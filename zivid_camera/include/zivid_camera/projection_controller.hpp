@@ -38,7 +38,6 @@
 #include <zivid_interfaces/srv/projection_resolution.hpp>
 #include <zivid_interfaces/srv/projection_start.hpp>
 #include <zivid_interfaces/srv/projection_status.hpp>
-#include <zivid_interfaces/srv/projection_stop.hpp>
 
 namespace Zivid
 {
@@ -78,8 +77,8 @@ private:
     std::shared_ptr<zivid_interfaces::srv::ProjectionStatus::Response> response);
   void stopServiceHandler(
     const std::shared_ptr<rmw_request_id_t> request_header,
-    const std::shared_ptr<zivid_interfaces::srv::ProjectionStop::Request> request,
-    std::shared_ptr<zivid_interfaces::srv::ProjectionStop::Response> response);
+    const std::shared_ptr<std_srvs::srv::Trigger::Request> request,
+    std::shared_ptr<std_srvs::srv::Trigger::Response> response);
 
   rclcpp::Node & node_;
   Zivid::Camera & camera_;
@@ -89,6 +88,6 @@ private:
   rclcpp::Service<zivid_interfaces::srv::ProjectionResolution>::SharedPtr resolution_service_;
   rclcpp::Service<zivid_interfaces::srv::ProjectionStart>::SharedPtr start_service_;
   rclcpp::Service<zivid_interfaces::srv::ProjectionStatus>::SharedPtr status_service_;
-  rclcpp::Service<zivid_interfaces::srv::ProjectionStop>::SharedPtr stop_service_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr stop_service_;
 };
 }  // namespace zivid_camera

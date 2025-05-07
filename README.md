@@ -483,7 +483,7 @@ Start the projector. This service takes _either_ a path _or_ raw pixel values in
 The specified file or data must match the resolution of the projector.
 
 ### projection/stop
-[zivid_interfaces/srv/ProjectionStop.srv](./zivid_interfaces/srv/ProjectionStop.srv)
+[std_srvs/srv/Trigger](https://docs.ros2.org/latest/api/std_srvs/srv/Trigger.html)
 
 Stops the current projection, if any.
 

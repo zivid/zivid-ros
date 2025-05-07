@@ -87,7 +87,7 @@ ProjectionController::ProjectionController(rclcpp::Node & zivid_camera_node, Ziv
   state_ = std::make_unique<ProjectionState>();
   start_service_ = node_.create_service<zivid_interfaces::srv::ProjectionStart>(
     "projection/start", std::bind(&ProjectionController::startServiceHandler, this, _1, _2, _3));
-  stop_service_ = node_.create_service<zivid_interfaces::srv::ProjectionStop>(
+  stop_service_ = node_.create_service<std_srvs::srv::Trigger>(
     "projection/stop", std::bind(&ProjectionController::stopServiceHandler, this, _1, _2, _3));
   resolution_service_ = node_.create_service<zivid_interfaces::srv::ProjectionResolution>(
     "projection/resolution",
@@ -170,8 +170,8 @@ void ProjectionController::startServiceHandler(
 
 void ProjectionController::stopServiceHandler(
   const std::shared_ptr<rmw_request_id_t> /*request_header*/,
-  const std::shared_ptr<zivid_interfaces::srv::ProjectionStop::Request> /*request*/,
-  std::shared_ptr<zivid_interfaces::srv::ProjectionStop::Response> response)
+  const std::shared_ptr<std_srvs::srv::Trigger::Request> /*request*/,
+  std::shared_ptr<std_srvs::srv::Trigger::Response> response)
 {
   RCLCPP_INFO_STREAM(node_.get_logger(), __func__);
 

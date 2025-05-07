@@ -5,7 +5,8 @@
 # image must be the same resolution as the projector.
 string file_path
 
-# Raw pixel data In BGRA format. The size of the array must be 4 * width * height. The alpha channel is ignored.
+# Raw pixel data In BGRA format. The size of the array must be 4 * width * height where the width and height are given
+# by the projector's resolution. The alpha channel is ignored.
 uint8[] data
 ---
 bool success

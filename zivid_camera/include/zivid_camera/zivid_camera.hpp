@@ -51,6 +51,7 @@ struct ColorRGBA;
 struct ColorSRGB;
 using ColorRGBA_SRGB = ColorSRGB;
 class Frame;
+class Frame2D;
 template <typename T>
 class Image;
 class PointCloud;
@@ -126,6 +127,7 @@ private:
     const std::shared_ptr<zivid_interfaces::srv::IsConnected::Request> request,
     std::shared_ptr<zivid_interfaces::srv::IsConnected::Response> response);
   void publishFrame(const Zivid::Frame & frame);
+  void publishFrame2D(const Zivid::Frame2D & frame2D);
   Zivid::Frame invokeCaptureAndPublishFrame(const Zivid::Settings & settings);
   bool shouldPublishPointsXYZ() const;
   bool shouldPublishPointsXYZRGBA() const;

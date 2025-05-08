@@ -31,7 +31,8 @@
 namespace Zivid
 {
 class Frame;
-}
+class Frame2D;
+}  // namespace Zivid
 
 namespace zivid_camera
 {

@@ -544,32 +544,9 @@ void ZividCamera::capture2DServiceHandler(
 
   runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
-      const auto color_space = colorSpace();
       const auto settings2D = settings_2d_controller_->currentSettings();
       auto frame2D = camera_->capture(settings2D);
-      if (shouldPublishColorImg()) {
-        const auto header = makeHeader();
-        const auto intrinsics = Zivid::Experimental::Calibration::intrinsics(*camera_);
-
-        switch (color_space) {
-          case ColorSpace::sRGB: {
-            auto image = frame2D.imageRGBA_SRGB();
-            const auto camera_info =
-              makeCameraInfo(header, image.width(), image.height(), intrinsics);
-            publishColorImage(header, camera_info, image);
-          } break;
-          case ColorSpace::LinearRGB: {
-            auto image = frame2D.imageRGBA();
-            const auto camera_info =
-              makeCameraInfo(header, image.width(), image.height(), intrinsics);
-            publishColorImage(header, camera_info, image);
-          } break;
-          default:
-            throw std::runtime_error(
-              "Internal error: Unknown color space value " +
-              std::to_string(static_cast<int>(color_space)));
-        }
-      }
+      publishFrame2D(frame2D);
     },
     response, get_logger(), "Capture2D");
 }
@@ -708,6 +685,32 @@ void ZividCamera::publishFrame(const Zivid::Frame & frame)
     RCLCPP_WARN_STREAM(
       get_logger(),
       __func__ << ": capture was called, but no subscribers active and 0 messages sent");
+  }
+}
+
+void ZividCamera::publishFrame2D(const Zivid::Frame2D & frame2D)
+{
+  if (shouldPublishColorImg()) {
+    const auto color_space = colorSpace();
+    const auto header = makeHeader();
+    const auto intrinsics = Zivid::Experimental::Calibration::intrinsics(*camera_);
+
+    switch (color_space) {
+      case ColorSpace::sRGB: {
+        auto image = frame2D.imageRGBA_SRGB();
+        const auto camera_info = makeCameraInfo(header, image.width(), image.height(), intrinsics);
+        publishColorImage(header, camera_info, image);
+      } break;
+      case ColorSpace::LinearRGB: {
+        auto image = frame2D.imageRGBA();
+        const auto camera_info = makeCameraInfo(header, image.width(), image.height(), intrinsics);
+        publishColorImage(header, camera_info, image);
+      } break;
+      default:
+        throw std::runtime_error(
+          "Internal error: Unknown color space value " +
+          std::to_string(static_cast<int>(color_space)));
+    }
   }
 }
 

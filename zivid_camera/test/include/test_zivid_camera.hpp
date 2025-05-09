@@ -189,6 +189,7 @@ protected:
   static constexpr auto parameter_settings_2d_file_path = "settings_2d_file_path";
   static constexpr auto parameter_settings_2d_yaml = "settings_2d_yaml";
   static constexpr auto parameter_color_space = "color_space";
+  static constexpr auto parameter_intrinsics_source = "intrinsics_source";
 
   ZividNodeTest(
     FileCameraMode file_camera_mode = FileCameraMode::Default,
@@ -204,6 +205,7 @@ protected:
     setNodeParameter(parameter_settings_yaml, "");
     setNodeParameter(parameter_settings_2d_file_path, "");
     setNodeParameter(parameter_settings_2d_yaml, "");
+    setNodeParameter(parameter_intrinsics_source, "camera");
     setNodeColorSpaceSRGB();
   }
 
@@ -558,6 +560,33 @@ Settings2D:
       ci.p, std::array<double, 12>{
               1781.447998046875, 0, 990.49267578125, 0, 0, 1781.5296630859375, 585.81781005859375,
               0, 0, 0, 1, 0});
+  }
+
+  void assertCameraInfoForFileCameraWithIntrinsicsSourceFrame(
+    const sensor_msgs::msg::CameraInfo & ci) const
+  {
+    ASSERT_EQ(ci.width, 1944U);
+    ASSERT_EQ(ci.height, 1200U);
+    ASSERT_EQ(ci.distortion_model, "plumb_bob");
+
+    //     [fx  0 cx]
+    // K = [ 0 fy cy]
+    //     [ 0  0  1]
+    assertArrayDoubleEq(
+      ci.k, std::array<double, 9>{
+              1781.447998046875, 0, 987.73809659051881, 0, 1781.5296630859375, 583.48110207475008,
+              0, 0, 1});
+
+    // R = I
+    assertArrayDoubleEq(ci.r, std::array<double, 9>{1, 0, 0, 0, 1, 0, 0, 0, 1});
+
+    //     [fx'  0  cx' Tx]
+    // P = [ 0  fy' cy' Ty]
+    //     [ 0   0   1   0]
+    assertArrayDoubleEq(
+      ci.p, std::array<double, 12>{
+              1781.447998046875, 0, 987.73809659051881, 0, 0, 1781.5296630859375,
+              583.48110207475008, 0, 0, 0, 1, 0});
   }
 
   void verifyPoint(const geometry_msgs::msg::Point & point, std::array<double, 3> expect_position)

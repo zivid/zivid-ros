@@ -718,6 +718,59 @@ TEST_F(ZividNodeTest, testCaptureCameraInfo)
   assertCameraInfoForFileCamera(*color_camera_info_sub.lastMessage());
   assertCameraInfoForFileCamera(*depth_camera_info_sub.lastMessage());
   assertCameraInfoForFileCamera(*snr_camera_info_sub.lastMessage());
+
+  setNodeParameter(parameter_intrinsics_source, "frame");
+  doSingleDefaultAcquisitionCaptureUsingFilePath();
+
+  ASSERT_EQ(color_camera_info_sub.numMessages(), 2U);
+  ASSERT_EQ(depth_camera_info_sub.numMessages(), 2U);
+  ASSERT_EQ(snr_camera_info_sub.numMessages(), 2U);
+
+  assertCameraInfoForFileCameraWithIntrinsicsSourceFrame(*color_camera_info_sub.lastMessage());
+  assertCameraInfoForFileCameraWithIntrinsicsSourceFrame(*depth_camera_info_sub.lastMessage());
+  assertCameraInfoForFileCameraWithIntrinsicsSourceFrame(*snr_camera_info_sub.lastMessage());
+}
+
+TEST_F(ZividNodeTest, testCaptureInvalidIntrinsicsSourceCaptureErrors)
+{
+  auto color_image_sub = subscribe<sensor_msgs::msg::Image>(color_image_color_topic_name);
+  auto depth_image_sub = subscribe<sensor_msgs::msg::Image>(depth_image_topic_name);
+  auto snr_image_sub = subscribe<sensor_msgs::msg::Image>(snr_image_topic_name);
+
+  setNodeParameter(parameter_intrinsics_source, "invalid_intrinsics_source");
+
+  verifyTriggerResponseError(
+    doSingleDefaultAcquisitionCaptureUsingFilePath(),
+    "Invalid value for parameter 'intrinsics_source': 'invalid_intrinsics_source'. Expected one "
+    "of: camera, frame.");
+
+  ASSERT_EQ(color_image_sub.numMessages(), 0U);
+  ASSERT_EQ(depth_image_sub.numMessages(), 0U);
+  ASSERT_EQ(snr_image_sub.numMessages(), 0U);
+}
+
+TEST_F(ZividNodeTest, testCaptureInvalidIntrinsicsSourceCapture2D)
+{
+  auto color_camera_info_sub =
+    subscribe<sensor_msgs::msg::CameraInfo>(color_camera_info_topic_name);
+
+  verifyTriggerResponseSuccess(doSingleDefaultAcquisitionCapture2DUsingFilePath());
+  ASSERT_EQ(color_camera_info_sub.numMessages(), 1U);
+  assertCameraInfoForFileCamera(*color_camera_info_sub.lastMessage());
+
+  setNodeParameter(parameter_intrinsics_source, "frame");
+  verifyTriggerResponseSuccess(doSingleDefaultAcquisitionCapture2DUsingFilePath());
+  ASSERT_EQ(color_camera_info_sub.numMessages(), 2U);
+  assertCameraInfoForFileCamera(*color_camera_info_sub.lastMessage());
+}
+
+TEST_F(ZividNodeTest, testCaptureInvalidIntrinsicsSourceCapture2DNotAnError)
+{
+  AllCapture2DTopicsSubscriber topics_subscriber(*this);
+
+  setNodeParameter(parameter_intrinsics_source, "invalid_intrinsics_source");
+  verifyTriggerResponseSuccess(doSingleDefaultAcquisitionCapture2DUsingFilePath());
+  topics_subscriber.assert_num_topics_received(1U);
 }
 
 class Capture2DOutputTest : public CaptureOutputTest

@@ -71,6 +71,11 @@ enum class ColorSpace
   sRGB,
   LinearRGB,
 };
+enum class IntrinsicsSource
+{
+  Camera,
+  Frame,
+};
 template <typename SettingsType>
 class CaptureSettingsController;
 class DetectorController;
@@ -161,10 +166,12 @@ private:
     const Zivid::CameraIntrinsics & intrinsics);
   [[noreturn]] void logErrorAndThrowRuntimeException(const std::string & message);
   ColorSpace colorSpace() const;
+  IntrinsicsSource intrinsicsSource() const;
 
   friend class ControllerInterface;
 
   std::map<std::string, ColorSpace> color_space_name_value_map_;
+  std::map<std::string, IntrinsicsSource> intrinsics_source_name_value_map_;
   rclcpp::TimerBase::SharedPtr camera_connection_keepalive_timer_;
   bool use_latched_publisher_for_points_xyz_{false};
   bool use_latched_publisher_for_points_xyzrgba_{false};

@@ -93,6 +93,15 @@ Zivid::Application makeZividApplication()
 
 namespace zivid_camera
 {
+namespace ParamNames
+{
+constexpr auto serial_number = "serial_number";
+constexpr auto max_capture_acquisitions = "max_capture_acquisitions";
+constexpr auto file_camera_path = "file_camera_path";
+constexpr auto frame_id = "frame_id";
+constexpr auto update_firmware_automatically = "update_firmware_automatically";
+}  // namespace ParamNames
+
 ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   : nh_(nh)
   , priv_(priv)
@@ -128,15 +137,15 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   }
 
   std::string serial_number;
-  priv_.param<decltype(serial_number)>("serial_number", serial_number, "");
+  priv_.param<decltype(serial_number)>(ParamNames.serial_number, serial_number, "");
 
   int max_capture_acquisitions;
-  priv_.param<decltype(max_capture_acquisitions)>("max_capture_acquisitions", max_capture_acquisitions, 10);
+  priv_.param<decltype(max_capture_acquisitions)>(ParamNames.max_capture_acquisitions, max_capture_acquisitions, 10);
 
-  priv_.param<decltype(frame_id_)>("frame_id", frame_id_, "zivid_optical_frame");
+  priv_.param<decltype(frame_id_)>(ParamNames.frame_id, frame_id_, "zivid_optical_frame");
 
   std::string file_camera_path;
-  priv_.param<decltype(file_camera_path)>("file_camera_path", file_camera_path, "");
+  priv_.param<decltype(file_camera_path)>(ParamNames.file_camera_path, file_camera_path, "");
   const bool file_camera_mode = !file_camera_path.empty();
 
   priv_.param<bool>("use_latched_publisher_for_points_xyz", use_latched_publisher_for_points_xyz_, false);
@@ -147,7 +156,7 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   priv_.param<bool>("use_latched_publisher_for_normals_xyz", use_latched_publisher_for_normals_xyz_, false);
 
   bool update_firmware_automatically = true;
-  priv_.param<bool>("update_firmware_automatically", update_firmware_automatically, update_firmware_automatically);
+  priv_.param<bool>(ParamNames.update_firmware_automatically, update_firmware_automatically, update_firmware_automatically);
 
   if (file_camera_mode)
   {

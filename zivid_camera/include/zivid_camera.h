@@ -29,6 +29,12 @@ enum class CameraStatus
   Disconnected
 };
 
+enum class ColorSpace
+{
+  sRGB,
+  LinearRGB,
+};
+
 class ZividCamera
 {
 public:
@@ -60,11 +66,14 @@ private:
   bool shouldPublishNormalsXYZ() const;
   std_msgs::Header makeHeader();
   void publishPointCloudXYZ(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud);
-  void publishPointCloudXYZRGBA(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud);
+  void publishPointCloudXYZRGBA(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud,
+                                ColorSpace color_space);
   void publishColorImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
-                         const Zivid::PointCloud& point_cloud);
+                         const Zivid::PointCloud& point_cloud, ColorSpace color_space);
   void publishColorImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
                          const Zivid::Image<Zivid::ColorRGBA>& image);
+  void publishColorImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
+                         const Zivid::Image<Zivid::ColorRGBA_SRGB>& image);
   void publishDepthImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
                          const Zivid::PointCloud& point_cloud);
   void publishSnrImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
@@ -72,6 +81,7 @@ private:
   void publishNormalsXYZ(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud);
   sensor_msgs::CameraInfoConstPtr makeCameraInfo(const std_msgs::Header& header, std::size_t width, std::size_t height,
                                                  const Zivid::CameraIntrinsics& intrinsics);
+  ColorSpace colorSpace() const;
 
   // using Capture3DSettingsController =
   //    CaptureSettingsController<Zivid::Settings, SettingsConfig, SettingsAcquisitionConfig>;
@@ -80,6 +90,7 @@ private:
 
   ros::NodeHandle nh_;
   ros::NodeHandle priv_;
+  std::map<std::string, ColorSpace> color_space_name_value_map_;
   ros::Timer camera_connection_keepalive_timer_;
   CameraStatus camera_status_;
   bool use_latched_publisher_for_points_xyz_;

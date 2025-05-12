@@ -221,6 +221,7 @@ constexpr auto serial_number = "serial_number";
 constexpr auto file_camera_path = "file_camera_path";
 constexpr auto frame_id = "frame_id";
 constexpr auto color_space = "color_space";
+constexpr auto intrinsics_source = "intrinsics_source";
 }  // namespace ParamNames
 
 ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
@@ -228,6 +229,10 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
   color_space_name_value_map_{
     {"srgb", zivid_camera::ColorSpace::sRGB},
     {"linear_rgb", zivid_camera::ColorSpace::LinearRGB},
+  },
+  intrinsics_source_name_value_map_{
+    {"camera", zivid_camera::IntrinsicsSource::Camera},
+    {"frame", zivid_camera::IntrinsicsSource::Frame},
   },
   zivid_{std::make_unique<Zivid::Application>(
     Zivid::Detail::createApplicationForWrapper(Zivid::Detail::EnvironmentInfo::Wrapper::ros2))},
@@ -254,6 +259,7 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
   frame_id_ = declare_parameter<std::string>(ParamNames::frame_id, "zivid_optical_frame");
 
   declare_parameter<std::string>(ParamNames::color_space, "linear_rgb");
+  declare_parameter<std::string>(ParamNames::intrinsics_source, "camera");
 
   const auto file_camera_path = declare_parameter(ParamNames::file_camera_path, "");
   const bool file_camera_mode = !file_camera_path.empty();
@@ -668,7 +674,20 @@ void ZividCamera::publishFrame(const Zivid::Frame & frame)
       publishPointCloudXYZRGBA(header, point_cloud, color_space);
     }
     if (publish_color_img || publish_depth_img || publish_snr_img) {
-      const auto intrinsics = Zivid::Experimental::Calibration::intrinsics(*camera_);
+      auto intrinsics = [&] {
+        const auto intrinsics_source = intrinsicsSource();
+        switch (intrinsics_source) {
+          case IntrinsicsSource::Camera:
+            return Zivid::Experimental::Calibration::intrinsics(*camera_);
+          case IntrinsicsSource::Frame:
+            return Zivid::Experimental::Calibration::estimateIntrinsics(frame);
+          default:
+            throw std::runtime_error(
+              "Internal error: Unknown intrinsics source value " +
+              std::to_string(static_cast<int>(intrinsics_source)));
+        }
+      }();
+
       const auto camera_info =
         makeCameraInfo(header, point_cloud.width(), point_cloud.height(), intrinsics);
 
@@ -939,6 +958,13 @@ ColorSpace ZividCamera::colorSpace() const
   const auto color_space_str = get_parameter(ParamNames::color_space).as_string();
   return parameterStringToEnum(
     ParamNames::color_space, color_space_str, color_space_name_value_map_);
+}
+
+IntrinsicsSource ZividCamera::intrinsicsSource() const
+{
+  const auto intrinsics_source = get_parameter(ParamNames::intrinsics_source).as_string();
+  return parameterStringToEnum(
+    ParamNames::intrinsics_source, intrinsics_source, intrinsics_source_name_value_map_);
 }
 }  // namespace zivid_camera
 

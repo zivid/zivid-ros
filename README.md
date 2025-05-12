@@ -787,6 +787,29 @@ Using ros2 run (when `zivid_camera` node is already running):
 ros2 run zivid_samples sample_capture_cpp
 ```
 
+### Sample with SDK: Capture and Load Frame
+
+The sample serves to demonstrate how to use the Zivid SDK on the sample-side directly, as a supplement to the services
+provided by the Zivid camera driver. Captures are still performed using the `zivid_camera` node and its ROS services.
+
+First, the sample performs a `capture_and_save` service call to the `zivid_camera` node to save a file to ZDF, just like
+in the [Capture and Save sample](#sample-capture-and-save). Then, it loads the ZDF, using the Zivid SDK directly, and
+prints information about it.
+
+This sample expects the `zivid_camera` to run in a separate node, in a different process. When using the Zivid API, each
+process needs to have its own copy of `Zivid::Application`. For this reason, the sample constructs its own copy of
+`Zivid::Application`.
+
+```bash
+ros2 launch zivid_samples sample.launch sample:=sample_with_sdk_capture_and_load_cpp
+```
+
+Or using ros2 run (when `zivid_camera` node is already running):
+
+```bash
+ros2 run zivid_samples sample_with_sdk_capture_and_load_cpp
+```
+
 ## Launch Files
 
 Several sample launch files are provided for the Zivid camera driver and samples. Common to all of them is that they

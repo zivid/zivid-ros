@@ -33,6 +33,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 
 find_package(Zivid 2.15.0 COMPONENTS Core REQUIRED)
@@ -54,6 +55,25 @@ zivid_add_cpp_sample(sample_with_sdk_hand_eye_calibration
   LINK_TARGETS
     Zivid::Core
 )
+
+add_library(zivid_component_hand_eye SHARED src/node_hand_eye_calibration.cpp)
+ament_target_dependencies(zivid_component_hand_eye rclcpp_components rclcpp std_srvs zivid_interfaces tf2 tf2_ros tf2_geometry_msgs)
+target_link_libraries(zivid_component_hand_eye Zivid::Core)
+
+rclcpp_components_register_node(
+    zivid_component_hand_eye
+    PLUGIN "zivid_component::HandEyeCalibration"
+    EXECUTABLE zivid_component
+)
+
+ament_export_targets(export_zivid_component_hand_eye)
+install(TARGETS zivid_component_hand_eye
+        EXPORT export_zivid_component_hand_eye
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+        RUNTIME DESTINATION bin
+)
+
 
 zivid_add_python_sample(sample_capture)
 zivid_add_python_sample(sample_capture_2d)

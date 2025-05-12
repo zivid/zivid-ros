@@ -831,6 +831,33 @@ ros2 run tf2_ros static_transform_publisher --x 1 --y 2 --z 3 --yaw 1.57 --pitch
 
 Note that the robot pose and associated transform should be changed between each capture.
 
+### Sample with SDK: Hand-eye Calibration Component
+
+Running the zivid camera node and hand-eye calibration component together in a single process.
+
+Terminal 1:
+```bash
+ros2 run rclcpp_components component_container_mt
+```
+
+Terminal 2:
+```bash
+ros2 run tf2_ros static_transform_publisher --x 1 --y 2 --z 3 --yaw 1.57 --pitch 0 --roll 0 --frame-id map --child-frame-id robot_end_effector
+```
+
+Terminal 3:
+```bash
+# Load camera
+ros2 component load /ComponentManager zivid_camera zivid_camera::ZividCamera
+
+# Just to set the settings parameter
+ros2 run zivid_samples sample_capture_and_save_cpp
+
+# Load and start the hand-eye node
+ros2 component load /ComponentManager zivid_samples zivid_component::HandEyeCalibration -p configuration:=eye_in_hand
+ros2 service call /hand_eye_sample_with_sdk_capture std_srvs/srv/Trigger
+```
+
 ## Launch Files
 
 Several sample launch files are provided for the Zivid camera driver and samples. Common to all of them is that they

@@ -1,5 +1,4 @@
 #include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_srvs/srv/trigger.hpp>
 #include <stdexcept>
@@ -10,6 +9,9 @@
  * capture is triggered.
  */
 
+rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr g_capture_client;
+std::shared_ptr<rclcpp::Node> g_node;
+
 void fatal_error(const rclcpp::Logger & logger, const std::string & message)
 {
   RCLCPP_ERROR_STREAM(logger, message);
@@ -18,9 +20,7 @@ void fatal_error(const rclcpp::Logger & logger, const std::string & message)
 
 void set_settings(const std::shared_ptr<rclcpp::Node> & node)
 {
-  RCLCPP_INFO(node->get_logger(), "Setting parameter 'settings_yaml'");
-  const std::string settings_yml =
-    R"(
+  const std::string settings_yml = R"(
 __version__:
   serializer: 1
   data: 22
@@ -36,19 +36,18 @@ Settings:
           Enabled: yes
           Threshold: 5
 )";
-
   auto param_client = std::make_shared<rclcpp::AsyncParametersClient>(node, "zivid_camera");
+
   while (!param_client->wait_for_service(std::chrono::seconds(3))) {
     if (!rclcpp::ok()) {
-      fatal_error(node->get_logger(), "Client interrupted while waiting for service to appear.");
+      fatal_error(node->get_logger(), "Interrupted while waiting for parameter service.");
     }
-    RCLCPP_INFO(node->get_logger(), "Waiting for the parameters client to appear...");
+    RCLCPP_INFO(node->get_logger(), "Waiting for parameter service...");
   }
 
   auto result = param_client->set_parameters({rclcpp::Parameter("settings_yaml", settings_yml)});
-  if (
-    rclcpp::spin_until_future_complete(node, result, std::chrono::seconds(30)) !=
-    rclcpp::FutureReturnCode::SUCCESS) {
+  if (rclcpp::spin_until_future_complete(node, result, std::chrono::seconds(120)) !=
+      rclcpp::FutureReturnCode::SUCCESS) {
     fatal_error(node->get_logger(), "Failed to set `settings_yaml` parameter");
   }
 }
@@ -56,62 +55,69 @@ Settings:
 void set_srgb(const std::shared_ptr<rclcpp::Node> & node)
 {
   auto param_client = std::make_shared<rclcpp::AsyncParametersClient>(node, "zivid_camera");
+
   while (!param_client->wait_for_service(std::chrono::seconds(3))) {
     if (!rclcpp::ok()) {
-      fatal_error(node->get_logger(), "Client interrupted while waiting for service to appear.");
+      fatal_error(node->get_logger(), "Interrupted while waiting for parameter service.");
     }
-    RCLCPP_INFO(node->get_logger(), "Waiting for the parameters client to appear...");
+    RCLCPP_INFO(node->get_logger(), "Waiting for parameter service...");
   }
 
   auto result = param_client->set_parameters({rclcpp::Parameter("color_space", "srgb")});
-  if (
-    rclcpp::spin_until_future_complete(node, result, std::chrono::seconds(30)) !=
-    rclcpp::FutureReturnCode::SUCCESS) {
+  if (rclcpp::spin_until_future_complete(node, result, std::chrono::seconds(30)) !=
+      rclcpp::FutureReturnCode::SUCCESS) {
     fatal_error(node->get_logger(), "Failed to set `color_space` parameter");
   }
 }
 
-auto create_capture_client(std::shared_ptr<rclcpp::Node> & node)
+rclcpp::Client<std_srvs::srv::Trigger>::SharedPtr create_capture_client(const std::shared_ptr<rclcpp::Node> & node)
 {
   auto client = node->create_client<std_srvs::srv::Trigger>("capture");
+
   while (!client->wait_for_service(std::chrono::seconds(3))) {
     if (!rclcpp::ok()) {
-      fatal_error(node->get_logger(), "Client interrupted while waiting for service to appear.");
+      fatal_error(node->get_logger(), "Interrupted while waiting for capture service.");
     }
-    RCLCPP_INFO(node->get_logger(), "Waiting for the capture service to appear...");
+    RCLCPP_INFO(node->get_logger(), "Waiting for capture service...");
   }
 
-  RCLCPP_INFO(node->get_logger(), "capture service is available");
+  RCLCPP_INFO(node->get_logger(), "Capture service is available.");
   return client;
+}
+
+void trigger_capture()
+{
+  RCLCPP_INFO(g_node->get_logger(), "Triggering capture");
+  auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
+  g_capture_client->async_send_request(request);
+}
+
+void on_point_cloud_received(sensor_msgs::msg::PointCloud2::ConstSharedPtr msg)
+{
+  RCLCPP_INFO(g_node->get_logger(), "Received point cloud of size %d x %d", msg->width, msg->height);
+  trigger_capture();
 }
 
 int main(int argc, char * argv[])
 {
   rclcpp::init(argc, argv);
-  auto node = rclcpp::Node::make_shared("sample_capture");
-  RCLCPP_INFO(node->get_logger(), "Started the sample_capture node");
+  g_node = rclcpp::Node::make_shared("sample_capture");
 
-  set_settings(node);
-  set_srgb(node);
+  RCLCPP_INFO(g_node->get_logger(), "Started the sample_capture node");
 
-  auto capture_client = create_capture_client(node);
-  auto trigger_capture = [&]() {
-    RCLCPP_INFO(node->get_logger(), "Triggering capture");
-    capture_client->async_send_request(std::make_shared<std_srvs::srv::Trigger::Request>());
-  };
+  set_settings(g_node);
+  set_srgb(g_node);
 
-  auto points_xyzrgba_subscription = node->create_subscription<sensor_msgs::msg::PointCloud2>(
-    "points/xyzrgba", 10, [&](sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) -> void {
-      RCLCPP_INFO(
-        node->get_logger(), "Received point cloud of size %d x %d", msg->width, msg->height);
-      trigger_capture();
-    });
+  g_capture_client = create_capture_client(g_node);
+
+
+  auto sub = g_node->create_subscription<sensor_msgs::msg::PointCloud2>(
+    "points/xyzrgba", 10, on_point_cloud_received);
 
   trigger_capture();
 
-  RCLCPP_INFO(node->get_logger(), "Spinning node.. Press Ctrl+C to abort.");
-  rclcpp::spin(node);
-
+  RCLCPP_INFO(g_node->get_logger(), "Spinning node.. Press Ctrl+C to abort.");
+  rclcpp::spin(g_node);
   rclcpp::shutdown();
 
   return EXIT_SUCCESS;

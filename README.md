@@ -1,11 +1,12 @@
 # Zivid ROS driver
 
-This is a branch for the Zivid ROS1 camera driver that supports Zivid SDK 2.14 and later.
+This is a branch for the Zivid ROS1 camera driver that supports Zivid SDK 2.15.
 Be aware that this branch does *not* support configuring Zivid settings via dynamic_reconfigure.
 You must use service `load_settings_from_file` or `load_settings_2d_from_file` and provide a .yml file
 to set the Zivid capture settings. See [Services](#services) for more info.
 
-The ROS 1 driver for SDK < 2.14.0 can be found on the branch ros1-master, [available here](https://github.com/zivid/zivid-ros/tree/ros1-master).
+The ROS 1 driver for SDK 2.14.0 can be found in branch ros1-sdk-2.14.0, [available here](https://github.com/zivid/zivid-ros/tree/ros1-sdk-2.14.0).
+The ROS 1 driver for SDK < 2.14.0 can be found in branch ros1-master, [available here](https://github.com/zivid/zivid-ros/tree/ros1-master).
 The ROS 2 driver can be found on the master branch, [available here](https://github.com/zivid/zivid-ros/tree/master).
 
 [![Build Status][ci-badge]][ci-url]
@@ -78,7 +79,7 @@ mkdir -p ~/catkin_ws/src
 Clone the Zivid ROS project into the src directory:
 ```bash
 cd ~/catkin_ws/src
-git clone https://github.com/zivid/zivid-ros.git -b ros1-sdk-2.14.0
+git clone https://github.com/zivid/zivid-ros.git -b ros1-sdk-2.15.0
 ```
 
 Install dependencies:

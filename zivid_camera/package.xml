@@ -23,6 +23,7 @@
   <build_export_depend>std_msgs</build_export_depend>
   <build_export_depend>dynamic_reconfigure</build_export_depend>
   <build_export_depend>image_transport</build_export_depend>
+  <build_export_depend>message_generation</build_export_depend>
   <exec_depend>roscpp</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>

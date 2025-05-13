@@ -13,13 +13,11 @@ if [ -z "$cppFiles$hFiles" ]; then
     exit 1
 fi
 
-echo "Checking clang-format conformance"
+echo "Formatting C++ source files with clang-format"
 clang-format --version || exit $?
 for fileName in $cppFiles $hFiles; do
-    echo $fileName
-    diff $fileName \
-        <(clang-format $fileName) \
-        || exit $?
+    echo "Formatting $fileName"
+    clang-format -i $fileName || exit $?
 done
 
 echo Success! ["$(basename $0)"]

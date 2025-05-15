@@ -377,6 +377,13 @@ Each coordinate is a float value. There are no additional padding floats, so poi
 12 bytes (3*4 bytes). The normals are unit vectors. Note that subscribing to this topic
 will cause some additional processing time for calculating the normals.
 
+### acquisition_done
+
+This topic is published as soon as the camera is done with acquisitions. At this point it
+is safe to move the scene (e.g. robot). This comes before a point cloud or image is necessarily
+available. See the article [Optimize robot cycle times](https://support.zivid.com/en/latest/academy/applications/bin-picking/optimize-robot-cycle-times.html)
+for more information.
+
 ## Configuration
 
 The `zivid_camera` node supports both single-acquisition (2D and 3D) and multi-acquisition

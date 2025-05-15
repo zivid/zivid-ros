@@ -316,7 +316,7 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
 
   ROS_INFO("Advertising topics");
   acquisition_done_publisher_ =
-      nh_.advertise<AcquisitionDone>("acquisition_done", 1, use_latched_publisher_for_acquisition_done_);
+      nh_.advertise<std_msgs::Header>("acquisition_done", 1, use_latched_publisher_for_acquisition_done_);
   points_xyz_publisher_ =
       nh_.advertise<sensor_msgs::PointCloud2>("points/xyz", 1, use_latched_publisher_for_points_xyz_);
   points_xyzrgba_publisher_ =
@@ -691,9 +691,8 @@ void ZividCamera::publishAcquisitionDone(const std_msgs::Header& header)
 {
   ROS_DEBUG_STREAM("Publishing " << acquisition_done_publisher_.getTopic());
 
-  auto msg = boost::make_shared<zivid_camera::AcquisitionDone>();
-  msg->header = header;
-  acquisition_done_publisher_.publish(msg);
+  auto header_msg = boost::make_shared<std_msgs::Header>(header);
+  acquisition_done_publisher_.publish(header_msg);
 }
 
 void ZividCamera::publishPointCloudXYZ(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud)

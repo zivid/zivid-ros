@@ -379,11 +379,10 @@ will cause some additional processing time for calculating the normals.
 
 ### acquisition_done
 
-When using the Zivid SDK directly there is information in when the capture API returns.
-This indicates that the camera is done with acquisitions. At this point it is safe to move
-the scene (e.g. robot). In ROS the capture service wraps the capture call, but also
-extraction and processing of the point cloud. The same goes for 2D capture. Use this topic
-to control when to, e.g., move the robot.
+This topic is published as soon as the camera is done with acquisitions. At this point it
+is safe to move the scene (e.g. robot). This comes before a point cloud or image is necessarily
+available. See the article [Optimize robot cycle times](https://support.zivid.com/en/latest/academy/applications/bin-picking/optimize-robot-cycle-times.html)
+for more information.
 
 ## Configuration
 

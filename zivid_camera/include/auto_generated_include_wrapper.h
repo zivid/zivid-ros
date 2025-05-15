@@ -11,7 +11,6 @@
 //#include <zivid_camera/SettingsConfig.h>
 //#include <zivid_camera/Settings2DAcquisitionConfig.h>
 //#include <zivid_camera/Settings2DConfig.h>
-#include <zivid_camera/AcquisitionDone.h>
 #include <zivid_camera/Capture.h>
 #include <zivid_camera/CaptureAndSave.h>
 #include <zivid_camera/Capture2D.h>

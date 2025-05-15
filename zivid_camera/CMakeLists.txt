@@ -93,12 +93,6 @@ add_service_files(
   CameraInfoSerialNumber.srv
   IsConnected.srv
 )
-add_message_files(
-  DIRECTORY
-  msg
-  FILES
-  AcquisitionDone.msg
-)
 generate_messages(
   DEPENDENCIES
   sensor_msgs

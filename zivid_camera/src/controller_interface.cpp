@@ -39,4 +39,9 @@ void ControllerInterface::publishFrame(const Zivid::Frame & frame) const
 {
   zivid_camera_->publishFrame(frame);
 }
+
+void ControllerInterface::publishFrame2D(const Zivid::Frame2D & frame2D) const
+{
+  zivid_camera_->publishFrame2D(frame2D);
+}
 }  // namespace zivid_camera

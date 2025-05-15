@@ -1,0 +1,13 @@
+# Specify an image to project. You must specify either a file path or pixel data. Specifying both is concidered an
+# error.
+
+# Path to an image on the file system. The supported file types are PNG (.png), JPEG (.jpg, .jpeg) and BMP (.bmp). The
+# image must be the same resolution as the projector.
+string image_path
+
+# Raw pixel data In BGRA format. The size of the array must be 4 * width * height where the width and height are given
+# by the projector's resolution. The alpha channel is ignored.
+uint8[] data
+---
+bool success
+string message

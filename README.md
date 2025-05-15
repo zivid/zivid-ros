@@ -483,6 +483,39 @@ correction.
 
 Removes the last infield correction capture gathered in the `zivid_camera` node.
 
+### projection/resolution
+[zivid_interfaces/srv/ProjectionResolution.srv](./zivid_interfaces/srv/ProjectionResolution.srv)
+
+Returns the width and height of the projector.
+
+### projection/status
+[zivid_interfaces/srv/ProjectionStatus.srv](./zivid_interfaces/srv/ProjectionStatus.srv)
+
+Returns whether the projector is turned on or not.
+
+### projection/start
+[zivid_interfaces/srv/ProjectionStart.srv](./zivid_interfaces/srv/ProjectionStart.srv)
+
+Start the projector. This service takes _either_ a path _or_ raw pixel values in BGRA format to specify what to project.
+The specified file or data must match the resolution of the projector, which can be obtained using the
+[resolution service](#projectionresolution).
+
+If a capture is performed using any other service than [projection/capture_2d](#projectioncapture_2d), the projector
+will be turned off.
+
+### projection/stop
+[std_srvs/srv/Trigger](https://docs.ros2.org/latest/api/std_srvs/srv/Trigger.html)
+
+Stops the current projection, if any.
+
+### projection/capture_2d
+[std_srvs/srv/Trigger](https://docs.ros2.org/latest/api/std_srvs/srv/Trigger.html)
+
+Invoke this service to trigger a 2D capture while the projector is turned on. Like [capture_2d](#capture_2d) this
+service requires capture settings to be [configured](#configuration). This function can only be used with a
+zero-brightness 2D capture, otherwise it will interfere with the projected image. The service will fail with an error if
+settings contains brightness > 0.
+
 ## Topics
 
 The Zivid ROS driver provides several topics providing 3D, color, SNR and camera calibration
@@ -809,6 +842,43 @@ Or using ros2 run (when `zivid_camera` node is already running):
 ```bash
 ros2 run zivid_samples sample_with_sdk_capture_and_load_cpp
 ```
+
+### Sample Projection
+
+This sample shows how to use the various [projection/[...]](#ProjectionStart) services. It takes one optional argument
+which is a path to an image to be projected:
+
+```bash
+ros2 launch zivid_samples sample.launch sample:=sample_projection_cpp image_path:=<image>
+ros2 launch zivid_samples sample.launch sample:=sample_projection.py image_path:=<image>
+```
+
+Using ros2 run (when `zivid_camera` node is already running):
+```
+ros2 run zivid_samples sample_projection_cpp --ros-args -p image_path:=<image>
+ros2 run zivid_samples sample_projection.py --ros-args -p image_path:=<image>
+```
+If the argument is not given the sample will project a generated image with color gradients.
+
+Source code: [C++](./zivid_samples/src/sample_projection.cpp) [Python](./zivid_samples/scripts/sample_projection.py)
+
+### Sample Project and Capture
+
+This sample shows how to perform a capture while the projector is on. A simple marker is projected and a 2D capture is
+performed.
+
+```bash
+ros2 launch zivid_samples sample.launch sample:=sample_project_and_capture_cpp
+ros2 launch zivid_samples sample.launch sample:=sample_project_and_capture.py
+```
+
+Using ros2 run (when `zivid_camera` node is already running):
+```
+ros2 run zivid_samples sample_project_and_capture_cpp
+ros2 run zivid_samples sample_project_and_capture.py
+```
+
+Source code: [C++](./zivid_samples/src/sample_project_and_capture.cpp) [Python](./zivid_samples/scripts/sample_project_and_capture.py)
 
 ## Launch Files
 

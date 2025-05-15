@@ -51,6 +51,7 @@ struct ColorRGBA;
 struct ColorSRGB;
 using ColorRGBA_SRGB = ColorSRGB;
 class Frame;
+class Frame2D;
 template <typename T>
 class Image;
 class PointCloud;
@@ -81,6 +82,7 @@ class CaptureSettingsController;
 class DetectorController;
 class HandEyeCalibrationController;
 class InfieldCorrectionController;
+class ProjectionController;
 class ControllerInterface;
 
 class ZividCamera : public rclcpp::Node
@@ -126,6 +128,7 @@ private:
     const std::shared_ptr<zivid_interfaces::srv::IsConnected::Request> request,
     std::shared_ptr<zivid_interfaces::srv::IsConnected::Response> response);
   void publishFrame(const Zivid::Frame & frame);
+  void publishFrame2D(const Zivid::Frame2D & frame2D);
   Zivid::Frame invokeCaptureAndPublishFrame(const Zivid::Settings & settings);
   bool shouldPublishPointsXYZ() const;
   bool shouldPublishPointsXYZRGBA() const;
@@ -199,6 +202,7 @@ private:
   std::unique_ptr<DetectorController> detector_controller_;
   std::unique_ptr<InfieldCorrectionController> infield_correction_controller_;
   std::unique_ptr<HandEyeCalibrationController> hand_eye_calibration_controller_;
+  std::unique_ptr<ProjectionController> projection_controller_;
 
   std::unique_ptr<Zivid::Application> zivid_;
   CameraStatus camera_status_{CameraStatus::Idle};

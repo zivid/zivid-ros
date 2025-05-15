@@ -47,6 +47,9 @@
 #include <zivid_interfaces/srv/capture_and_save.hpp>
 #include <zivid_interfaces/srv/capture_assistant_suggest_settings.hpp>
 #include <zivid_interfaces/srv/is_connected.hpp>
+#include <zivid_interfaces/srv/projection_resolution.hpp>
+#include <zivid_interfaces/srv/projection_start.hpp>
+#include <zivid_interfaces/srv/projection_status.hpp>
 
 #ifdef _WIN32
 #define ZIVID_SAMPLE_DATA_DIR "C:\\ProgramData\\Zivid\\"
@@ -1065,6 +1068,29 @@ TEST_F(ZividCATest, testCaptureAssistantInvalidAmbientLightFrequencyFails)
     "Unhandled AMBIENT_LIGHT_FREQUENCY value: 255");
   verifyTriggerResponseSuccess(
     doCaptureAssistantRequest(Request::AMBIENT_LIGHT_FREQUENCY_60HZ, std::chrono::seconds{1}));
+}
+
+TEST_F(TestWithFileCamera, testProjectionServices)
+{
+  auto capture_2d_response = doEmptySrvRequest<std_srvs::srv::Trigger>(projection_capture_2d);
+  verifyTriggerResponseError(capture_2d_response, "Camera is not projecting");
+
+  auto resolution_response =
+    doEmptySrvRequest<zivid_interfaces::srv::ProjectionResolution>(projection_resolution);
+  verifyTriggerResponseError(
+    resolution_response, "The camera does not support image display using the projector");
+
+  auto start_response = doEmptySrvRequest<zivid_interfaces::srv::ProjectionStart>(projection_start);
+  verifyTriggerResponseError(
+    start_response, "The camera does not support image display using the projector");
+
+  auto status_response =
+    doEmptySrvRequest<zivid_interfaces::srv::ProjectionStatus>(projection_status);
+  verifyTriggerResponseSuccess(status_response);
+  ASSERT_EQ(status_response->projecting, false);
+
+  auto stop_response = doEmptySrvRequest<std_srvs::srv::Trigger>(projection_stop);
+  verifyTriggerResponseSuccess(stop_response);
 }
 
 int main(int argc, char ** argv)

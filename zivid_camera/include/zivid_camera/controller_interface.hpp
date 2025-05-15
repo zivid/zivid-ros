@@ -31,7 +31,8 @@
 namespace Zivid
 {
 class Frame;
-}
+class Frame2D;
+}  // namespace Zivid
 
 namespace zivid_camera
 {
@@ -41,6 +42,7 @@ class ControllerInterface
 {
 public:
   void publishFrame(const Zivid::Frame & frame) const;
+  void publishFrame2D(const Zivid::Frame2D & frame2D) const;
 
 private:
   friend class ZividCamera;

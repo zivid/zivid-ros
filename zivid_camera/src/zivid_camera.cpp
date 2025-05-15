@@ -49,6 +49,7 @@
 #include <zivid_camera/detector_controller.hpp>
 #include <zivid_camera/hand_eye_calibration_controller.hpp>
 #include <zivid_camera/infield_correction_controller.hpp>
+#include <zivid_camera/projection_controller.hpp>
 #include <zivid_camera/utility.hpp>
 #include <zivid_camera/zivid_camera.hpp>
 
@@ -407,6 +408,8 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
     std::make_unique<InfieldCorrectionController>(*this, *camera_, ControllerInterface{*this});
   hand_eye_calibration_controller_ = std::make_unique<HandEyeCalibrationController>(
     *this, *camera_, *settings_controller_, ControllerInterface{*this});
+  projection_controller_ = std::make_unique<ProjectionController>(
+    *this, *camera_, *settings_2d_controller_, ControllerInterface{*this});
 
   RCLCPP_INFO(get_logger(), "Zivid camera driver is now ready!");
 }
@@ -544,32 +547,9 @@ void ZividCamera::capture2DServiceHandler(
 
   runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
-      const auto color_space = colorSpace();
       const auto settings2D = settings_2d_controller_->currentSettings();
       auto frame2D = camera_->capture(settings2D);
-      if (shouldPublishColorImg()) {
-        const auto header = makeHeader();
-        const auto intrinsics = Zivid::Experimental::Calibration::intrinsics(*camera_);
-
-        switch (color_space) {
-          case ColorSpace::sRGB: {
-            auto image = frame2D.imageRGBA_SRGB();
-            const auto camera_info =
-              makeCameraInfo(header, image.width(), image.height(), intrinsics);
-            publishColorImage(header, camera_info, image);
-          } break;
-          case ColorSpace::LinearRGB: {
-            auto image = frame2D.imageRGBA();
-            const auto camera_info =
-              makeCameraInfo(header, image.width(), image.height(), intrinsics);
-            publishColorImage(header, camera_info, image);
-          } break;
-          default:
-            throw std::runtime_error(
-              "Internal error: Unknown color space value " +
-              std::to_string(static_cast<int>(color_space)));
-        }
-      }
+      publishFrame2D(frame2D);
     },
     response, get_logger(), "Capture2D");
 }
@@ -708,6 +688,32 @@ void ZividCamera::publishFrame(const Zivid::Frame & frame)
     RCLCPP_WARN_STREAM(
       get_logger(),
       __func__ << ": capture was called, but no subscribers active and 0 messages sent");
+  }
+}
+
+void ZividCamera::publishFrame2D(const Zivid::Frame2D & frame2D)
+{
+  if (shouldPublishColorImg()) {
+    const auto color_space = colorSpace();
+    const auto header = makeHeader();
+    const auto intrinsics = Zivid::Experimental::Calibration::intrinsics(*camera_);
+
+    switch (color_space) {
+      case ColorSpace::sRGB: {
+        auto image = frame2D.imageRGBA_SRGB();
+        const auto camera_info = makeCameraInfo(header, image.width(), image.height(), intrinsics);
+        publishColorImage(header, camera_info, image);
+      } break;
+      case ColorSpace::LinearRGB: {
+        auto image = frame2D.imageRGBA();
+        const auto camera_info = makeCameraInfo(header, image.width(), image.height(), intrinsics);
+        publishColorImage(header, camera_info, image);
+      } break;
+      default:
+        throw std::runtime_error(
+          "Internal error: Unknown color space value " +
+          std::to_string(static_cast<int>(color_space)));
+    }
   }
 }
 

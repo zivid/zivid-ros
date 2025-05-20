@@ -315,6 +315,8 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   // capture_2d_settings_controller_ = std::make_unique<Capture2DSettingsController>(nh_, camera_, "settings_2d", 1);
 
   ROS_INFO("Advertising topics");
+  acquisition_done_publisher_ =
+      nh_.advertise<std_msgs::Header>("acquisition_done", 1, use_latched_publisher_for_acquisition_done_);
   points_xyz_publisher_ =
       nh_.advertise<sensor_msgs::PointCloud2>("points/xyz", 1, use_latched_publisher_for_points_xyz_);
   points_xyzrgba_publisher_ =
@@ -464,8 +466,13 @@ bool ZividCamera::capture2DServiceHandler(Capture2D::Request&, Capture2D::Respon
     throw std::runtime_error("capture_2d called with 0 enabled acquisitions!");
   }
 
+  ROS_INFO("Capturing 2D with %zd acquisition(s)", settings2D.acquisitions().size());
   ROS_DEBUG_STREAM(settings2D);
   auto frame2D = camera_.capture(settings2D);
+  if (shouldPublishAcquisitionDone())
+  {
+    publishAcquisitionDone(makeHeader());
+  }
   if (shouldPublishColorImg())
   {
     const auto header = makeHeader();
@@ -573,6 +580,7 @@ bool ZividCamera::isConnectedServiceHandler(IsConnected::Request&, IsConnected::
 
 void ZividCamera::publishFrame(const Zivid::Frame& frame)
 {
+  const bool publish_acquisition_done = shouldPublishAcquisitionDone();
   const bool publish_points_xyz = shouldPublishPointsXYZ();
   const bool publish_points_xyzrgba = shouldPublishPointsXYZRGBA();
   const bool publish_color_img = shouldPublishColorImg();
@@ -580,11 +588,17 @@ void ZividCamera::publishFrame(const Zivid::Frame& frame)
   const bool publish_snr_img = shouldPublishSnrImg();
   const bool publish_normals_xyz = shouldPublishNormalsXYZ();
 
-  if (publish_points_xyz || publish_points_xyzrgba || publish_color_img || publish_depth_img || publish_snr_img ||
-      publish_normals_xyz)
+  if (publish_acquisition_done || publish_points_xyz || publish_points_xyzrgba || publish_color_img ||
+      publish_depth_img || publish_snr_img || publish_normals_xyz)
   {
     const auto color_space = colorSpace();
     const auto header = makeHeader();
+
+    if (publish_acquisition_done)
+    {
+      publishAcquisitionDone(header);
+    }
+
     auto point_cloud = frame.pointCloud();
 
     // Transform point cloud from millimeters (Zivid SDK) to meter (ROS).
@@ -629,6 +643,11 @@ void ZividCamera::publishFrame(const Zivid::Frame& frame)
   }
 }
 
+bool ZividCamera::shouldPublishAcquisitionDone() const
+{
+  return acquisition_done_publisher_.getNumSubscribers() > 0 || use_latched_publisher_for_acquisition_done_;
+}
+
 bool ZividCamera::shouldPublishPointsXYZRGBA() const
 {
   return points_xyzrgba_publisher_.getNumSubscribers() > 0 || use_latched_publisher_for_points_xyzrgba_;
@@ -666,6 +685,14 @@ std_msgs::Header ZividCamera::makeHeader()
   header.stamp = ros::Time::now();
   header.frame_id = frame_id_;
   return header;
+}
+
+void ZividCamera::publishAcquisitionDone(const std_msgs::Header& header)
+{
+  ROS_DEBUG_STREAM("Publishing " << acquisition_done_publisher_.getTopic());
+
+  auto header_msg = boost::make_shared<std_msgs::Header>(header);
+  acquisition_done_publisher_.publish(header_msg);
 }
 
 void ZividCamera::publishPointCloudXYZ(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud)

@@ -58,6 +58,7 @@ private:
   bool isConnectedServiceHandler(IsConnected::Request& req, IsConnected::Response& res);
   void publishFrame(const Zivid::Frame& frame);
   Zivid::Frame invokeCaptureAndPublishFrame();
+  bool shouldPublishAcquisitionDone() const;
   bool shouldPublishPointsXYZ() const;
   bool shouldPublishPointsXYZRGBA() const;
   bool shouldPublishColorImg() const;
@@ -65,6 +66,7 @@ private:
   bool shouldPublishSnrImg() const;
   bool shouldPublishNormalsXYZ() const;
   std_msgs::Header makeHeader();
+  void publishAcquisitionDone(const std_msgs::Header& header);
   void publishPointCloudXYZ(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud);
   void publishPointCloudXYZRGBA(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud,
                                 ColorSpace color_space);
@@ -93,12 +95,14 @@ private:
   std::map<std::string, ColorSpace> color_space_name_value_map_;
   ros::Timer camera_connection_keepalive_timer_;
   CameraStatus camera_status_;
+  bool use_latched_publisher_for_acquisition_done_;
   bool use_latched_publisher_for_points_xyz_;
   bool use_latched_publisher_for_points_xyzrgba_;
   bool use_latched_publisher_for_color_image_;
   bool use_latched_publisher_for_depth_image_;
   bool use_latched_publisher_for_snr_image_;
   bool use_latched_publisher_for_normals_xyz_;
+  ros::Publisher acquisition_done_publisher_;
   ros::Publisher points_xyz_publisher_;
   ros::Publisher points_xyzrgba_publisher_;
   image_transport::ImageTransport image_transport_;

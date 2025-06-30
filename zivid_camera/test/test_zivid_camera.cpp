@@ -20,6 +20,7 @@
 
 #include <Zivid/Application.h>
 #include <Zivid/CaptureAssistant.h>
+#include <Zivid/Experimental/Calibration.h>
 #include <Zivid/Experimental/SettingsInfo.h>
 #include <Zivid/Frame.h>
 #include <Zivid/Camera.h>
@@ -761,6 +762,115 @@ TEST_F(CaptureOutputTest, testCapture2D)
   short_wait_duration.sleep();
   assert_num_topics_received(2);
   verify_image_and_camera_info(*color_image_color_sub.lastMessage(), *color_camera_info_sub.lastMessage());
+}
+
+class CaptureWithSettings2DTest : public CaptureOutputTest
+{
+protected:
+  CaptureWithSettings2DTest()
+    : settings_(Zivid::Settings::Acquisitions{ Zivid::Settings::Acquisition{} },
+                Zivid::Settings::Color{
+                    Zivid::Settings2D{ Zivid::Settings2D::Acquisitions{ Zivid::Settings2D::Acquisition{} } } })
+  {
+  }
+
+  void TearDown() override
+  {
+    loadSettings((boost::filesystem::path{ testDataDir() } / "settings" / "3d" / "single.yml").string());
+  }
+
+  void loadSettingsWithColorAndCapture()
+  {
+    const auto path = (boost::filesystem::temp_directory_path() / "zivid_camera_test_settings_with_color.yml").string();
+    settings_.save(path);
+    loadSettings(path);
+    medium_wait_duration.sleep();
+    zivid_camera::Capture capture;
+    ASSERT_TRUE(ros::service::call(capture_service_name, capture));
+    short_wait_duration.sleep();
+  }
+
+  void loadSettings(const std::string& path)
+  {
+    zivid_camera::LoadSettingsFromFile load_settings;
+    load_settings.request.file_path = path;
+    ASSERT_TRUE(ros::service::call(load_settings_from_file_service_name, load_settings));
+  }
+
+  Zivid::Settings settings_;
+};
+
+TEST_F(CaptureWithSettings2DTest, testCaptureColorImageFromSettings2D)
+{
+  auto color_camera_info_sub = subscribe<sensor_msgs::CameraInfo>(color_camera_info_topic_name);
+  auto color_image_sub = subscribe<sensor_msgs::Image>(color_image_color_topic_name);
+  auto points_sub = subscribe<sensor_msgs::PointCloud2>(points_xyz_topic_name);
+
+  loadSettingsWithColorAndCapture();
+
+  ASSERT_EQ(color_image_sub.numMessages(), 1U);
+  ASSERT_EQ(color_camera_info_sub.numMessages(), 1U);
+  ASSERT_EQ(points_sub.numMessages(), 1U);
+
+  const auto& image = *color_image_sub.lastMessage();
+  const auto expected_frame2D = camera_.capture2D(settings_);
+  assertSensorMsgsImageMeta(image, expected_frame2D.imageRGBA().width(), expected_frame2D.imageRGBA().height(), 4U,
+                            "rgba8");
+  assertSensorMsgsImageContents(image, expected_frame2D.imageRGBA());
+
+  const auto& camera_info = *color_camera_info_sub.lastMessage();
+  const auto expected_camera_matrix =
+      Zivid::Experimental::Calibration::intrinsics(camera_, settings_.color().value()).cameraMatrix();
+  ASSERT_FLOAT_EQ(camera_info.K[0], expected_camera_matrix.fx().value());
+  ASSERT_FLOAT_EQ(camera_info.K[2], expected_camera_matrix.cx().value());
+  ASSERT_FLOAT_EQ(camera_info.K[4], expected_camera_matrix.fy().value());
+  ASSERT_FLOAT_EQ(camera_info.K[5], expected_camera_matrix.cy().value());
+
+  const auto& points = *points_sub.lastMessage();
+  ASSERT_EQ(image.header.stamp, points.header.stamp);
+}
+
+TEST_F(CaptureWithSettings2DTest, testCapturePointsXYZRGBAKeepsColorsFromSettings2D)
+{
+  auto color_image_sub = subscribe<sensor_msgs::Image>(color_image_color_topic_name);
+  auto points_sub = subscribe<sensor_msgs::PointCloud2>(points_xyzrgba_topic_name);
+
+  loadSettingsWithColorAndCapture();
+
+  ASSERT_EQ(color_image_sub.numMessages(), 1U);
+  ASSERT_EQ(points_sub.numMessages(), 1U);
+
+  const auto& points = *points_sub.lastMessage();
+  const auto expected_colors = camera_.capture2D3D(settings_).pointCloud().copyColorsBGRA();
+  ASSERT_EQ(points.width, expected_colors.width());
+  ASSERT_EQ(points.height, expected_colors.height());
+  for (std::size_t i = 0; i < expected_colors.size(); i++)
+  {
+    const uint32_t argb = *reinterpret_cast<const uint32_t*>(&points.data[i * points.point_step + 12]);
+    const auto& expected = expected_colors(i);
+    const auto expected_argb = static_cast<uint32_t>(expected.a << 24) | static_cast<uint32_t>(expected.r << 16) |
+                               static_cast<uint32_t>(expected.g << 8) | static_cast<uint32_t>(expected.b);
+    ASSERT_EQ(argb, expected_argb);
+  }
+}
+
+TEST_F(CaptureWithSettings2DTest, testCaptureAndSaveKeepsColorsFromSettings2D)
+{
+  auto color_image_sub = subscribe<sensor_msgs::Image>(color_image_color_topic_name);
+  const auto settings_path =
+      (boost::filesystem::temp_directory_path() / "zivid_camera_test_settings_with_color.yml").string();
+  settings_.save(settings_path);
+  loadSettings(settings_path);
+  medium_wait_duration.sleep();
+
+  const auto file_path = (boost::filesystem::temp_directory_path() / "zivid_camera_test_with_color.zdf").string();
+  zivid_camera::CaptureAndSave capture_and_save;
+  capture_and_save.request.file_path = file_path;
+  ASSERT_TRUE(ros::service::call(capture_and_save_service_name, capture_and_save));
+  short_wait_duration.sleep();
+
+  ASSERT_EQ(color_image_sub.numMessages(), 1U);
+  ASSERT_TRUE(Zivid::Frame{ file_path }.frame2D().has_value());
 }
 
 class CaptureAndSaveTest : public TestWithFileCamera

@@ -8,7 +8,7 @@ on:
     - cron:  '0 22 * * *'
 
 env:
-  NEWEST_ZIVID_VERSION: '2.15.0+5fcc365b-1'
+  NEWEST_ZIVID_VERSION: '2.16.0+46cdaba6-1'
 
 jobs:
   code-analysis:
@@ -72,7 +72,6 @@ jobs:
   build-driver-and-run-tests-for-older-sdk:
     name: Build driver and run tests for older Zivid SDK
     runs-on: ubuntu-latest
-    if: false  # Remove this line when adding support for new versions
     strategy:
       fail-fast: true
       matrix:

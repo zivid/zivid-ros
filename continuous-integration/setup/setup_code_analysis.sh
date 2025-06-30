@@ -10,6 +10,14 @@ function apt-yes {
     apt-get --assume-yes "$@"
 }
 
+apt-yes install curl gnupg2 lsb-release || exit $?
+
+curl -fsSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc \
+  | gpg --dearmor -o /usr/share/keyrings/ros-archive-keyring.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" \
+  > /etc/apt/sources.list.d/ros-latest.list
+
 apt-yes update || exit $?
 apt-yes dist-upgrade || exit $?
 

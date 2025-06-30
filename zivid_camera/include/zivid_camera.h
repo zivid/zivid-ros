@@ -76,6 +76,7 @@ private:
   void publishPointCloudXYZ(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud);
   void publishPointCloudXYZRGBA(const std_msgs::Header& header, const Zivid::PointCloud& point_cloud,
                                 ColorSpace color_space);
+  void publishColorImageFromFrame2D(const Zivid::Frame2D& frame2D);
   void publishColorImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
                          const Zivid::PointCloud& point_cloud, ColorSpace color_space);
   void publishColorImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
@@ -90,6 +91,7 @@ private:
   sensor_msgs::CameraInfoConstPtr makeCameraInfo(const std_msgs::Header& header, std::size_t width, std::size_t height,
                                                  const Zivid::CameraIntrinsics& intrinsics);
   ColorSpace colorSpace() const;
+  void updateIntrinsics2D(const Zivid::CameraIntrinsics& intrinsics);
   IntrinsicsSource intrinsicsSource() const;
 
   // using Capture3DSettingsController =
@@ -133,6 +135,7 @@ private:
   Zivid::Camera camera_;
   Zivid::Settings current_settings_;
   Zivid::Settings2D current_settings_2d_;
+  Zivid::CameraIntrinsics current2Dintrinsics_;
 
   std::string frame_id_;
   unsigned int header_seq_;

@@ -15,6 +15,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/predef.h>
 
+#include <future>
 #include <numeric>
 #include <sstream>
 #include <thread>
@@ -317,6 +318,8 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   ROS_INFO_STREAM("Connected to camera '" << camera_.info().serialNumber() << "'");
   setCameraStatus(CameraStatus::Connected);
 
+  updateIntrinsics2D(Zivid::Experimental::Calibration::intrinsics(camera_, current_settings_2d_));
+
   camera_connection_keepalive_timer_ =
       nh_.createTimer(ros::Duration(10), &ZividCamera::onCameraConnectionKeepAliveTimeout, this);
 
@@ -471,7 +474,6 @@ bool ZividCamera::capture2DServiceHandler(Capture2D::Request&, Capture2D::Respon
 
   serviceHandlerHandleCameraConnectionLoss();
 
-  const auto color_space = colorSpace();
   const auto settings2D = current_settings_2d_;  // capture_2d_settings_controller_->zividSettings();
 
   if (settings2D.acquisitions().isEmpty())
@@ -482,34 +484,14 @@ bool ZividCamera::capture2DServiceHandler(Capture2D::Request&, Capture2D::Respon
   ROS_INFO("Capturing 2D with %zd acquisition(s)", settings2D.acquisitions().size());
   ROS_DEBUG_STREAM(settings2D);
   auto frame2D = camera_.capture(settings2D);
+  updateIntrinsics2D(Zivid::Experimental::Calibration::intrinsics(camera_, settings2D));
   if (shouldPublishAcquisitionDone())
   {
     publishAcquisitionDone(makeHeader());
   }
   if (shouldPublishColorImg())
   {
-    const auto header = makeHeader();
-    const auto intrinsics = Zivid::Experimental::Calibration::intrinsics(camera_, settings2D);
-    switch (color_space)
-    {
-      case ColorSpace::sRGB: {
-        auto image = frame2D.imageRGBA_SRGB();
-        const auto camera_info = makeCameraInfo(header, image.width(), image.height(), intrinsics);
-        ROS_DEBUG("Publishing image with 'srgb' color space");
-        publishColorImage(header, camera_info, image);
-      }
-      break;
-      case ColorSpace::LinearRGB: {
-        auto image = frame2D.imageRGBA();
-        const auto camera_info = makeCameraInfo(header, image.width(), image.height(), intrinsics);
-        ROS_DEBUG("Publishing image with 'linear' color space");
-        publishColorImage(header, camera_info, image);
-      }
-      break;
-      default:
-        throw std::runtime_error("Internal error: Unknown color space value " +
-                                 std::to_string(static_cast<int>(color_space)));
-    }
+    publishColorImageFromFrame2D(frame2D);
   }
   return true;
 }
@@ -596,13 +578,12 @@ void ZividCamera::publishFrame(const Zivid::Frame& frame)
   const bool publish_acquisition_done = shouldPublishAcquisitionDone();
   const bool publish_points_xyz = shouldPublishPointsXYZ();
   const bool publish_points_xyzrgba = shouldPublishPointsXYZRGBA();
-  const bool publish_color_img = shouldPublishColorImg();
   const bool publish_depth_img = shouldPublishDepthImg();
   const bool publish_snr_img = shouldPublishSnrImg();
   const bool publish_normals_xyz = shouldPublishNormalsXYZ();
 
-  if (publish_acquisition_done || publish_points_xyz || publish_points_xyzrgba || publish_color_img ||
-      publish_depth_img || publish_snr_img || publish_normals_xyz)
+  if (publish_acquisition_done || publish_points_xyz || publish_points_xyzrgba || publish_depth_img ||
+      publish_snr_img || publish_normals_xyz)
   {
     const auto color_space = colorSpace();
     const auto header = makeHeader();
@@ -627,17 +608,17 @@ void ZividCamera::publishFrame(const Zivid::Frame& frame)
     {
       publishPointCloudXYZRGBA(header, point_cloud, color_space);
     }
-    if (publish_color_img || publish_depth_img || publish_snr_img)
+    if (publish_depth_img || publish_snr_img)
     {
       auto intrinsics = [&] {
         const auto intrinsics_source = intrinsicsSource();
         switch (intrinsics_source)
         {
           case IntrinsicsSource::Camera:
-            ROS_INFO("Using camera intrinsics for publishing images");
+            ROS_DEBUG("Using camera intrinsics for publishing images");
             return Zivid::Experimental::Calibration::intrinsics(camera_, frame.settings());
           case IntrinsicsSource::Frame:
-            ROS_INFO("Using frame intrinsics for publishing images");
+            ROS_DEBUG("Using frame intrinsics for publishing images");
             return Zivid::Experimental::Calibration::estimateIntrinsics(frame);
           default:
             throw std::runtime_error("Internal error: Unknown intrinsics source value " +
@@ -646,10 +627,6 @@ void ZividCamera::publishFrame(const Zivid::Frame& frame)
       }();
       const auto camera_info = makeCameraInfo(header, point_cloud.width(), point_cloud.height(), intrinsics);
 
-      if (publish_color_img)
-      {
-        publishColorImage(header, camera_info, point_cloud, color_space);
-      }
       if (publish_depth_img)
       {
         publishDepthImage(header, camera_info, point_cloud);
@@ -785,6 +762,34 @@ void ZividCamera::publishColorImage(const std_msgs::Header& header, const sensor
   color_image_publisher_.publish(image, camera_info);
 }
 
+void ZividCamera::publishColorImageFromFrame2D(const Zivid::Frame2D& frame2D)
+{
+  ROS_DEBUG("Publishing color image from Zivid::Frame2D");
+  const auto color_space = colorSpace();
+  const auto header = makeHeader();
+  const auto settings2D = frame2D.settings();
+  switch (color_space)
+  {
+    case ColorSpace::sRGB: {
+      auto image = frame2D.imageRGBA_SRGB();
+      const auto camera_info = makeCameraInfo(header, image.width(), image.height(), current2Dintrinsics_);
+      ROS_DEBUG("Publishing image with 'srgb' color space");
+      publishColorImage(header, camera_info, image);
+    }
+    break;
+    case ColorSpace::LinearRGB: {
+      auto image = frame2D.imageRGBA();
+      const auto camera_info = makeCameraInfo(header, image.width(), image.height(), current2Dintrinsics_);
+      ROS_DEBUG("Publishing image with 'linear' color space");
+      publishColorImage(header, camera_info, image);
+    }
+    break;
+    default:
+      throw std::runtime_error("Internal error: Unknown color space value " +
+                               std::to_string(static_cast<int>(color_space)));
+  }
+}
+
 void ZividCamera::publishColorImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
                                     const Zivid::Image<Zivid::ColorRGBA>& image)
 {
@@ -897,9 +902,30 @@ Zivid::Frame ZividCamera::invokeCaptureAndPublishFrame()
     throw std::runtime_error("capture called with 0 enabled acquisitions!");
   }
 
-  ROS_INFO("Capturing with %zd acquisition(s)", settings.acquisitions().size());
-  ROS_DEBUG_STREAM(settings);
-  const auto frame = camera_.capture(settings);
+  ROS_DEBUG("Capturing with %zd acquisition(s)", settings.acquisitions().size());
+  Zivid::Frame2D frame2D;
+  bool should_publish_color_img = shouldPublishColorImg();
+  if (settings.color().hasValue() && should_publish_color_img)
+  {
+    ROS_DEBUG_STREAM("Capturing 2D as part of 2D+3D. " << color_image_publisher_.getNumSubscribers()
+                                                       << " subscribers.");
+    frame2D = camera_.capture2D(settings);
+    updateIntrinsics2D(Zivid::Experimental::Calibration::intrinsics(camera_, settings));
+  }
+  else if (should_publish_color_img)
+  {
+    ROS_DEBUG("No color image to publish from Zivid::Frame2D, since settings.color() is not set.");
+    should_publish_color_img = false;
+  }
+  ROS_DEBUG("Capturing 3D as part of 2D+3D");
+  std::future<Zivid::Frame> frame3D_future =
+      std::async(std::launch::async, &decltype(camera_)::capture3D, &camera_, settings);
+  if (should_publish_color_img)
+  {
+    ROS_DEBUG("Publishing color image from Zivid::Frame2D in separate thread");
+    publishColorImageFromFrame2D(frame2D);
+  }
+  const auto frame = frame3D_future.get();
   publishFrame(frame);
   return frame;
 }
@@ -914,6 +940,12 @@ ColorSpace ZividCamera::colorSpace() const
     throw std::runtime_error("Failed to get parameter 'color_space'");
   }
   return parameterStringToEnum(ParamNames::color_space, color_space_str, color_space_name_value_map_);
+}
+
+void ZividCamera::updateIntrinsics2D(const Zivid::CameraIntrinsics& intrinsics)
+{
+  ROS_DEBUG_STREAM(__func__);
+  current2Dintrinsics_ = intrinsics;
 }
 
 IntrinsicsSource ZividCamera::intrinsicsSource() const

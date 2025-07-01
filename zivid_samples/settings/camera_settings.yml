@@ -1,48 +1,100 @@
-__version__:
-  serializer: 1
-  data: 10
+__version__: 27
 Settings:
-  Acquisitions:
-    - Acquisition:
-        Aperture: 5.66
-        Brightness: 1.5
-        ExposureTime: 6500
-        Gain: 1
-  Diagnostics:
-    Enabled: no
-  Experimental:
-    Engine: phase
-  Processing:
+    Acquisitions:
+        - Acquisition:
+              Aperture: 2.83
+              Brightness: 1.8
+              ExposureTime: 40000
+              Gain: 1
+        - Acquisition:
+              Aperture: 2.83
+              Brightness: 1.8
+              ExposureTime: 40000
+              Gain: 1
     Color:
-      Balance:
-        Blue: 1
-        Green: 1
-        Red: 1
-      Experimental:
-        ToneMapping:
-          Enabled: hdrOnly
-      Gamma: 1
-    Filters:
-      Experimental:
-        ContrastDistortion:
-          Correction:
+        __version__: 7
+        Settings2D:
+            Acquisitions:
+                - Acquisition:
+                      Aperture: 4.0
+                      Brightness: 1.8
+                      ExposureTime: 2000
+                      Gain: 1
+            Processing:
+                Color:
+                    Balance:
+                        Blue: 1
+                        Green: 1
+                        Red: 1
+                    Experimental:
+                        Mode: automatic
+                    Gamma: 1
+            Sampling:
+                Color: rgb
+                Pixel: all
+    Diagnostics:
+        Enabled: no
+    Engine: stripe
+    Processing:
+        Color:
+            Balance:
+                Blue: 1
+                Green: 1
+                Red: 1
+            Experimental:
+                Mode: automatic
+            Gamma: 1
+        Filters:
+            Cluster:
+                Removal:
+                    Enabled: yes
+                    MaxNeighborDistance: 7
+                    MinArea: 500
+            Experimental:
+                ContrastDistortion:
+                    Correction:
+                        Enabled: yes
+                        Strength: 0.3
+                    Removal:
+                        Enabled: no
+                        Threshold: 0.3
+            Hole:
+                Repair:
+                    Enabled: yes
+                    HoleSize: 0.2
+                    Strictness: 2
+            Noise:
+                Removal:
+                    Enabled: yes
+                    Threshold: 3
+                Repair:
+                    Enabled: no
+                Suppression:
+                    Enabled: no
+            Outlier:
+                Removal:
+                    Enabled: yes
+                    Threshold: 20
+            Reflection:
+                Removal:
+                    Enabled: yes
+                    Mode: global
+            Smoothing:
+                Gaussian:
+                    Enabled: yes
+                    Sigma: 4
+        Resampling:
+            Mode: __not_set__
+    RegionOfInterest:
+        Box:
             Enabled: no
-            Strength: 0.4
-          Removal:
+            Extents: [-10, 100]
+            PointA: [0, 0, 0]
+            PointB: [0, 0, 0]
+            PointO: [0, 0, 0]
+        Depth:
             Enabled: no
-            Threshold: 0.5
-      Noise:
-        Removal:
-          Enabled: yes
-          Threshold: 7
-      Outlier:
-        Removal:
-          Enabled: yes
-          Threshold: 5
-      Reflection:
-        Removal:
-          Enabled: no
-      Smoothing:
-        Gaussian:
-          Enabled: no
-          Sigma: 1.5
+            Range: [300, 1300]
+    Sampling:
+        Color: rgb
+        Pixel: all

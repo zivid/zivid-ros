@@ -37,7 +37,11 @@ int main(int argc, char** argv)
     }
 
     ROS_INFO("Successfully loaded nodelet '%s'", nodelet_name);
-    ros::spin();
+    // ros::spin();
+    ros::AsyncSpinner spinner(3);  // Use 2 threads or more, depends on workload
+    spinner.start();
+
+    ros::waitForShutdown();
     return EXIT_SUCCESS;
   }
   catch (const std::exception& e)

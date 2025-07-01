@@ -162,6 +162,7 @@ constexpr auto file_camera_path = "file_camera_path";
 constexpr auto frame_id = "frame_id";
 constexpr auto update_firmware_automatically = "update_firmware_automatically";
 constexpr auto color_space = "color_space";
+constexpr auto intrinsics_source = "intrinsics_source";
 }  // namespace ParamNames
 
 ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
@@ -178,6 +179,10 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
   , color_space_name_value_map_{
     {"srgb", zivid_camera::ColorSpace::sRGB},
     {"linear_rgb", zivid_camera::ColorSpace::LinearRGB},
+  }
+  , intrinsics_source_name_value_map_{
+    {"camera", zivid_camera::IntrinsicsSource::Camera},
+    {"frame", zivid_camera::IntrinsicsSource::Frame},
   }
   , zivid_(makeZividApplication())
   , header_seq_(0)
@@ -220,6 +225,14 @@ ZividCamera::ZividCamera(ros::NodeHandle& nh, ros::NodeHandle& priv)
     ROS_INFO("No color space parameter found. Defaulting to 'linear_rgb'");
     color_space = "linear_rgb";
     priv_.setParam(ParamNames::color_space, color_space);
+  }
+
+  std::string intrinsics_source;
+  if (!priv_.getParam(ParamNames::intrinsics_source, intrinsics_source))
+  {
+    ROS_INFO("No intrinsics source parameter found. Defaulting to 'camera'");
+    intrinsics_source = "camera";
+    priv_.setParam(ParamNames::intrinsics_source, intrinsics_source);
   }
 
   priv_.param<bool>("use_latched_publisher_for_points_xyz", use_latched_publisher_for_points_xyz_, false);
@@ -476,7 +489,7 @@ bool ZividCamera::capture2DServiceHandler(Capture2D::Request&, Capture2D::Respon
   if (shouldPublishColorImg())
   {
     const auto header = makeHeader();
-    const auto intrinsics = Zivid::Experimental::Calibration::intrinsics(camera_);
+    const auto intrinsics = Zivid::Experimental::Calibration::intrinsics(camera_, settings2D);
     switch (color_space)
     {
       case ColorSpace::sRGB: {
@@ -616,7 +629,21 @@ void ZividCamera::publishFrame(const Zivid::Frame& frame)
     }
     if (publish_color_img || publish_depth_img || publish_snr_img)
     {
-      const auto intrinsics = Zivid::Experimental::Calibration::intrinsics(camera_);
+      auto intrinsics = [&] {
+        const auto intrinsics_source = intrinsicsSource();
+        switch (intrinsics_source)
+        {
+          case IntrinsicsSource::Camera:
+            ROS_INFO("Using camera intrinsics for publishing images");
+            return Zivid::Experimental::Calibration::intrinsics(camera_, frame.settings());
+          case IntrinsicsSource::Frame:
+            ROS_INFO("Using frame intrinsics for publishing images");
+            return Zivid::Experimental::Calibration::estimateIntrinsics(frame);
+          default:
+            throw std::runtime_error("Internal error: Unknown intrinsics source value " +
+                                     std::to_string(static_cast<int>(intrinsics_source)));
+        }
+      }();
       const auto camera_info = makeCameraInfo(header, point_cloud.width(), point_cloud.height(), intrinsics);
 
       if (publish_color_img)
@@ -887,6 +914,18 @@ ColorSpace ZividCamera::colorSpace() const
     throw std::runtime_error("Failed to get parameter 'color_space'");
   }
   return parameterStringToEnum(ParamNames::color_space, color_space_str, color_space_name_value_map_);
+}
+
+IntrinsicsSource ZividCamera::intrinsicsSource() const
+{
+  ROS_DEBUG_STREAM(__func__);
+
+  std::string intrinsics_source_str;
+  if (!priv_.getParam(ParamNames::intrinsics_source, intrinsics_source_str))
+  {
+    throw std::runtime_error("Failed to get parameter 'intrinsics_source'");
+  }
+  return parameterStringToEnum(ParamNames::intrinsics_source, intrinsics_source_str, intrinsics_source_name_value_map_);
 }
 
 }  // namespace zivid_camera

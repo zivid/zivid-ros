@@ -35,6 +35,12 @@ enum class ColorSpace
   LinearRGB,
 };
 
+enum class IntrinsicsSource
+{
+  Camera,
+  Frame,
+};
+
 class ZividCamera
 {
 public:
@@ -84,6 +90,7 @@ private:
   sensor_msgs::CameraInfoConstPtr makeCameraInfo(const std_msgs::Header& header, std::size_t width, std::size_t height,
                                                  const Zivid::CameraIntrinsics& intrinsics);
   ColorSpace colorSpace() const;
+  IntrinsicsSource intrinsicsSource() const;
 
   // using Capture3DSettingsController =
   //    CaptureSettingsController<Zivid::Settings, SettingsConfig, SettingsAcquisitionConfig>;
@@ -93,6 +100,7 @@ private:
   ros::NodeHandle nh_;
   ros::NodeHandle priv_;
   std::map<std::string, ColorSpace> color_space_name_value_map_;
+  std::map<std::string, IntrinsicsSource> intrinsics_source_name_value_map_;
   ros::Timer camera_connection_keepalive_timer_;
   CameraStatus camera_status_;
   bool use_latched_publisher_for_acquisition_done_;

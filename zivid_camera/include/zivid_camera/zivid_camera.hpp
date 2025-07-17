@@ -170,6 +170,8 @@ private:
   [[noreturn]] void logErrorAndThrowRuntimeException(const std::string & message);
   ColorSpace colorSpace() const;
   IntrinsicsSource intrinsicsSource() const;
+  static void exportFrame(
+    const Zivid::Frame & frame, const std::string & file_name, ColorSpace color_space);
 
   friend class ControllerInterface;
 

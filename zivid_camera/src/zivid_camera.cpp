@@ -31,6 +31,7 @@
 #include <Zivid/CaptureAssistant.h>
 #include <Zivid/Exception.h>
 #include <Zivid/Experimental/Calibration.h>
+#include <Zivid/Experimental/PointCloudExport.h>
 #include <Zivid/Firmware.h>
 #include <Zivid/Frame2D.h>
 #include <Zivid/Image.h>
@@ -530,9 +531,8 @@ void ZividCamera::captureAndSaveServiceHandler(
     [&]() {
       const auto settings = settings_controller_->currentSettings();
       const auto frame = invokeCaptureAndPublishFrame(settings);
-      const auto destination_path = request->file_path;
-      RCLCPP_INFO(get_logger(), "Saving frame to '%s'", destination_path.c_str());
-      frame.save(destination_path);
+      RCLCPP_INFO(get_logger(), "Saving frame to '%s'", request->file_path.c_str());
+      exportFrame(frame, request->file_path, colorSpace());
     },
     response, get_logger(), "CaptureAndSave");
 }
@@ -971,6 +971,45 @@ IntrinsicsSource ZividCamera::intrinsicsSource() const
   const auto intrinsics_source = get_parameter(ParamNames::intrinsics_source).as_string();
   return parameterStringToEnum(
     ParamNames::intrinsics_source, intrinsics_source, intrinsics_source_name_value_map_);
+}
+
+void ZividCamera::exportFrame(
+  const Zivid::Frame & frame, const std::string & file_name, ColorSpace color_space)
+{
+  namespace PointCloudExport = Zivid::Experimental::PointCloudExport;
+
+  PointCloudExport::ColorSpace export_color_space = [&]() {
+    switch (color_space) {
+      case ColorSpace::LinearRGB:
+        return PointCloudExport::ColorSpace::linearRGB;
+      case ColorSpace::sRGB:
+        return PointCloudExport::ColorSpace::sRGB;
+      default:
+        throw std::runtime_error("Enum `color_space` out of range.");
+    }
+  }();
+
+  const auto extension = [&]() {
+    const auto pos = file_name.find_last_of('.');
+    return file_name.substr(pos + 1);
+  }();
+
+  if (extension == "zdf") {
+    const auto spec = PointCloudExport::FileFormat::ZDF(file_name);
+    PointCloudExport::exportFrame(frame, spec);
+  } else if (extension == "ply") {
+    const auto spec = PointCloudExport::FileFormat::PLY(
+      file_name, PointCloudExport::FileFormat::PLY::Layout::ordered, export_color_space);
+    PointCloudExport::exportFrame(frame, spec);
+  } else if (extension == "pcd") {
+    const auto spec = PointCloudExport::FileFormat::PCD(file_name, export_color_space);
+    PointCloudExport::exportFrame(frame, spec);
+  } else if (extension == "xyz") {
+    const auto spec = PointCloudExport::FileFormat::XYZ(file_name, export_color_space);
+    PointCloudExport::exportFrame(frame, spec);
+  } else {
+    throw std::runtime_error("Unknown extension `" + extension + "`.");
+  }
 }
 }  // namespace zivid_camera
 

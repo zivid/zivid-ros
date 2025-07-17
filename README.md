@@ -35,6 +35,9 @@ are using Zivid SDK 2.14 or newer.
 This driver supports Ubuntu 20.04 / 22.04 / 24.04 with ROS2. Follow the official [ROS installation instructions](https://docs.ros.org/) for
 your OS.
 
+> [!TIP]
+> If you are using an OS that is not supported by ROS2, you can use the *dev container* provided in this repository.
+
 If you are looking for the Zivid ROS1 driver, please use the [`ros1-master` branch](https://github.com/zivid/zivid-ros/tree/ros1-master) for
 Zivid SDK 2.13 or older, or use the [`ros1-sdk-2.14.0` branch](https://github.com/zivid/zivid-ros/tree/ros1-sdk-2.14.0) for Zivid SDK 2.14 or newer.
 
@@ -60,6 +63,9 @@ sudo apt-get install -y g++
 ```
 
 ### Downloading and building Zivid ROS driver
+
+> [!NOTE]
+> If you will be using the *dev container*, skip to the [Using Dev Container](#using-dev-container) section.
 
 First, source the `setup.bash` script for your ROS distribution in your terminal:
 
@@ -95,6 +101,17 @@ Finally, build the driver:
 
 ```bash
 cd ~/ros2_ws
+colcon build --symlink-install
+```
+
+#### Using Dev Container
+
+If you are using a dev container, you can skip the above steps and instead open the dev container in your IDE.
+
+To build the driver in the dev container, run the following command in the terminal inside the dev container:
+
+```bash
+source /opt/ros/$ROS_DISTRO/setup.bash
 colcon build --symlink-install
 ```
 

@@ -1,0 +1,37 @@
+{
+    "name": "zivid-ros (ROS2)",
+    "remoteUser": "${localEnv:USER:ros}",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "args": {
+            "USERNAME": "${localEnv:USER:ros}",
+            "USER_UID": "${localEnv:UID:1000}",
+            "USER_GID": "${localEnv:GID:1000}",
+            "DOCKER_REPO": "osrf/ros",
+            "ROS_DISTRO": "jazzy",
+            "IMAGE_SUFFIX": "-desktop-full",
+            "ZIVID_VERSION": "2.16.0+46cdaba6-1"
+        }
+    },
+    "workspaceFolder": "/home/ws",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/home/ws/src/zivid-ros,type=bind",
+    "containerEnv": {
+        "DISPLAY": "unix:0",
+        "ROS_AUTOMATIC_DISCOVERY_RANGE": "LOCALHOST",
+        "ROS_DOMAIN_ID": "42"
+    },
+    "runArgs": [
+        "--net=host",
+        "--pid=host",
+        "--ipc=host",
+        "-e", "DISPLAY=${env:DISPLAY}",
+        "--gpus=all"
+    ],
+    "mounts": [
+        // Comment these out if using Windows:
+       "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
+       "source=/dev/dri,target=/dev/dri,type=bind,consistency=cached"
+    ],
+    "onCreateCommand": "sudo chown -R $(whoami) /home/ws",
+    "postCreateCommand": "rosdep update && rosdep install --from-paths /home/ws/src --ignore-src --default-yes"
+}

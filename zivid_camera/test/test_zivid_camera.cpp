@@ -918,16 +918,48 @@ TEST_F(CaptureAndSaveTest, testCaptureAndSaveInvalidExtension)
 TEST_F(CaptureAndSaveTest, testCaptureAndSaveZDF)
 {
   captureAndSaveToPath(getTemporaryFilePath("valid.zdf").string(), true);
+
+  // Note: the color_space parameter does not affect the ZDF file format, but we still want to test
+  // that it does not break when set to either value.
+
+  setNodeColorSpaceLinearRGB();
+  captureAndSaveToPath(getTemporaryFilePath("valid_linear.zdf").string(), true);
+
+  setNodeColorSpaceSRGB();
+  captureAndSaveToPath(getTemporaryFilePath("valid_srgb.zdf").string(), true);
 }
 
 TEST_F(CaptureAndSaveTest, testCaptureAndSavePLY)
 {
   captureAndSaveToPath(getTemporaryFilePath("valid.ply").string(), true);
+
+  setNodeColorSpaceLinearRGB();
+  captureAndSaveToPath(getTemporaryFilePath("valid_linear.ply").string(), true);
+
+  setNodeColorSpaceSRGB();
+  captureAndSaveToPath(getTemporaryFilePath("valid_srgb.ply").string(), true);
 }
 
 TEST_F(CaptureAndSaveTest, testCaptureAndSavePCD)
 {
   captureAndSaveToPath(getTemporaryFilePath("valid.pcd").string(), true);
+
+  setNodeColorSpaceLinearRGB();
+  captureAndSaveToPath(getTemporaryFilePath("valid_linear.pcd").string(), true);
+
+  setNodeColorSpaceSRGB();
+  captureAndSaveToPath(getTemporaryFilePath("valid_srgb.pcd").string(), true);
+}
+
+TEST_F(CaptureAndSaveTest, testCaptureAndSaveXYZ)
+{
+  captureAndSaveToPath(getTemporaryFilePath("valid.xyz").string(), true);
+
+  setNodeColorSpaceLinearRGB();
+  captureAndSaveToPath(getTemporaryFilePath("valid_linear.xyz").string(), true);
+
+  setNodeColorSpaceSRGB();
+  captureAndSaveToPath(getTemporaryFilePath("valid_srgb.xyz").string(), true);
 }
 
 class ZividCATest : public CaptureOutputTest

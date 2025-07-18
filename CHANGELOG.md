@@ -2,6 +2,21 @@
 
 This project adheres to [Semantic Versioning](https://semver.org).
 
+# 3.2.0
+* Added new services for a number of different functions: 
+  * Calibration board and fiducial marker detection. 
+  * Infield correction. 
+  * Hand-eye calibration. 
+  * Image projection. 
+  * See [README](./README.md) for a description of all the available services.
+* Added URDF/Xacro for Zivid cameras. The Zivid camera will now appear in the scene in RViz.
+* Added parameter `color_space` used to configure whether images or point clouds are published in `linear_rgb` or `srgb`
+  color space. This also applies to point clouds saved using `capture_and_save`.
+* Added ability to get estimate intrinsics from capture frame. Estimate intrinsics are more accurate than the previously
+  hard-coded camera intrinsics.
+* The minimum supported Zivid SDK version is now 2.15.
+* Added CI testing of Zivid SDK version 2.16.
+
 # 3.1.0
 
 * Fix an issue that could result in a crash due to use of uninitialized memory in zivid_camera.

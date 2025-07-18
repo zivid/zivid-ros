@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>zivid_description</name>
-  <version>3.1.0</version>
+  <version>3.2.0</version>
   <description>Descriptions for Zivid 3D Cameras with visual and collision geometry</description>
   <maintainer email="customersuccess@zivid.com">Zivid</maintainer>
   <license>BSD3</license>

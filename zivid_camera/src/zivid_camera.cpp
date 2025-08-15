@@ -213,6 +213,15 @@ Enum parameterStringToEnum(
   return it->second;
 }
 
+Zivid::CameraIntrinsics cameraIntrinsicsFrom3DSettings(
+  const Zivid::Camera & camera, const Zivid::Settings & settings)
+{
+  if (settings.color().hasValue()) {
+    return Zivid::Experimental::Calibration::intrinsics(camera, settings.color().value());
+  }
+  return Zivid::Experimental::Calibration::intrinsics(camera, settings);
+}
+
 }  // namespace
 
 namespace zivid_camera
@@ -658,7 +667,7 @@ void ZividCamera::publishFrame(const Zivid::Frame & frame)
         const auto intrinsics_source = intrinsicsSource();
         switch (intrinsics_source) {
           case IntrinsicsSource::Camera:
-            return Zivid::Experimental::Calibration::intrinsics(*camera_);
+            return cameraIntrinsicsFrom3DSettings(*camera_, frame.settings());
           case IntrinsicsSource::Frame:
             return Zivid::Experimental::Calibration::estimateIntrinsics(frame);
           default:
@@ -696,7 +705,8 @@ void ZividCamera::publishFrame2D(const Zivid::Frame2D & frame2D)
   if (shouldPublishColorImg()) {
     const auto color_space = colorSpace();
     const auto header = makeHeader();
-    const auto intrinsics = Zivid::Experimental::Calibration::intrinsics(*camera_);
+    const auto intrinsics =
+      Zivid::Experimental::Calibration::intrinsics(*camera_, frame2D.settings());
 
     switch (color_space) {
       case ColorSpace::sRGB: {

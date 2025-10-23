@@ -29,7 +29,7 @@
 #pragma once
 
 #include <Zivid/Calibration/HandEye.h>
-#include <Zivid/Experimental/Calibration/InfieldCorrection.h>
+#include <Zivid/Calibration/InfieldCorrection.h>
 
 #include <filesystem>
 #include <rclcpp/rclcpp.hpp>

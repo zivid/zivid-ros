@@ -28,7 +28,7 @@
 
 #pragma once
 
-#include <Zivid/Experimental/Calibration/InfieldCorrection.h>
+#include <Zivid/Calibration/InfieldCorrection.h>
 
 #include <rclcpp/rclcpp.hpp>
 #include <std_srvs/srv/trigger.hpp>
@@ -56,7 +56,7 @@ struct InfieldCorrectionState
   };
 
   State state = State::Uninitialized;
-  std::vector<Zivid::Experimental::Calibration::InfieldCorrectionInput> dataset;
+  std::vector<Zivid::Calibration::InfieldCorrectionInput> dataset;
 };
 
 class InfieldCorrectionController

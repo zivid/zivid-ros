@@ -89,8 +89,13 @@ class ZividCamera : public rclcpp::Node
 {
 public:
   ZIVID_CAMERA_ROS_PUBLIC ZividCamera(const rclcpp::NodeOptions & options);
+  ZIVID_CAMERA_ROS_PUBLIC ZividCamera(
+    const rclcpp::NodeOptions & options, const std::string& node_name, const std::string& ns,
+    std::shared_ptr<Zivid::Application> external_zivid,
+    std::shared_ptr<Zivid::Camera> external_camera);
   ~ZividCamera() override;
   ZIVID_CAMERA_ROS_PUBLIC Zivid::Application & zividApplication();
+  ZIVID_CAMERA_ROS_PUBLIC std::shared_ptr<Zivid::Camera> zividCamera();
 
 private:
   void onCameraConnectionKeepAliveTimeout();
@@ -184,11 +189,13 @@ private:
   bool use_latched_publisher_for_depth_image_{false};
   bool use_latched_publisher_for_snr_image_{false};
   bool use_latched_publisher_for_normals_xyz_{false};
+  bool use_latched_publisher_for_camera_info_{false};
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr points_xyz_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr points_xyzrgba_publisher_;
   image_transport::CameraPublisher color_image_publisher_;
   image_transport::CameraPublisher depth_image_publisher_;
   image_transport::CameraPublisher snr_image_publisher_;
+  rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_publisher_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr normals_xyz_publisher_;
   rclcpp::Service<zivid_interfaces::srv::CameraInfoSerialNumber>::SharedPtr
     camera_info_serial_number_service_;
@@ -206,7 +213,7 @@ private:
   std::unique_ptr<HandEyeCalibrationController> hand_eye_calibration_controller_;
   std::unique_ptr<ProjectionController> projection_controller_;
 
-  std::unique_ptr<Zivid::Application> zivid_;
+  std::shared_ptr<Zivid::Application> zivid_;
   CameraStatus camera_status_{CameraStatus::Idle};
   std::unique_ptr<CaptureSettingsController<Zivid::Settings>> settings_controller_;
   std::unique_ptr<CaptureSettingsController<Zivid::Settings2D>> settings_2d_controller_;
@@ -214,7 +221,7 @@ private:
   // both controllers. Otherwise, the callback could run before the controllers are initialized,
   // which is undefined behavior.
   OnSetParametersCallbackHandle::SharedPtr set_parameters_callback_handle_;
-  std::unique_ptr<Zivid::Camera> camera_;
+  std::shared_ptr<Zivid::Camera> camera_;
   std::string frame_id_;
 };
 }  // namespace zivid_camera

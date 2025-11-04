@@ -27,8 +27,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include <Zivid/Calibration/Detector.h>
-#include <Zivid/Experimental/Calibration.h>
-#include <Zivid/Experimental/Calibration/InfieldCorrection.h>
 
 #include <cstdint>
 #include <numeric>

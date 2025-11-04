@@ -5,11 +5,12 @@ string message
 uint8 STATUS_NOT_SET = 0
 uint8 STATUS_OK = 1
 uint8 STATUS_DETECTION_FAILED = 2
-uint8 STATUS_INVALID_CAPTURE_METHOD = 3
+uint8 STATUS_INVALID_CAPTURE_METHOD = 3 # Zivid SDK < 2.17
 uint8 STATUS_INVALID_ALIGNMENT = 4
 
 # Get the detection status/validity as one of the above numeric status values. The above message will include a
-# human-readable description of the status.
+# human-readable description of the status. Zivid SDK 2.17 and newer will respond with a failure instead of setting
+# STATUS_INVALID_CAPTURE_METHOD. See the Zivid SDK 2.17 release notes for details.
 uint8 status
 
 # Number of successful infield correction captures. We recommend multiple captures with different board positions.

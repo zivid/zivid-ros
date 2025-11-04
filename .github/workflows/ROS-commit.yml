@@ -8,7 +8,7 @@ on:
     - cron:  '0 22 * * *'
 
 env:
-  NEWEST_ZIVID_VERSION: '2.16.0+46cdaba6-1'
+  NEWEST_ZIVID_VERSION: '2.17.0+5fc9f05e-1'
 
 jobs:
   code-analysis:
@@ -75,7 +75,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        zivid-version: ['2.15.0+5fcc365b-1']
+        zivid-version: ['2.15.0+5fcc365b-1', '2.16.0+46cdaba6-1']
         ros-distro: ['ros:humble-ros-base-jammy']
     steps:
       - name: Check out code

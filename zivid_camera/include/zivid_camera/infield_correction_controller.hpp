@@ -28,7 +28,16 @@
 
 #pragma once
 
+#include <Zivid/VersionConstants.h>
+#if ZIVID_CORE_VERSION_MAJOR > 2 || \
+  (ZIVID_CORE_VERSION_MAJOR == 2 && ZIVID_CORE_VERSION_MINOR >= 17)
+#include <Zivid/Calibration/InfieldCorrection.h>
+namespace Calibration = Zivid::Calibration;
+#else
+#define ZIVID_EXPERIMENTAL_INFIELD
 #include <Zivid/Experimental/Calibration/InfieldCorrection.h>
+namespace Calibration = Zivid::Experimental::Calibration;
+#endif
 
 #include <rclcpp/rclcpp.hpp>
 #include <std_srvs/srv/trigger.hpp>
@@ -56,7 +65,7 @@ struct InfieldCorrectionState
   };
 
   State state = State::Uninitialized;
-  std::vector<Zivid::Experimental::Calibration::InfieldCorrectionInput> dataset;
+  std::vector<Calibration::InfieldCorrectionInput> dataset;
 };
 
 class InfieldCorrectionController

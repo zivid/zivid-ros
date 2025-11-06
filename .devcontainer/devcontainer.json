@@ -10,7 +10,7 @@
             "DOCKER_REPO": "osrf/ros",
             "ROS_DISTRO": "jazzy",
             "IMAGE_SUFFIX": "-desktop-full",
-            "ZIVID_VERSION": "2.16.0+46cdaba6-1"
+            "ZIVID_VERSION": "2.17.0+5fc9f05e-1"
         }
     },
     "workspaceFolder": "/home/ws",

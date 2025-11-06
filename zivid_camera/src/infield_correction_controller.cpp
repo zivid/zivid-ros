@@ -27,8 +27,6 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include <Zivid/Calibration/Detector.h>
-#include <Zivid/Experimental/Calibration.h>
-#include <Zivid/Experimental/Calibration/InfieldCorrection.h>
 
 #include <cstdint>
 #include <numeric>
@@ -42,7 +40,7 @@ namespace zivid_camera
 namespace
 {
 std::string infieldCorrectionDistancesToString(
-  const std::vector<Zivid::Experimental::Calibration::InfieldCorrectionInput> & dataset)
+  const std::vector<Calibration::InfieldCorrectionInput> & dataset)
 {
   auto zValues = std::vector<double>(dataset.size());
   std::transform(dataset.begin(), dataset.end(), zValues.begin(), [](const auto & input) {
@@ -77,7 +75,7 @@ struct InfieldCorrectionStatistics
 };
 
 InfieldCorrectionStatistics calculateInfieldCorrectionStatistics(
-  const std::vector<Zivid::Experimental::Calibration::InfieldCorrectionInput> & dataset)
+  const std::vector<Calibration::InfieldCorrectionInput> & dataset)
 {
   if (dataset.empty()) {
     throw std::runtime_error("Empty dataset");
@@ -85,9 +83,8 @@ InfieldCorrectionStatistics calculateInfieldCorrectionStatistics(
   const auto dimensionTruenessErrors = [&] {
     std::vector<float> result;
     std::transform(
-      dataset.begin(), dataset.end(), std::back_inserter(result), [](const auto & input) {
-        return Zivid::Experimental::Calibration::verifyCamera(input).localDimensionTrueness();
-      });
+      dataset.begin(), dataset.end(), std::back_inserter(result),
+      [](const auto & input) { return Calibration::verifyCamera(input).localDimensionTrueness(); });
     return result;
   }();
   const float currentTruenessError = dimensionTruenessErrors.back();
@@ -103,7 +100,7 @@ InfieldCorrectionStatistics calculateInfieldCorrectionStatistics(
 
 std::string infieldCorrectionEstimateToString(
   const InfieldCorrectionStatistics & statistics,
-  const Zivid::Experimental::Calibration::AccuracyEstimate & accuracyEstimate)
+  const Calibration::AccuracyEstimate & accuracyEstimate)
 {
   std::stringstream ss;
   ss << std::fixed << std::setprecision(2);
@@ -167,8 +164,8 @@ void InfieldCorrectionController::readServiceHandler(
 
   runFunctionAndCatchExceptionsForTriggerResponse(
     [&]() {
-      if (Zivid::Experimental::Calibration::hasCameraCorrection(camera_)) {
-        const auto timestamp = Zivid::Experimental::Calibration::cameraCorrectionTimestamp(camera_);
+      if (Calibration::hasCameraCorrection(camera_)) {
+        const auto timestamp = Calibration::cameraCorrectionTimestamp(camera_);
         const auto time = std::chrono::system_clock::to_time_t(timestamp);
         std::stringstream ss;
         ss << "Timestamp of the current camera correction: "
@@ -193,8 +190,8 @@ void InfieldCorrectionController::resetServiceHandler(
   RCLCPP_INFO_STREAM(node_.get_logger(), __func__);
 
   runFunctionAndCatchExceptionsForTriggerResponse(
-    [&]() { Zivid::Experimental::Calibration::resetCameraCorrection(camera_); }, response,
-    node_.get_logger(), "InfieldCorrectionReset");
+    [&]() { Calibration::resetCameraCorrection(camera_); }, response, node_.get_logger(),
+    "InfieldCorrectionReset");
 }
 
 void InfieldCorrectionController::removeLastCaptureServiceHandler(
@@ -242,13 +239,13 @@ void InfieldCorrectionController::captureServiceHandler(
       auto & dataset = state_->dataset;
       response->number_of_captures = safeCast<int>(dataset.size());
       ensureStarted();
-      const auto frame = Zivid::Calibration::captureCalibrationBoard(camera_);
+      const auto frame = Calibration::captureCalibrationBoard(camera_);
       ensureIdentityOrThrow(frame.pointCloud().transformationMatrix());
       const auto detectionResult = Zivid::Calibration::detectCalibrationBoard(frame);
-      const auto input = Zivid::Experimental::Calibration::InfieldCorrectionInput{detectionResult};
+      const auto input = Calibration::InfieldCorrectionInput{detectionResult};
 
       using Response = zivid_interfaces::srv::InfieldCorrectionCapture::Response;
-      using Zivid::Experimental::Calibration::InfieldCorrectionDetectionStatus;
+      using Calibration::InfieldCorrectionDetectionStatus;
       switch (input.status()) {
         case InfieldCorrectionDetectionStatus::ok:
           response->status = Response::STATUS_OK;
@@ -256,9 +253,11 @@ void InfieldCorrectionController::captureServiceHandler(
         case InfieldCorrectionDetectionStatus::detectionFailed:
           response->status = Response::STATUS_DETECTION_FAILED;
           break;
+#if defined ZIVID_EXPERIMENTAL_INFIELD
         case InfieldCorrectionDetectionStatus::invalidCaptureMethod:
           response->status = Response::STATUS_INVALID_CAPTURE_METHOD;
           break;
+#endif
         case InfieldCorrectionDetectionStatus::invalidAlignment:
           response->status = Response::STATUS_INVALID_ALIGNMENT;
           break;
@@ -304,7 +303,7 @@ void InfieldCorrectionController::computeServiceHandler(
         (state_->state == InfieldCorrectionState::State::Started);
       response->number_of_captures = safeCast<int>(dataset.size());
       ensureStarted();
-      const auto correction = Zivid::Experimental::Calibration::computeCameraCorrection(dataset);
+      const auto correction = Calibration::computeCameraCorrection(dataset);
       const auto accuracyEstimate = correction.accuracyEstimate();
       const auto statistics = calculateInfieldCorrectionStatistics(dataset);
       response->trueness_errors = statistics.truenessErrorList;
@@ -333,9 +332,9 @@ void InfieldCorrectionController::computeAndWriteServiceHandler(
         (state_->state == InfieldCorrectionState::State::Started);
       response->number_of_captures = safeCast<int>(dataset.size());
       ensureStarted();
-      const auto correction = Zivid::Experimental::Calibration::computeCameraCorrection(dataset);
+      const auto correction = Calibration::computeCameraCorrection(dataset);
       RCLCPP_DEBUG(node_.get_logger(), "Writing correction to camera");
-      Zivid::Experimental::Calibration::writeCameraCorrection(camera_, correction);
+      Calibration::writeCameraCorrection(camera_, correction);
       const auto accuracyEstimate = correction.accuracyEstimate();
       const auto statistics = calculateInfieldCorrectionStatistics(dataset);
       response->trueness_errors = statistics.truenessErrorList;

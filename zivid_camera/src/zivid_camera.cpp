@@ -235,8 +235,10 @@ constexpr auto color_space = "color_space";
 constexpr auto intrinsics_source = "intrinsics_source";
 }  // namespace ParamNames
 
-ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
-: rclcpp::Node{"zivid_camera", options},
+ZividCamera::ZividCamera(
+  const std::string & node_name, const std::string & ns, const rclcpp::NodeOptions & options,
+  std::shared_ptr<Zivid::Application> application)
+: rclcpp::Node{node_name, ns, options},
   color_space_name_value_map_{
     {"srgb", zivid_camera::ColorSpace::sRGB},
     {"linear_rgb", zivid_camera::ColorSpace::LinearRGB},
@@ -245,8 +247,11 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
     {"camera", zivid_camera::IntrinsicsSource::Camera},
     {"frame", zivid_camera::IntrinsicsSource::Frame},
   },
-  zivid_{std::make_unique<Zivid::Application>(
-    Zivid::Detail::createApplicationForWrapper(Zivid::Detail::EnvironmentInfo::Wrapper::ros2))},
+  zivid_{
+    application == nullptr
+      ? std::make_shared<Zivid::Application>(
+          Zivid::Detail::createApplicationForWrapper(Zivid::Detail::EnvironmentInfo::Wrapper::ros2))
+      : application},
   set_parameters_callback_handle_{this->add_on_set_parameters_callback(
     std::bind(&ZividCamera::setParametersCallback, this, std::placeholders::_1))}
 {
@@ -422,6 +427,11 @@ ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
     *this, *camera_, *settings_2d_controller_, ControllerInterface{*this});
 
   RCLCPP_INFO(get_logger(), "Zivid camera driver is now ready!");
+}
+
+ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
+: ZividCamera("zivid_camera", "", options, nullptr)
+{
 }
 
 ZividCamera::~ZividCamera() = default;

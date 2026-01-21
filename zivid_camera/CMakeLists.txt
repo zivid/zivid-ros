@@ -106,7 +106,7 @@ install(TARGETS ${ZIVID_DRIVER_COMPONENT_NAME}
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib)
 
-install(TARGETS capture_2d_trigger RUNTIME DESTINATION bin)
+install(TARGETS capture_2d_trigger RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})

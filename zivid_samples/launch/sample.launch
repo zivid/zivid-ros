@@ -3,9 +3,7 @@
   <arg name="serial_number" default="" description="Serial number of camera to connect to"/>
   <arg name="settings_2d_file_path" default="" description="Path to a 2D settings file for capture_2d"/>
   <arg name="settings_2d_yaml" default="" description="Inline 2D settings YAML for capture_2d"/>
-  <arg name="capture_2d_oneshot" default="true" description="Trigger capture_2d once and exit"/>
-  <arg name="capture_2d_stop_on_failure" default="true" description="Exit after first capture_2d failure"/>
-  <arg name="capture_2d_wait_for_service_timeout_s" default="5.0" description="Seconds to wait for capture_2d service"/>
+  <arg name="capture_2d_wait_for_service_timeout_s" default="0.0" description="Seconds to wait for capture_2d service (<= 0 means wait forever)"/>
   <arg name="auto_capture_2d" default="false" description="Continuously trigger capture_2d when available"/>
   <arg name="capture_2d_rate" default="30.0" description="Rate in Hz for auto capture_2d triggers"/>
 
@@ -27,8 +25,6 @@
   </node>
   <node pkg="zivid_camera" exec="capture_2d_trigger" name="capture_2d_trigger" if="$(var auto_capture_2d)">
     <param name="rate_hz" value="$(var capture_2d_rate)"/>
-    <param name="oneshot" value="$(var capture_2d_oneshot)"/>
-    <param name="stop_on_failure" value="$(var capture_2d_stop_on_failure)"/>
     <param name="wait_for_service_timeout_s" value="$(var capture_2d_wait_for_service_timeout_s)"/>
   </node>
 

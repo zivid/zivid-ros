@@ -18,8 +18,8 @@ public:
   Capture2DTrigger() : Node("capture_2d_trigger"), start_time_(now())
   {
     rate_hz_ = declare_parameter<double>("rate_hz", default_rate_hz);
-    wait_for_service_timeout_s_ =
-      declare_parameter<double>("wait_for_service_timeout_s", default_wait_for_service_timeout_s);
+    const auto wait_param =
+      declare_parameter("wait_for_service_timeout_s", rclcpp::ParameterValue{});
     if (rate_hz_ <= 0.0)
     {
       RCLCPP_WARN(
@@ -27,6 +27,29 @@ public:
         "Parameter rate_hz must be positive. Falling back to default %.1f Hz.", default_rate_hz);
       rate_hz_ = default_rate_hz;
     }
+
+    if (wait_param.get_type() == rclcpp::ParameterType::PARAMETER_NOT_SET)
+    {
+      wait_for_service_timeout_s_ = default_wait_for_service_timeout_s;
+    }
+    else if (wait_param.get_type() == rclcpp::ParameterType::PARAMETER_INTEGER)
+    {
+      wait_for_service_timeout_s_ = static_cast<double>(wait_param.get<int64_t>());
+      RCLCPP_WARN(
+        get_logger(),
+        "Parameter wait_for_service_timeout_s was provided as integer. Converting to %.1f s.",
+        wait_for_service_timeout_s_);
+    }
+    else if (wait_param.get_type() == rclcpp::ParameterType::PARAMETER_DOUBLE)
+    {
+      wait_for_service_timeout_s_ = wait_param.get<double>();
+    }
+    else
+    {
+      throw rclcpp::exceptions::InvalidParameterTypeException(
+        "wait_for_service_timeout_s", "double or integer");
+    }
+
     if (wait_for_service_timeout_s_ < 0.0)
     {
       RCLCPP_WARN(

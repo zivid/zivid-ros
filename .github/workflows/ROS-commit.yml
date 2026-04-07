@@ -7,6 +7,9 @@ on:
   schedule:      # Scheduled trigger runs on the latest commit on the default branch.
     - cron:  '0 22 * * *'
 
+permissions:
+  contents: read
+
 env:
   NEWEST_ZIVID_VERSION: '2.17.0+5fc9f05e-1'
 

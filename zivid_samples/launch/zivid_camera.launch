@@ -4,7 +4,7 @@
   <arg name="settings_2d_yaml" default="" description="Inline 2D settings YAML for capture_2d"/>
   <arg name="auto_capture_2d" default="false" description="Continuously trigger capture_2d when available"/>
   <arg name="capture_2d_rate" default="30.0" description="Rate in Hz for auto capture_2d triggers"/>
-  <arg name="capture_2d_wait_for_service_timeout_s" default="0.0" description="Seconds to wait for capture_2d service (<= 0 means wait forever)"/>
+  <arg name="capture_2d_wait_for_service_timeout_s" default="0.0" description="Seconds to wait for capture_2d service (&lt;= 0 means wait forever)"/>
   <node pkg="zivid_camera" exec="zivid_camera" name="zivid_camera">
     <param name="serial_number" value="$(var serial_number)"/>
     <param name="settings_2d_file_path" value="$(var settings_2d_file_path)"/>

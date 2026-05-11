@@ -23,7 +23,7 @@
     <param name="settings_2d_file_path" value="$(var settings_2d_file_path)"/>
     <param name="settings_2d_yaml" value="$(var settings_2d_yaml)"/>
   </node>
-  <node pkg="zivid_camera" exec="capture_2d_trigger" name="capture_2d_trigger" if="$(var auto_capture_2d)">
+  <node pkg="zivid_samples" exec="capture_2d_trigger" name="capture_2d_trigger" if="$(var auto_capture_2d)">
     <param name="rate_hz" value="$(var capture_2d_rate)"/>
     <param name="wait_for_service_timeout_s" value="$(var capture_2d_wait_for_service_timeout_s)"/>
   </node>

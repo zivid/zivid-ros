@@ -385,6 +385,9 @@ Performs a hand-eye calibration capture. This service takes the robot pose as an
 detects any calibration objects. The resulting point cloud and color image will be published just like during a normal call to the
 [capture](#capture) service.
 
+> [!IMPORTANT]
+> The robot poses must be given in millimeters because Zivid point clouds are expressed in millimeters.
+
 If the detections is successful, the result is stored locally in the driver. Additionally, if a working directory was
 specified during start, the captured frame and robot pose is saved to that directory.
 
@@ -790,6 +793,9 @@ hand-eye calibration on Zivid cameras. The sample is for exposition only, to dem
 The sample begins by preparing the camera node for hand-eye calibration. Then a fixed number of captures is gathered at
 a fixed duration between captures, using a simulated robot pose. Finally, hand-eye calibration is run using the gathered
 data.
+
+> [!IMPORTANT]
+> The robot poses must be given in millimeters because Zivid point clouds are expressed in millimeters.
 
 Source code: [C++](./zivid_samples/src/sample_hand_eye_calibration.cpp) [Python](./zivid_samples/scripts/sample_hand_eye_calibration.py)
 

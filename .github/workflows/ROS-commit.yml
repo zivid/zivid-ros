@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
         with:
           lfs: false
       - name: Run code_analysis.sh
@@ -55,7 +55,7 @@ jobs:
             compiler: 'clang++-18'
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
         with:
           lfs: false
       - name: Build and Test
@@ -79,7 +79,7 @@ jobs:
         ros-distro: ['ros:humble-ros-base-jammy']
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
         with:
           lfs: false
       - name: Build and Test

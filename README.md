@@ -112,7 +112,7 @@ To build the driver in the dev container, run the following command in the termi
 
 ```bash
 source /opt/ros/$ROS_DISTRO/setup.bash
-colcon build --symlink-install
+colcon build --symlink-install --cmake-arg -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 ```
 
 ## Getting started

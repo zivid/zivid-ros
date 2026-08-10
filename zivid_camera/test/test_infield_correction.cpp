@@ -97,13 +97,19 @@ protected:
   }
 };
 
+class TestWithNoCalibrationBoard : public ZividNodeTest
+{
+protected:
+  TestWithNoCalibrationBoard() : ZividNodeTest{FileCameraMode::HDR, NodeReusePolicy::AllowReuse} {}
+};
+
 class TestWithCalibrationBoardFreshNode : public TestWithCalibrationBoard
 {
 protected:
   TestWithCalibrationBoardFreshNode() : TestWithCalibrationBoard{NodeReusePolicy::RestartNode} {}
 };
 
-TEST_F(ZividNodeTest, testInfieldCorrectionCaptureFailed)
+TEST_F(TestWithNoCalibrationBoard, testInfieldCorrectionCaptureFailed)
 {
   AllCaptureTopicsSubscriber all_capture_topics_subscriber(*this);
   all_capture_topics_subscriber.assert_num_topics_received(0);

@@ -41,7 +41,13 @@ protected:
   }
 };
 
-TEST_F(ZividNodeTest, testDetectorDetectCalibrationBoardFailMissing)
+class TestWithNoCalibrationBoard : public ZividNodeTest
+{
+protected:
+  TestWithNoCalibrationBoard() : ZividNodeTest{FileCameraMode::HDR, NodeReusePolicy::AllowReuse} {}
+};
+
+TEST_F(TestWithNoCalibrationBoard, testDetectorDetectCalibrationBoardFailMissing)
 {
   AllCaptureTopicsSubscriber all_capture_topics_subscriber(*this);
   all_capture_topics_subscriber.assert_num_topics_received(0);

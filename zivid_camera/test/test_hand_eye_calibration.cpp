@@ -28,10 +28,13 @@
 
 #include <gtest/gtest.h>
 
+#include <cmath>
 #include <ctime>
 #include <filesystem>
+#include <geometry_msgs/msg/transform.hpp>
 #include <std_srvs/srv/trigger.hpp>
 #include <test_zivid_camera.hpp>
+#include <zivid_interfaces/msg/hand_eye_calibration_residual.hpp>
 #include <zivid_interfaces/srv/hand_eye_calibration_calibrate.hpp>
 #include <zivid_interfaces/srv/hand_eye_calibration_capture.hpp>
 #include <zivid_interfaces/srv/hand_eye_calibration_load.hpp>
@@ -261,6 +264,15 @@ TEST_F(TestHandEyeWithCalibrationBoard, testHandEyeStartCaptureLoadCycle)
                  });
   verifyDirectoryContents(tmp_directory.path(), files);
 
+  verifyTriggerResponseSuccess(handEyeCapture({7, 8, 9}));
+  files.insert(
+    files.end(), {
+                   "calibration_object_pose_2.zdf",
+                   "checkerboard_pose_in_camera_frame_2.yaml",
+                   "robot_pose_2.yaml",
+                 });
+  verifyDirectoryContents(tmp_directory.path(), files);
+
   const auto original_calibration_response =
     handEyeCalibrate(zivid_interfaces::srv::HandEyeCalibrationCalibrate::Request::EYE_TO_HAND);
   ASSERT_TRUE(original_calibration_response->success);
@@ -455,6 +467,7 @@ TEST_F(TestHandEyeWithCalibrationBoard, testHandEyeCalibrateCalibrationBoardSucc
   startWithCalibrationBoard();
   verifyTriggerResponseSuccess(handEyeCapture({}));
   verifyTriggerResponseSuccess(handEyeCapture({1, 2, 3}));
+  verifyTriggerResponseSuccess(handEyeCapture({7, 8, 9}));
 
   for (const int configuration :
        {zivid_interfaces::srv::HandEyeCalibrationCalibrate::Request::EYE_TO_HAND,
@@ -470,7 +483,7 @@ TEST_F(TestHandEyeWithCalibrationBoard, testHandEyeCalibrateCalibrationBoardSucc
     ASSERT_NE(response->transform.translation.x, 0);
     ASSERT_NE(response->transform.translation.y, 0);
     ASSERT_NE(response->transform.translation.z, 0);
-    ASSERT_EQ(response->residuals.size(), 2);
+    ASSERT_EQ(response->residuals.size(), 3);
   }
 }
 
@@ -558,12 +571,14 @@ TEST_F(TestHandEyeWithCalibrationBoard, testHandEyeCalibrateDuplicateCaptures)
 TEST_F(TestHandEyeWithCalibrationBoard, testHandEyeCalibrateHandlesSuccess)
 {
   startWithCalibrationBoard();
-  verifyTriggerResponseSuccess(handEyeCapture({}));
-  verifyTriggerResponseSuccess(handEyeCapture({}));
-  verifyTriggerResponseSuccess(handEyeCapture({1, 2, 3}));
-  verifyTriggerResponseSuccess(handEyeCapture({4, 5, 6}));
+  verifyTriggerResponseSuccess(handEyeCapture({}));         // handle 0
+  verifyTriggerResponseSuccess(handEyeCapture({}));         // handle 1 (duplicate of 0)
+  verifyTriggerResponseSuccess(handEyeCapture({1, 2, 3}));  // handle 2
+  verifyTriggerResponseSuccess(handEyeCapture({4, 5, 6}));  // handle 3
+  verifyTriggerResponseSuccess(handEyeCapture({7, 8, 9}));  // handle 4
 
   {
+    // handles {1,2,3} → captures at (0,0,0), (1,2,3), (4,5,6) — 3 distinct poses
     auto request = std::make_shared<zivid_interfaces::srv::HandEyeCalibrationCalibrate::Request>();
     request->configuration =
       zivid_interfaces::srv::HandEyeCalibrationCalibrate::Request::EYE_TO_HAND;
@@ -577,10 +592,11 @@ TEST_F(TestHandEyeWithCalibrationBoard, testHandEyeCalibrateHandlesSuccess)
   }
 
   {
+    // handles {2,3,4} → captures at (1,2,3), (4,5,6), (7,8,9) — 3 distinct poses
     auto request = std::make_shared<zivid_interfaces::srv::HandEyeCalibrationCalibrate::Request>();
     request->configuration =
       zivid_interfaces::srv::HandEyeCalibrationCalibrate::Request::EYE_TO_HAND;
-    request->capture_handles = {2, 3};
+    request->capture_handles = {2, 3, 4};
     auto response = doSrvRequest<zivid_interfaces::srv::HandEyeCalibrationCalibrate>(
       "hand_eye_calibration/calibrate", request);
     ASSERT_TRUE(response->success);
@@ -670,13 +686,35 @@ TEST_F(TestHandEyeWithCalibrationBoard, testHandEyeCalibrateHandlesInvalid)
   }
 }
 
+// The low-DOF tests below exist mainly to check the interfaces, that all the input and output
+// fields can be assigned and read as expected. The calibration input data does not make a lot of
+// sense, so the numeric results are not meaningful: they differ between SDK versions and between
+// compute backends (CUDA vs OpenCL). Another calibration result, or an unsuccessful calibration,
+// would be just as valid here. We therefore only verify that the returned values are well-formed.
+
+// Note: the rotation is not checked for unit norm. Some SDK version and compute backend
+// combinations return a degenerate transform for the low-DOF inputs used below.
+void verifyTransformIsWellFormed(const geometry_msgs::msg::Transform & transform)
+{
+  EXPECT_TRUE(std::isfinite(transform.rotation.x));
+  EXPECT_TRUE(std::isfinite(transform.rotation.y));
+  EXPECT_TRUE(std::isfinite(transform.rotation.z));
+  EXPECT_TRUE(std::isfinite(transform.rotation.w));
+
+  EXPECT_TRUE(std::isfinite(transform.translation.x));
+  EXPECT_TRUE(std::isfinite(transform.translation.y));
+  EXPECT_TRUE(std::isfinite(transform.translation.z));
+}
+
+// Note: NaN residuals are accepted, they occur for some of the low-DOF inputs used below.
+void verifyResidualIsWellFormed(const zivid_interfaces::msg::HandEyeCalibrationResidual & residual)
+{
+  EXPECT_FALSE(std::isinf(residual.rotation));
+  EXPECT_FALSE(std::isinf(residual.translation));
+}
+
 TEST_F(TestHandEyeWithCalibrationBoard, testHandEyeCalibrateLowDOFMarkers)
 {
-  // This test exists mainly to check the interfaces, that all the input and output fields can be
-  // assigned and read as expected. The calibration input data does not make a lot of sense, so it
-  // would be reasonable for the output data to change in other SDK version. Another calibration
-  // result, or an unsuccessful calibration, would be just as valid here.
-  constexpr double margin = 0.1;
   const std::string marker_dictionary = "aruco4x4_50";
   const std::vector<int> marker_ids = {1, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31};
   startWithMarkers(marker_ids, marker_dictionary);
@@ -720,26 +758,15 @@ TEST_F(TestHandEyeWithCalibrationBoard, testHandEyeCalibrateLowDOFMarkers)
     containsSubstring, response->message,
     "Hand-eye calibration completed. { Hand-Eye transformation:");
 
-  EXPECT_NEAR(response->transform.rotation.x, -0.55137087592950862, margin);
-  EXPECT_NEAR(response->transform.rotation.y, 0.56498650630404534, margin);
-  EXPECT_NEAR(response->transform.rotation.z, -0.028818253506047845, margin);
-  EXPECT_NEAR(response->transform.rotation.w, 0.613147553977895, margin);
-  EXPECT_NEAR(response->transform.translation.x, -6.66133349609375, margin);
-  EXPECT_NEAR(response->transform.translation.y, -6.8641166992187497, margin);
-  EXPECT_NEAR(response->transform.translation.z, -7.1228476562500003, margin);
+  verifyTransformIsWellFormed(response->transform);
   ASSERT_EQ(response->residuals.size(), 6);
-  EXPECT_NEAR(response->residuals.at(0).rotation, 173.12001037597656, margin);
-  EXPECT_NEAR(response->residuals.at(0).translation, 11.606989860534668, margin);
+  for (const auto & residual : response->residuals) {
+    verifyResidualIsWellFormed(residual);
+  }
 }
 
 TEST_F(TestHandEyeWithCalibrationBoard, testHandEyeCalibrateLowDOFCalibrationBoard)
 {
-  // This test exists mainly to check the interfaces, that all the input and output fields can be
-  // assigned and read as expected. The calibration input data does not make a lot of sense, so it
-  // would be reasonable for the output data to change in other SDK version. Another calibration
-  // result, or an unsuccessful calibration, would be just as valid here.
-  constexpr double margin = 0.1;
-
   startWithCalibrationBoard();
   setSingleDefaultAcquisitionSettingsUsingYml();
   verifyTriggerResponseSuccess(handEyeCapture({}));
@@ -766,16 +793,11 @@ TEST_F(TestHandEyeWithCalibrationBoard, testHandEyeCalibrateLowDOFCalibrationBoa
       containsSubstring, response->message,
       "Hand-eye calibration completed. { Hand-Eye transformation:");
 
-    EXPECT_NEAR(response->transform.rotation.x, -0.3338221307333164, margin);
-    EXPECT_NEAR(response->transform.rotation.y, 0.12382566623145259, margin);
-    EXPECT_NEAR(response->transform.rotation.z, 0.0287235994234704, margin);
-    EXPECT_NEAR(response->transform.rotation.w, 0.9340262029926838, margin);
-    EXPECT_NEAR(response->transform.translation.x, 0.20223348999023438, margin);
-    EXPECT_NEAR(response->transform.translation.y, 0.40201751708984373, margin);
-    EXPECT_NEAR(response->transform.translation.z, 0.61725994873046874, margin);
+    verifyTransformIsWellFormed(response->transform);
     ASSERT_EQ(response->residuals.size(), 2);
-    EXPECT_NEAR(response->residuals.at(0).rotation, 0, margin);
-    EXPECT_NEAR(response->residuals.at(0).translation, 1.8708286285400391, margin);
+    for (const auto & residual : response->residuals) {
+      verifyResidualIsWellFormed(residual);
+    }
   }
 
   // Using pose
@@ -803,15 +825,10 @@ TEST_F(TestHandEyeWithCalibrationBoard, testHandEyeCalibrateLowDOFCalibrationBoa
       containsSubstring, response->message,
       "Hand-eye calibration completed. { Hand-Eye transformation:");
 
-    EXPECT_NEAR(response->transform.rotation.x, 0.020668384913865655, margin);
-    EXPECT_NEAR(response->transform.rotation.y, -0.080071359828544894, margin);
-    EXPECT_NEAR(response->transform.rotation.z, 0.012730027152341797, margin);
-    EXPECT_NEAR(response->transform.rotation.w, 0.99649353232488391, margin);
-    EXPECT_NEAR(response->transform.translation.x, 0.62237646484374998, margin);
-    EXPECT_NEAR(response->transform.translation.y, 1.1673579101562499, margin);
-    EXPECT_NEAR(response->transform.translation.z, 0.41257031249999998, margin);
+    verifyTransformIsWellFormed(response->transform);
     ASSERT_EQ(response->residuals.size(), 2);
-    EXPECT_NEAR(response->residuals.at(0).rotation, 0, margin);
-    EXPECT_NEAR(response->residuals.at(0).translation, 1.8708287477493286, margin);
+    for (const auto & residual : response->residuals) {
+      verifyResidualIsWellFormed(residual);
+    }
   }
 }

@@ -39,7 +39,7 @@
 #include <zivid_camera/utility.hpp>
 
 #define HAND_EYE_CONFIGURATION_TO_STRING(Configuration) \
-#Configuration " (" + std::to_string(HandEyeCalibrationCalibrateRequest::Configuration) + ")"
+  #Configuration " (" + std::to_string(HandEyeCalibrationCalibrateRequest::Configuration) + ")"
 
 namespace zivid_camera
 {
@@ -535,5 +535,4 @@ void HandEyeCalibrationController::calibrateServiceHandler(
     },
     response, node_.get_logger(), "HandEyeCalibrationCalibrate");
 }
-
 }  // namespace zivid_camera

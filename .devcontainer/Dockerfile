@@ -50,7 +50,7 @@ RUN wget -q --tries=3 https://downloads.zivid.com/sdk/releases/${ZIVID_VERSION}/
 
 # Download sample data for running tests
 RUN mkdir -p /usr/share/Zivid/data/
-RUN for sample in "FileCameraZivid2M70.zip" "BinWithCalibrationBoard.zip"; do \
+RUN for sample in "FileCameraZivid2M70.zip" "FileCameraZivid2M70_HDR.zip" "BinWithCalibrationBoard.zip"; do \
         wget -q --tries=3 "https://www.zivid.com/software/${sample}" && \
         unzip -q "${sample}" -d /usr/share/Zivid/data/ && \
         rm "${sample}"; \

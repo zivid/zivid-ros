@@ -10,7 +10,7 @@ echo "Installing Zivid API config file"
 install -D "$SCRIPT_DIR"/ZividAPIConfigCPU.yml "$HOME"/.config/Zivid/API/Config.yml || exit $?
 
 echo "Download and install zivid sample data"
-for sample in "FileCameraZivid2M70.zip" "BinWithCalibrationBoard.zip"; do
+for sample in "FileCameraZivid2M70.zip" "FileCameraZivid2M70_HDR.zip" "BinWithCalibrationBoard.zip"; do
     echo "Downloading ${sample}"
     wget -q "https://www.zivid.com/software/${sample}" || exit $?
     mkdir -p /usr/share/Zivid/data/ || exit $?

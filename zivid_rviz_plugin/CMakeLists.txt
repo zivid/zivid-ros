@@ -14,9 +14,6 @@ find_package(std_srvs REQUIRED)
 find_package(zivid_interfaces REQUIRED)
 
 set(CMAKE_AUTOMOC ON)
-qt5_wrap_cpp(MOC_FILES
-  include/zivid_rviz_plugin/infield_correction.hpp
-)
 
 add_library(zivid_rviz_plugin src/infield_correction.cpp ${MOC_FILES})
 target_include_directories(zivid_rviz_plugin PUBLIC

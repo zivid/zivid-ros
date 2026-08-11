@@ -19,6 +19,6 @@ apt-yes install \
     python3-pip \
     || exit $?
 
-pip3 install -r $SCRIPT_DIR/code_analysis_requirements.txt || exit $?
+pip3 install --break-system-packages -r $SCRIPT_DIR/code_analysis_requirements.txt || exit $?
 
 echo Success! ["$(basename $0)"]

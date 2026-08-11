@@ -21,7 +21,7 @@ jobs:
           lfs: false
       - name: Run code_analysis.sh
         run: |
-          CI_TEST_OS=ros:humble-ros-base-jammy \
+          CI_TEST_OS=ros:lyrical-ros-core-resolute \
           ./continuous-integration/run_code_analysis_in_docker.sh
       - name: Notify Teams
         if: ${{ failure() && github.ref == 'refs/heads/master' }}

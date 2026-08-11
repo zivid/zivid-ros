@@ -551,16 +551,17 @@ Settings:
   const auto & point_cloud = points_sub.lastMessage();
   ASSERT_TRUE(point_cloud);
 
-  const auto point_cloud_sdk = captureViaSDK(Zivid::Settings{
-    Zivid::Settings::Acquisitions{Zivid::Settings::Acquisition{}},
-    Zivid::Settings::RegionOfInterest::Box{
-      Zivid::Settings::RegionOfInterest::Box::Enabled::yes,
-      Zivid::Settings::RegionOfInterest::Box::PointO{-370.5, -288, 886},
-      Zivid::Settings::RegionOfInterest::Box::PointA{-354, 191.5, 673},
-      Zivid::Settings::RegionOfInterest::Box::PointB{420, -250, 876.5},
-      Zivid::Settings::RegionOfInterest::Box::Extents{-2, 200.5},
-    },
-  });
+  const auto point_cloud_sdk = captureViaSDK(
+    Zivid::Settings{
+      Zivid::Settings::Acquisitions{Zivid::Settings::Acquisition{}},
+      Zivid::Settings::RegionOfInterest::Box{
+        Zivid::Settings::RegionOfInterest::Box::Enabled::yes,
+        Zivid::Settings::RegionOfInterest::Box::PointO{-370.5, -288, 886},
+        Zivid::Settings::RegionOfInterest::Box::PointA{-354, 191.5, 673},
+        Zivid::Settings::RegionOfInterest::Box::PointB{420, -250, 876.5},
+        Zivid::Settings::RegionOfInterest::Box::Extents{-2, 200.5},
+      },
+    });
 
   auto expected = point_cloud_sdk.copyData<Zivid::PointXYZ>();
   const auto num_z_nan = [&] {
@@ -1102,8 +1103,9 @@ TEST_F(ZividCATest, testCaptureAssistantDefaultAmbientLightFrequencyWorks)
   using Request = zivid_interfaces::srv::CaptureAssistantSuggestSettings::Request;
   auto request = std::make_shared<Request>();
   request->max_capture_time = rclcpp::Duration{std::chrono::seconds{1}};
-  verifyTriggerResponseSuccess(doSrvRequest<zivid_interfaces::srv::CaptureAssistantSuggestSettings>(
-    capture_assistant_suggest_settings_service_name, request));
+  verifyTriggerResponseSuccess(
+    doSrvRequest<zivid_interfaces::srv::CaptureAssistantSuggestSettings>(
+      capture_assistant_suggest_settings_service_name, request));
 }
 
 TEST_F(ZividCATest, testCaptureAssistantInvalidAmbientLightFrequencyFails)

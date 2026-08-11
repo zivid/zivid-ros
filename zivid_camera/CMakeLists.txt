@@ -59,24 +59,39 @@ rclcpp_components_register_node(${ZIVID_DRIVER_COMPONENT_NAME}
                                 EXECUTABLE
                                 "zivid_camera")
 
-target_link_libraries(${ZIVID_DRIVER_COMPONENT_NAME} Zivid::Core)
-set(ZIVID_DRIVER_DEPENDENCIES
-    rclcpp_components
-    std_msgs
-    std_srvs
-    sensor_msgs
-    image_transport
-    tf2
-    tf2_ros
-    tf2_geometry_msgs
-    zivid_interfaces
-)
-ament_target_dependencies(${ZIVID_DRIVER_COMPONENT_NAME} ${ZIVID_DRIVER_DEPENDENCIES})
 target_compile_definitions(${ZIVID_DRIVER_COMPONENT_NAME} PRIVATE "ZIVID_CAMERA_ROS_EXPORTING")
+
+target_link_libraries(${ZIVID_DRIVER_COMPONENT_NAME} PUBLIC
+  ${sensor_msgs_TARGETS}
+  ${std_msgs_TARGETS}
+  ${std_srvs_TARGETS}
+  ${zivid_interfaces_TARGETS}
+  image_transport::image_transport
+  rclcpp_components::component
+  rclcpp_components::component_manager
+  sensor_msgs::sensor_msgs_library
+  tf2::tf2
+  tf2_geometry_msgs::tf2_geometry_msgs
+  tf2_ros::static_transform_broadcaster_node
+  tf2_ros::tf2_ros
+  Zivid::Core
+)
 
 #############
 ## Install ##
 #############
+
+set(ZIVID_DRIVER_DEPENDENCIES
+  image_transport
+  rclcpp
+  sensor_msgs
+  std_msgs
+  std_srvs
+  tf2
+  tf2_geometry_msgs
+  tf2_ros
+  zivid_interfaces
+)
 
 set(ZIVID_DRIVER_TARGETS_EXPORT_NAME ${PROJECT_NAME}Targets)
 
@@ -117,15 +132,17 @@ if(BUILD_TESTING)
       test/test_infield_correction.cpp
       TIMEOUT 1000
   )
-  ament_target_dependencies(${TEST_TARGET_NAME}
-      rclcpp
-      std_msgs
-      sensor_msgs
-      image_transport
-      zivid_interfaces
+  target_link_libraries(${TEST_TARGET_NAME}
+      ${sensor_msgs_TARGETS}
+      ${std_msgs_TARGETS}
+      ${zivid_interfaces_TARGETS}
+      image_transport::image_transport
+      rclcpp::rclcpp
+      sensor_msgs::sensor_msgs_library
+      Zivid::Core
+      ${ZIVID_DRIVER_COMPONENT_NAME}
   )
   target_include_directories(${TEST_TARGET_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test/include)
-  target_link_libraries(${TEST_TARGET_NAME} Zivid::Core ${ZIVID_DRIVER_COMPONENT_NAME})
 
 endif()
 

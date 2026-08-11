@@ -23,12 +23,12 @@ target_include_directories(zivid_rviz_plugin PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
-ament_target_dependencies(zivid_rviz_plugin
-  rclcpp
-  pluginlib
-  rviz_common
-  std_srvs
-  zivid_interfaces
+target_link_libraries(zivid_rviz_plugin PUBLIC
+  ${std_srvs_TARGETS}
+  ${zivid_interfaces_TARGETS}
+  pluginlib::pluginlib
+  rclcpp::rclcpp
+  rviz_common::rviz_common
 )
 
 if(BUILD_TESTING)

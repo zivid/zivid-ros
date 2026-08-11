@@ -8,7 +8,7 @@ on:
     - cron:  '0 22 * * *'
 
 env:
-  NEWEST_ZIVID_VERSION: '2.17.0+5fc9f05e-1'
+  NEWEST_ZIVID_VERSION: '2.18.0+1b44dbef-1'
 
 jobs:
   code-analysis:
@@ -34,25 +34,13 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: ['ros:humble-ros-base-jammy', 'ros:jazzy-ros-core-noble']
+        os: ['ros:humble-ros-base-jammy', 'ros:jazzy-ros-core-noble', 'ros:lyrical-ros-core-resolute']
         compiler: ['g++', 'clang++']
         include:
-          - os: 'ros:humble-ros-base-jammy'
-            compiler: 'g++-12'
-          - os: 'ros:humble-ros-base-jammy'
-            compiler: 'g++-13'
-          - os: 'ros:humble-ros-base-jammy'
-            compiler: 'clang++-15'
-          - os: 'ros:jazzy-ros-core-noble'
-            compiler: 'clang++-14'
-          - os: 'ros:jazzy-ros-core-noble'
-            compiler: 'clang++-15'
-          - os: 'ros:jazzy-ros-core-noble'
-            compiler: 'clang++-16'
-          - os: 'ros:jazzy-ros-core-noble'
-            compiler: 'clang++-17'
-          - os: 'ros:jazzy-ros-core-noble'
-            compiler: 'clang++-18'
+          - os: 'ros:lyrical-ros-core-resolute'
+            compiler: 'g++-16'
+          - os: 'ros:lyrical-ros-core-resolute'
+            compiler: 'clang++-22'
     steps:
       - name: Check out code
         uses: actions/checkout@v6
@@ -75,7 +63,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        zivid-version: ['2.15.0+5fcc365b-1', '2.16.0+46cdaba6-1']
+        zivid-version: ['2.15.0+5fcc365b-1', '2.16.0+46cdaba6-1', '2.17.0+5fc9f05e-1']
         ros-distro: ['ros:humble-ros-base-jammy']
     steps:
       - name: Check out code

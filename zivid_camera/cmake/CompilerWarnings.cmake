@@ -29,9 +29,19 @@
 function(set_target_warning_compile_options TARGET)
 
   if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    # To be able to discover issues in our code as new compilers are released,
+    # we enable -Werror and -Weverything and suppress warnings when necessary.
+    # However, this means that warnings that are introduced in one clang version
+    # may not be available in another. Hence, we only enable -Weverything for
+    # version greater or equal to the newest version we test in CI. This also
+    # ensures that once we introduce a newer compiler version, CI will fail
+    # unless we address or suppress any new warnings from that version.
 
-    set(TARGET_FLAGS -Wall -Wextra -Werror -pedantic -Weverything)
-    set(WARNINGS_THAT_SHOULD_BE_IGNORED
+    set(SUPPORTED_CLANG_WARNINGS_VERSION 22)
+    if(${CMAKE_CXX_COMPILER_VERSION} GREATER_EQUAL ${SUPPORTED_CLANG_WARNINGS_VERSION})
+
+      set(TARGET_FLAGS -Wall -Wextra -Werror -pedantic -Weverything)
+      set(WARNINGS_THAT_SHOULD_BE_IGNORED
         c++98-compat                    # Code base should be modern
         c++98-compat-pedantic           # Code base should be modern
         padded                          # It's not worth the effort in our domain (desktop PC with tons of memory)
@@ -39,11 +49,22 @@ function(set_target_warning_compile_options TARGET)
                                         # problem, maybe even linker will resolve this. Must add boilerplate to
                                         # fix, not worth it
         covered-switch-default          # We don't want this warning, because we want the default labels for safety.
-    )
+        unsafe-buffer-usage-in-libc-call# ROS macros trigger such warnings
+        missing-noreturn                # Triggers in visitor-style code with a throwing branch. Adding the label is a
+                                        # C++23 extension.
+        c2y-extensions                  # Triggers with some ROS macros using __COUNTER__ builtin.
+      )
 
-    foreach(WARNING ${WARNINGS_THAT_SHOULD_BE_IGNORED})
-      list(APPEND TARGET_FLAGS -Wno-${WARNING})
-    endforeach()
+      foreach(WARNING ${WARNINGS_THAT_SHOULD_BE_IGNORED})
+        list(APPEND TARGET_FLAGS -Wno-${WARNING})
+      endforeach()
+
+    else()
+
+      # Enable some warnings, but not -Weverything, for the reason explained above.
+      set(TARGET_FLAGS -Wall -Wextra -Werror)
+
+    endif()
 
     target_compile_options(${TARGET} PRIVATE ${TARGET_FLAGS})
 

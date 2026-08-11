@@ -175,6 +175,8 @@ private:
   IntrinsicsSource intrinsicsSource() const;
   static void exportFrame(
     const Zivid::Frame & frame, const std::string & file_name, ColorSpace color_space);
+  image_transport::CameraPublisher createCameraPublisher(
+    const std::string & topic, bool use_latched_publisher);
 
   friend class ControllerInterface;
 

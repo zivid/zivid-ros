@@ -196,7 +196,6 @@ std::vector<Zivid::Calibration::HandEyeInput> loadHandEyeWorkspace(
             "Could not detect calibration object in frame \"" + frame_path.string() + "\". " +
             error_message};
         }},
-
       detection_result);
   }
 
@@ -385,7 +384,7 @@ void HandEyeCalibrationController::captureServiceHandler(
 
       const auto settings = settings_controller_.currentSettings();
       RCLCPP_INFO(
-        node_.get_logger(), "Capturing with %zd acquisition(s)", settings.acquisitions().size());
+        node_.get_logger(), "Capturing with %zu acquisition(s)", settings.acquisitions().size());
       RCLCPP_DEBUG_STREAM(node_.get_logger(), settings);
 
       const auto robot_pose = toZividPose(request->robot_pose);
@@ -426,12 +425,9 @@ void HandEyeCalibrationController::captureServiceHandler(
       // above computations assume a non-transformed point cloud, so publish the frame at the end.
       controller_interface_.publishFrame(frame);
 
-      std::visit(
-        Overloaded{
-          [&](const Zivid::Calibration::DetectionResult & /*valid_detection*/) {},
-          [&](const Zivid::Calibration::DetectionResultFiducialMarkers & /*valid_detection*/) {},
-          [&](const std::string & error_message) { throw std::runtime_error{error_message}; }},
-        detection_result);
+      if (const auto * error_message = std::get_if<std::string>(&detection_result)) {
+        throw std::runtime_error{*error_message};
+      }
 
       response->capture_handle = capture_handle;
       response->success = true;

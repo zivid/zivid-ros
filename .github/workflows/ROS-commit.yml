@@ -3,7 +3,6 @@ name: ROS Commit
 
 on:
   push:           # Push trigger runs on any pushed branch.
-  pull_request:   # Run on new and updated PR's.
   schedule:      # Scheduled trigger runs on the latest commit on the default branch.
     - cron:  '0 22 * * *'
 

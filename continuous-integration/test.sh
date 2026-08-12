@@ -34,7 +34,7 @@ if [ "$CI_TEST_OS" == "ros:humble-ros-base-jammy" ] || [ "$CI_TEST_OS" == "ros:i
 fi
 
 export GTEST_BREAK_ON_FAILURE=1;
-colcon test --event-handlers console_direct+ --ctest-args tests --exclude-regex $excludeTests --output-on-failure --ros-args --log-level debug || exit $?
+colcon test --event-handlers console_direct+ --ctest-args tests --exclude-regex $excludeTests --output-on-failure || exit $?
 
 echo "Check for test errors"
 colcon test-result --all || exit $?

@@ -2,6 +2,11 @@
 
 This project adheres to [Semantic Versioning](https://semver.org).
 
+# 3.4.0
+
+* Fixes compilation error and failing tests with Zivid SDK 2.18.
+* Add support for ROS 2 Lyrical distribution.
+
 # 3.3.0
 
 * Added `ZividCamera` constructor allowing the `Zivid::Application` to be shared.

@@ -49,6 +49,7 @@
 enum class FileCameraMode
 {
   Default,
+  HDR,
   CalibrationBoard,
 };
 
@@ -680,6 +681,6 @@ Settings2D:
 class TestWithFileCamera : public ZividNodeTest
 {
 protected:
-  TestWithFileCamera();
+  explicit TestWithFileCamera(FileCameraMode fileCameraMode = FileCameraMode::Default);
   Zivid::Camera camera_;
 };

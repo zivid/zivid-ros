@@ -112,7 +112,7 @@ To build the driver in the dev container, run the following command in the termi
 
 ```bash
 source /opt/ros/$ROS_DISTRO/setup.bash
-colcon build --symlink-install
+colcon build --symlink-install --cmake-arg -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 ```
 
 ## Getting started
@@ -1090,7 +1090,7 @@ may try to connect to the same camera at the same time.
 This project comes with a set of unit and module tests to verify the provided functionality. To run
 the tests locally, first download and install the required data used for testing:
 ```bash
-for sample in "FileCameraZivid2M70.zip" "BinWithCalibrationBoard.zip"; do
+for sample in "FileCameraZivid2M70.zip" "FileCameraZivid2M70_HDR.zip" "BinWithCalibrationBoard.zip"; do
     echo "Downloading ${sample}"
     wget -q "https://www.zivid.com/software/${sample}" || exit $?
     mkdir -p /usr/share/Zivid/data/ || exit $?

@@ -32,8 +32,7 @@ function install_opencl_cpu_runtime {
     apt update || exit $?
 
     # Install the OpenCL runtime
-    # TODO: remove libxml2 once Intel sorts out its package dependencies
-    apt --assume-yes install libxml2 intel-oneapi-runtime-opencl-2024 intel-oneapi-runtime-compilers-2024 || exit $?
+    apt --assume-yes install intel-oneapi-runtime-opencl intel-oneapi-runtime-compilers || exit $?
 }
 
 install_opencl_cpu_runtime || exit $?
@@ -56,7 +55,10 @@ echo "Installing compiler $CI_TEST_COMPILER"
 
 if [[ "$CI_TEST_COMPILER" == "g++"    ||
       "$CI_TEST_COMPILER" == "g++-12"  ||
-      "$CI_TEST_COMPILER" == "g++-13"
+      "$CI_TEST_COMPILER" == "g++-13"  ||
+      "$CI_TEST_COMPILER" == "g++-14"  ||
+      "$CI_TEST_COMPILER" == "g++-15"  ||
+      "$CI_TEST_COMPILER" == "g++-16"
       ]]; then
 
     apt-yes install software-properties-common || exit $?
@@ -69,7 +71,11 @@ elif [[ "$CI_TEST_COMPILER" == "clang++"    ||
         "$CI_TEST_COMPILER" == "clang++-15"  ||
         "$CI_TEST_COMPILER" == "clang++-16"  ||
         "$CI_TEST_COMPILER" == "clang++-17" ||
-        "$CI_TEST_COMPILER" == "clang++-18" ]]; then
+        "$CI_TEST_COMPILER" == "clang++-18" ||
+        "$CI_TEST_COMPILER" == "clang++-19" ||
+        "$CI_TEST_COMPILER" == "clang++-20" ||
+        "$CI_TEST_COMPILER" == "clang++-21" ||
+        "$CI_TEST_COMPILER" == "clang++-22" ]]; then
 
     apt-yes install ${CI_TEST_COMPILER//\+/} || exit $?
 
@@ -82,9 +88,13 @@ echo "Install Zivid debian packages"
 
 ZIVID_RELEASE_DIR="https://downloads.zivid.com/sdk/releases/$CI_TEST_ZIVID_VERSION"
 
-if [[ "$UBUNTU_VERSION" == "20.04" || "$UBUNTU_VERSION" == "22.04" || "$UBUNTU_VERSION" == "24.04" ]]; then
+if [[ "$UBUNTU_VERSION" == "20.04" || "$UBUNTU_VERSION" == "22.04" || "$UBUNTU_VERSION" == "24.04" || "$UBUNTU_VERSION" == "26.04" ]]; then
 
-    install_www_deb "$ZIVID_RELEASE_DIR/u20/zivid_${CI_TEST_ZIVID_VERSION}_amd64.deb" || exit $?
+    if [[ "$CI_TEST_ZIVID_VERSION" < "2.18.0" ]]; then
+        install_www_deb "$ZIVID_RELEASE_DIR/u20/zivid_${CI_TEST_ZIVID_VERSION}_amd64.deb" || exit $?
+    else
+        install_www_deb "$ZIVID_RELEASE_DIR/u20/zivid-opencl_${CI_TEST_ZIVID_VERSION}_amd64.deb" || exit $?
+    fi
 
 else
 

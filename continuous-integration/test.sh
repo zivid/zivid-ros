@@ -10,7 +10,7 @@ echo "Installing Zivid API config file"
 install -D "$SCRIPT_DIR"/ZividAPIConfigCPU.yml "$HOME"/.config/Zivid/API/Config.yml || exit $?
 
 echo "Download and install zivid sample data"
-for sample in "FileCameraZivid2M70.zip" "BinWithCalibrationBoard.zip"; do
+for sample in "FileCameraZivid2M70.zip" "FileCameraZivid2M70_HDR.zip" "BinWithCalibrationBoard.zip"; do
     echo "Downloading ${sample}"
     wget -q "https://www.zivid.com/software/${sample}" || exit $?
     mkdir -p /usr/share/Zivid/data/ || exit $?
@@ -23,18 +23,14 @@ echo "Running tests"
 # We exclude `clang_format` here since it has variations between versions, instead we check it during code analysis.
 excludeTests="clang_format"
 
-if [ "$CI_TEST_OS" == "ros:humble-ros-base-jammy" ] || [ "$CI_TEST_OS" == "ros:iron-ros-core-jammy" ]; then
-  # The listed OSes have issues invoking clang-tidy correctly:
-  #   - Humble seems to not invoke it with the correct C++ language version, resulting in it not finding
-  #     std::optional and std::variant.
-  #   - Iron does not find the compile commands.
-  # On the other hand, Jazzy seems to work well, so we get the checks when testing on this OS.
-  echo "Skipping clang-tidy tests since OS is '$CI_TEST_OS'"
+if [[ "$CI_TEST_COMPILER" == "g++"* ]]; then
+  # When using gcc, ament_clang_tidy reports errors with missing system headers. Hence, restrict to clang builds only.
+  echo "Skipping clang-tidy tests since compiler is '$CI_TEST_COMPILER'"
   excludeTests+="|clang_tidy"
 fi
 
 export GTEST_BREAK_ON_FAILURE=1;
-colcon test --event-handlers console_direct+ --ctest-args tests --exclude-regex $excludeTests --output-on-failure --ros-args --log-level debug || exit $?
+colcon test --event-handlers console_direct+ --ctest-args tests --exclude-regex $excludeTests --output-on-failure || exit $?
 
 echo "Check for test errors"
 colcon test-result --all || exit $?

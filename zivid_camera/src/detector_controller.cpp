@@ -100,7 +100,7 @@ void DetectorController::detectMarkersHandler(
     [&]() {
       const auto settings = settings_controller_.currentSettings();
       RCLCPP_INFO(
-        node_.get_logger(), "Capturing with %zd acquisition(s)", settings.acquisitions().size());
+        node_.get_logger(), "Capturing with %zu acquisition(s)", settings.acquisitions().size());
       RCLCPP_DEBUG_STREAM(node_.get_logger(), settings);
       const auto frame = camera_.capture(settings);
       ensureIdentityOrThrow(frame.pointCloud().transformationMatrix());

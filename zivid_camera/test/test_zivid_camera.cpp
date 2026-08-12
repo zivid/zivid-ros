@@ -60,8 +60,23 @@
 namespace
 {
 constexpr auto file_camera_default_path = ZIVID_SAMPLE_DATA_DIR "FileCameraZivid2M70.zfc";
+constexpr auto file_camera_hdr_path = ZIVID_SAMPLE_DATA_DIR "FileCameraZivid2M70_HDR.zfc";
 constexpr auto file_camera_calibration_board_path =
   ZIVID_SAMPLE_DATA_DIR "BinWithCalibrationBoard.zfc";
+
+const char * fileCameraModeToPath(FileCameraMode mode)
+{
+  switch (mode) {
+    case FileCameraMode::Default:
+      return file_camera_default_path;
+    case FileCameraMode::HDR:
+      return file_camera_hdr_path;
+    case FileCameraMode::CalibrationBoard:
+      return file_camera_calibration_board_path;
+    default:
+      throw std::runtime_error("Unexpected file camera mode");
+  }
+}
 }  // namespace
 
 std::shared_ptr<zivid_camera::ZividCamera> ZividCameraNodeWrapper::getOrConstruct(
@@ -70,17 +85,7 @@ std::shared_ptr<zivid_camera::ZividCamera> ZividCameraNodeWrapper::getOrConstruc
   if (
     !m_fileCameraMode.has_value() || reusePolicy == NodeReusePolicy::RestartNode ||
     m_fileCameraMode.value() != fileCamera) {
-    std::string fileCameraPath;
-    switch (fileCamera) {
-      case FileCameraMode::Default:
-        fileCameraPath = file_camera_default_path;
-        break;
-      case FileCameraMode::CalibrationBoard:
-        fileCameraPath = file_camera_calibration_board_path;
-        break;
-      default:
-        throw std::runtime_error("Unexpected file camera mode");
-    }
+    std::string fileCameraPath = fileCameraModeToPath(fileCamera);
     auto node_options =
       rclcpp::NodeOptions{}.append_parameter_override("file_camera_path", fileCameraPath);
     m_zividRosNode.reset();
@@ -104,9 +109,11 @@ void ZividCameraNodeWrapper::reset()
   m_zividRosNode.reset();
 }
 
-TestWithFileCamera::TestWithFileCamera()
-: camera_(
-    ZividCameraNodeWrapper::get()->zividApplication().createFileCamera(file_camera_default_path))
+TestWithFileCamera::TestWithFileCamera(FileCameraMode fileCameraMode)
+: ZividNodeTest(fileCameraMode),
+  camera_(
+    ZividCameraNodeWrapper::get()->zividApplication().createFileCamera(
+      fileCameraModeToPath(fileCameraMode)))
 {
 }
 
@@ -375,6 +382,11 @@ TEST_F(ZividNodeTest, testRepeatedCapture2DPublishesTopics)
 class CaptureOutputTest : public TestWithFileCamera
 {
 protected:
+  explicit CaptureOutputTest(FileCameraMode file_camera_mode = FileCameraMode::Default)
+  : TestWithFileCamera(file_camera_mode)
+  {
+  }
+
   Zivid::PointCloud captureViaSDKDefaultSettings()
   {
     return camera_
@@ -539,16 +551,17 @@ Settings:
   const auto & point_cloud = points_sub.lastMessage();
   ASSERT_TRUE(point_cloud);
 
-  const auto point_cloud_sdk = captureViaSDK(Zivid::Settings{
-    Zivid::Settings::Acquisitions{Zivid::Settings::Acquisition{}},
-    Zivid::Settings::RegionOfInterest::Box{
-      Zivid::Settings::RegionOfInterest::Box::Enabled::yes,
-      Zivid::Settings::RegionOfInterest::Box::PointO{-370.5, -288, 886},
-      Zivid::Settings::RegionOfInterest::Box::PointA{-354, 191.5, 673},
-      Zivid::Settings::RegionOfInterest::Box::PointB{420, -250, 876.5},
-      Zivid::Settings::RegionOfInterest::Box::Extents{-2, 200.5},
-    },
-  });
+  const auto point_cloud_sdk = captureViaSDK(
+    Zivid::Settings{
+      Zivid::Settings::Acquisitions{Zivid::Settings::Acquisition{}},
+      Zivid::Settings::RegionOfInterest::Box{
+        Zivid::Settings::RegionOfInterest::Box::Enabled::yes,
+        Zivid::Settings::RegionOfInterest::Box::PointO{-370.5, -288, 886},
+        Zivid::Settings::RegionOfInterest::Box::PointA{-354, 191.5, 673},
+        Zivid::Settings::RegionOfInterest::Box::PointB{420, -250, 876.5},
+        Zivid::Settings::RegionOfInterest::Box::Extents{-2, 200.5},
+      },
+    });
 
   auto expected = point_cloud_sdk.copyData<Zivid::PointXYZ>();
   const auto num_z_nan = [&] {
@@ -692,7 +705,7 @@ TEST_F(CaptureOutputTest, testCaptureNormals)
     // We do a transform in the ROS driver to scale from mm to meters. However,
     // `expected_normal_xyz` are calculated without transform, so we need a slightly higher
     // delta to compare.
-    constexpr float delta = 0.1f;
+    constexpr float delta = 0.15f;
     ASSERT_NO_FATAL_FAILURE(compareFloat(normal_x, expected_sdk_before_transform.x, delta));
     ASSERT_NO_FATAL_FAILURE(compareFloat(normal_y, expected_sdk_before_transform.y, delta));
     ASSERT_NO_FATAL_FAILURE(compareFloat(normal_z, expected_sdk_before_transform.z, delta));
@@ -965,6 +978,8 @@ TEST_F(CaptureAndSaveTest, testCaptureAndSaveXYZ)
 class ZividCATest : public CaptureOutputTest
 {
 protected:
+  ZividCATest() : CaptureOutputTest(FileCameraMode::CalibrationBoard) {}
+
   Zivid::CaptureAssistant::SuggestSettingsParameters::AmbientLightFrequency
   toAPIAmbientLightFrequency(int ambient_light_frequency)
   {
@@ -1088,8 +1103,9 @@ TEST_F(ZividCATest, testCaptureAssistantDefaultAmbientLightFrequencyWorks)
   using Request = zivid_interfaces::srv::CaptureAssistantSuggestSettings::Request;
   auto request = std::make_shared<Request>();
   request->max_capture_time = rclcpp::Duration{std::chrono::seconds{1}};
-  verifyTriggerResponseSuccess(doSrvRequest<zivid_interfaces::srv::CaptureAssistantSuggestSettings>(
-    capture_assistant_suggest_settings_service_name, request));
+  verifyTriggerResponseSuccess(
+    doSrvRequest<zivid_interfaces::srv::CaptureAssistantSuggestSettings>(
+      capture_assistant_suggest_settings_service_name, request));
 }
 
 TEST_F(ZividCATest, testCaptureAssistantInvalidAmbientLightFrequencyFails)

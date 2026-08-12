@@ -29,6 +29,7 @@
 #pragma once
 
 #include <Zivid/Calibration/HandEye.h>
+#include <Zivid/Calibration/MarkerDictionary.h>
 #include <Zivid/Camera.h>
 
 #include <filesystem>

@@ -8,11 +8,12 @@ ARG USERNAME=ros
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 ARG ZIVID_VERSION
+ARG ZIVID_CORE_PACKAGE
 
 # Setup the user
 RUN apt-get update && apt-get install -y sudo && \
     # Delete user if it exists in container (e.g Ubuntu Noble: ubuntu)
-    if id -u $USER_UID &> /dev/null; then \
+    if id -u $USER_UID > /dev/null 2>&1; then \
         userdel -f $(id -un $USER_UID); \
     fi && \
     # Create the user and group
@@ -42,14 +43,14 @@ ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
 # Download and install Zivid SDK
-RUN wget -q --tries=3 https://downloads.zivid.com/sdk/releases/${ZIVID_VERSION}/u24/amd64/zivid_${ZIVID_VERSION}_amd64.deb && \
+RUN wget -q --tries=3 https://downloads.zivid.com/sdk/releases/${ZIVID_VERSION}/u24/amd64/${ZIVID_CORE_PACKAGE}_${ZIVID_VERSION}_amd64.deb && \
     apt-get update && \
-    apt-get install --assume-yes ./zivid_${ZIVID_VERSION}_amd64.deb && \
-    rm ./zivid_${ZIVID_VERSION}_amd64.deb
+    apt-get install --assume-yes ./${ZIVID_CORE_PACKAGE}_${ZIVID_VERSION}_amd64.deb && \
+    rm ./${ZIVID_CORE_PACKAGE}_${ZIVID_VERSION}_amd64.deb
 
 # Download sample data for running tests
 RUN mkdir -p /usr/share/Zivid/data/
-RUN for sample in "FileCameraZivid2M70.zip" "BinWithCalibrationBoard.zip"; do \
+RUN for sample in "FileCameraZivid2M70.zip" "FileCameraZivid2M70_HDR.zip" "BinWithCalibrationBoard.zip"; do \
         wget -q --tries=3 "https://www.zivid.com/software/${sample}" && \
         unzip -q "${sample}" -d /usr/share/Zivid/data/ && \
         rm "${sample}"; \

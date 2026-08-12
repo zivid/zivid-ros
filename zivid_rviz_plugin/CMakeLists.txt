@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 project(zivid_rviz_plugin)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -14,21 +14,18 @@ find_package(std_srvs REQUIRED)
 find_package(zivid_interfaces REQUIRED)
 
 set(CMAKE_AUTOMOC ON)
-qt5_wrap_cpp(MOC_FILES
-  include/zivid_rviz_plugin/infield_correction.hpp
-)
 
 add_library(zivid_rviz_plugin src/infield_correction.cpp ${MOC_FILES})
 target_include_directories(zivid_rviz_plugin PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
-ament_target_dependencies(zivid_rviz_plugin
-  rclcpp
-  pluginlib
-  rviz_common
-  std_srvs
-  zivid_interfaces
+target_link_libraries(zivid_rviz_plugin PUBLIC
+  ${std_srvs_TARGETS}
+  ${zivid_interfaces_TARGETS}
+  pluginlib::pluginlib
+  rclcpp::rclcpp
+  rviz_common::rviz_common
 )
 
 if(BUILD_TESTING)

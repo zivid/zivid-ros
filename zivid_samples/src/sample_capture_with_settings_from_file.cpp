@@ -1,4 +1,17 @@
+// get_package_share_path was added in ament_index_cpp 1.13.2; on older
+// versions fall back to the get_package_share_directory. Note that the
+// latter was deprecated in 1.13.0, so if compiling with
+// 1.13.0 <= version < 1.13.2, then the compiler will raise a deprecation
+// warning. However, this should not happen on any of the ROS distros we
+// support.
+// TODO: remove this when dropping support for jazzy
+#if __has_include(<ament_index_cpp/get_package_share_path.hpp>)
+#define HAVE_AMENT_INDEX_CPP_PATH_API
+#include <ament_index_cpp/get_package_share_path.hpp>
+#else
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#endif
+
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -19,8 +32,14 @@ void fatal_error(const rclcpp::Logger & logger, const std::string & message)
 
 void set_settings(const std::shared_ptr<rclcpp::Node> & node)
 {
+#ifdef HAVE_AMENT_INDEX_CPP_PATH_API
+  const auto share_directory = ament_index_cpp::get_package_share_path("zivid_samples");
+  const auto path_to_settings_yml = share_directory / "settings/camera_settings.yml";
+#else
   const auto share_directory = ament_index_cpp::get_package_share_directory("zivid_samples");
   const auto path_to_settings_yml = share_directory + "/settings/camera_settings.yml";
+#endif
+
   RCLCPP_INFO_STREAM(
     node->get_logger(),
     "Setting parameter `settings_file_path` to '" << path_to_settings_yml << "'");

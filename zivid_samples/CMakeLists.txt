@@ -120,6 +120,10 @@ zivid_add_cpp_sample(sample_project_and_capture
     ${zivid_interfaces_TARGETS}
 )
 
+add_executable(capture_2d_trigger src/capture_2d_trigger.cpp)
+ament_target_dependencies(capture_2d_trigger rclcpp std_srvs)
+install(TARGETS capture_2d_trigger DESTINATION lib/${PROJECT_NAME})
+
 zivid_add_cpp_sample(sample_with_sdk_capture_and_load_frame
   LINK_TARGETS
     rclcpp::rclcpp

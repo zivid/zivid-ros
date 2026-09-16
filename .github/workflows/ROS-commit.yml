@@ -2,9 +2,15 @@ name: ROS Commit
 # Note: If the workflow name is changed, the CI badge URL in the README must also be updated
 
 on:
-  push:           # Push trigger runs on any pushed branch.
+  push:          # Push trigger runs only on long-lived branches; topic branches are
+    branches:    # covered by the pull_request trigger, so CI does not run twice.
+      - master
+      - ros1-master
+      - ros1-sdk-2.14.0
+  pull_request:  # Run on new and updated PR's, including PR's from forks.
   schedule:      # Scheduled trigger runs on the latest commit on the default branch.
     - cron:  '0 22 * * *'
+  workflow_dispatch:  # Allow re-running CI manually, without pushing an empty commit.
 
 env:
   NEWEST_ZIVID_VERSION: '2.18.0+1b44dbef-1'

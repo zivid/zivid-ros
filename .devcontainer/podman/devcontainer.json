@@ -1,0 +1,13 @@
+{
+    "name": "zivid-ros (ROS2, Podman)",
+    "remoteUser": "${localEnv:USER:ros}",
+    "dockerComposeFile": "compose.yaml",
+    "service": "dev",
+    "workspaceFolder": "/ws",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/ws/src/zivid-ros,type=bind",
+    "containerEnv": {
+        "ROS_AUTOMATIC_DISCOVERY_RANGE": "LOCALHOST",
+        "ROS_DOMAIN_ID": "42"
+    },
+    "postCreateCommand": "rosdep update && rosdep install --from-paths /ws/src --ignore-src --default-yes"
+}

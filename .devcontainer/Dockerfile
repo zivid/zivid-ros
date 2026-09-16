@@ -1,4 +1,4 @@
-ARG DOCKER_REPO=osrf/ros
+ARG DOCKER_REPO=docker.io/osrf/ros
 ARG ROS_DISTRO=jazzy
 ARG IMAGE_SUFFIX=-desktop-full
 
@@ -55,6 +55,9 @@ RUN for sample in "FileCameraZivid2M70.zip" "FileCameraZivid2M70_HDR.zip" "BinWi
         unzip -q "${sample}" -d /usr/share/Zivid/data/ && \
         rm "${sample}"; \
     done
+
+RUN mkdir -p /ws/src
+RUN chown -R $USERNAME:$USERNAME /ws
 
 USER $USERNAME
 CMD ["/bin/bash"]

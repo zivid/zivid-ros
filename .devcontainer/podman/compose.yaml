@@ -1,0 +1,31 @@
+services:
+  dev:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        USERNAME: ${USER:-ros}
+        USER_UID: ${UID:-1000}
+        USER_GID: ${GID:-1000}
+        DOCKER_REPO: docker.io/osrf/ros
+        ROS_DISTRO: lyrical
+        IMAGE_SUFFIX: -desktop-full
+        ZIVID_VERSION: 2.18.0+1b44dbef-1
+        ZIVID_CORE_PACKAGE: zivid-cuda
+    user: "${UID:-1000}:${GID:-1000}"
+    # Rootless podman: map the container user 1:1 to the host user so the
+    # bind-mounted workspace keeps its ownership. Podman-only; Docker rejects it.
+    userns_mode: keep-id
+    security_opt:
+      - label=disable
+    network_mode: host
+    devices:
+      - nvidia.com/gpu=all
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - /dev/dri:/dev/dri
+    working_dir: /ws
+    environment:
+      DISPLAY: ${DISPLAY:-:0}
+      ROS_AUTOMATIC_DISCOVERY_RANGE: LOCALHOST
+      ROS_DOMAIN_ID: "42"

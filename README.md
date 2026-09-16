@@ -994,7 +994,7 @@ of the point cloud in a target coordinate frame.
 
 The URDF or the underlying macro can be included in your own project.
 
-To view the Zivid 2, Zivid 2+, or Zivid 2+R cameras in RViz:
+To view the Zivid 2, Zivid 2+, Zivid 2+R, or Zivid 3 cameras in RViz:
 ```
 ros2 launch zivid_samples zivid_camera_with_rviz.launch model:=ZIVID_2_M70 field_of_view:=true
 ```
@@ -1017,6 +1017,7 @@ The available Zivid camera models are:
 - `ZIVID_2_PLUS_LR110`
 - `ZIVID_2_PLUS_MR130`
 - `ZIVID_2_PLUS_MR60`
+- `ZIVID_3_XL250`
 
 ## Frequently Asked Questions
 

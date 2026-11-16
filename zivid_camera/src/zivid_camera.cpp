@@ -506,9 +506,6 @@ bool ZividCamera::capture2DServiceHandler(Capture2D::Request&, Capture2D::Respon
         publishColorImage(header, camera_info, image);
       }
       break;
-      default:
-        throw std::runtime_error("Internal error: Unknown color space value " +
-                                 std::to_string(static_cast<int>(color_space)));
     }
   }
   return true;
@@ -639,10 +636,9 @@ void ZividCamera::publishFrame(const Zivid::Frame& frame)
           case IntrinsicsSource::Frame:
             ROS_INFO("Using frame intrinsics for publishing images");
             return Zivid::Experimental::Calibration::estimateIntrinsics(frame);
-          default:
-            throw std::runtime_error("Internal error: Unknown intrinsics source value " +
-                                     std::to_string(static_cast<int>(intrinsics_source)));
         }
+        throw std::runtime_error("Internal error: Unknown intrinsics source value " +
+                                 std::to_string(static_cast<int>(intrinsics_source)));
       }();
       const auto camera_info = makeCameraInfo(header, point_cloud.width(), point_cloud.height(), intrinsics);
 
@@ -757,10 +753,9 @@ void ZividCamera::publishPointCloudXYZRGBA(const std_msgs::Header& header, const
         return makePointCloud2Msg<Zivid::PointXYZColorBGRA_SRGB>(point_cloud, header);
       case ColorSpace::LinearRGB:
         return makePointCloud2Msg<Zivid::PointXYZColorBGRA>(point_cloud, header);
-      default:
-        throw std::runtime_error("Internal error: Unknown color space value " +
-                                 std::to_string(static_cast<int>(color_space)));
     }
+    throw std::runtime_error("Internal error: Unknown color space value " +
+                             std::to_string(static_cast<int>(color_space)));
   }();
 
   points_xyzrgba_publisher_.publish(msg);
@@ -777,10 +772,9 @@ void ZividCamera::publishColorImage(const std_msgs::Header& header, const sensor
         return makePointCloudImage<Zivid::ColorRGBA_SRGB>(point_cloud, header, sensor_msgs::image_encodings::RGBA8);
       case ColorSpace::LinearRGB:
         return makePointCloudImage<Zivid::ColorRGBA>(point_cloud, header, sensor_msgs::image_encodings::RGBA8);
-      default:
-        throw std::runtime_error("Internal error: Unknown color space value " +
-                                 std::to_string(static_cast<int>(color_space)));
     }
+    throw std::runtime_error("Internal error: Unknown color space value " +
+                             std::to_string(static_cast<int>(color_space)));
   }();
   color_image_publisher_.publish(image, camera_info);
 }

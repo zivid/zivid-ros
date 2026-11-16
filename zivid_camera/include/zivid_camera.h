@@ -99,8 +99,6 @@ private:
 
   ros::NodeHandle nh_;
   ros::NodeHandle priv_;
-  std::map<std::string, ColorSpace> color_space_name_value_map_;
-  std::map<std::string, IntrinsicsSource> intrinsics_source_name_value_map_;
   ros::Timer camera_connection_keepalive_timer_;
   CameraStatus camera_status_;
   bool use_latched_publisher_for_acquisition_done_;
@@ -114,6 +112,8 @@ private:
   ros::Publisher points_xyz_publisher_;
   ros::Publisher points_xyzrgba_publisher_;
   image_transport::ImageTransport image_transport_;
+  std::map<std::string, ColorSpace> color_space_name_value_map_;
+  std::map<std::string, IntrinsicsSource> intrinsics_source_name_value_map_;
   image_transport::CameraPublisher color_image_publisher_;
   image_transport::CameraPublisher depth_image_publisher_;
   image_transport::CameraPublisher snr_image_publisher_;

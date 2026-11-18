@@ -220,6 +220,21 @@ Or, if using `roslaunch` specify the parameter using `<param>`:
 > [2D Color Spaces and Output Formats](https://support.zivid.com/en/latest/reference-articles/color-spaces-and-output-formats.html)
 > for more details.
 
+`intrinsics_source` (string, default: "camera")
+> Specify how intrinsics are determined when publishing images from 3D captures. Valid values:
+>
+> - `camera`: Use hard-coded camera intrinsics. These intrinsics are given for a single aperture and a
+>    single temperature, and will therefore not be as accurate as the intrinsics estimated from the frame.
+> - `frame`: Estimate the intrinsics from the captured 3D frame. This gives more accurate results at the
+>    cost of additional computation time.
+>
+> In particular, this parameter affects data published on the topics [color/camera_info](#colorcamera_info),
+> [depth/camera_info](#depthcamera_info), and [snr/camera_info](#snrcamera_info), after performing a 3D capture. The
+> 2D-only captures will always use the hard-coded camera intrinsics. Please see the Zivid knowledge base on
+> [Camera Intrinsics](https://support.zivid.com/en/latest/reference-articles/camera-intrinsics.html) for more details.
+>
+> See [Sample Intrinsics](#sample-intrinsics) for code example.
+
 ## Services
 
 ### capture_assistant/suggest_settings
@@ -324,7 +339,7 @@ performance reasons no messages are generated or sent on topics with zero active
 ### color/camera_info
 [sensor_msgs/CameraInfo](http://docs.ros.org/api/sensor_msgs/html/msg/CameraInfo.html)
 
-Camera calibration and metadata.
+Camera calibration and metadata. See also parameter [`intrinsics_source`](#launch-parameters-advanced).
 
 ### color/image_color
 [sensor_msgs/Image](http://docs.ros.org/api/sensor_msgs/html/msg/Image.html)
@@ -336,7 +351,7 @@ is always 255.
 ### depth/camera_info
 [sensor_msgs/CameraInfo](http://docs.ros.org/api/sensor_msgs/html/msg/CameraInfo.html)
 
-Camera calibration and metadata.
+Camera calibration and metadata. See also parameter [`intrinsics_source`](#launch-parameters-advanced).
 
 ### depth/image
 [sensor_msgs/Image](http://docs.ros.org/api/sensor_msgs/html/msg/Image.html)
@@ -361,7 +376,7 @@ the RGBA values.
 ### snr/camera_info
 [sensor_msgs/CameraInfo](http://docs.ros.org/api/sensor_msgs/html/msg/CameraInfo.html)
 
-Camera calibration and metadata.
+Camera calibration and metadata. See also parameter [`intrinsics_source`](#launch-parameters-advanced).
 
 ### snr/image
 [sensor_msgs/Image](http://docs.ros.org/api/sensor_msgs/html/msg/Image.html)
@@ -450,6 +465,25 @@ Using rosrun (when `roscore` and `zivid_camera` are running):
 ```bash
 rosrun zivid_samples sample_capture_with_settings_from_yml_cpp
 rosrun zivid_samples sample_capture_with_settings_from_yml.py
+```
+
+### Sample Intrinsics
+
+This sample performs 3D captures and prints the published camera intrinsics with different settings. This sample shows
+how to set the [`intrinsics_source`](#launch-parameters-advanced) parameter, and how to subscribe to the
+[color/camera_info](#colorcamera_info) topic. Please see the Zivid knowledge base on
+[Camera Intrinsics](https://support.zivid.com/en/latest/reference-articles/camera-intrinsics.html) for more details.
+
+Source code: [C++](./zivid_samples/src/sample_intrinsics.cpp), [Python](./zivid_samples/scripts/sample_intrinsics.py)
+
+```bash
+ros2 launch zivid_samples sample.launch sample:=sample_intrinsics_cpp
+ros2 launch zivid_samples sample.launch sample:=sample_intrinsics.py
+```
+Using ros2 run (when `zivid_camera` node is already running):
+```bash
+ros2 run zivid_samples sample_intrinsics_cpp
+ros2 run zivid_samples sample_intrinsics.py
 ```
 
 ## Frequently Asked Questions

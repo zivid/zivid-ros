@@ -15,6 +15,10 @@ mkdir -p /usr/share/Zivid/data/ || exit $?
 unzip ./FileCameraZivid2M70.zip -d /usr/share/Zivid/data/ || exit $?
 rm ./FileCameraZivid2M70.zip || exit $?
 
+# The Intel OpenCL CPU runtime does not recognize some GitHub runner CPUs and
+# crashes compiling AVX-512 kernels for them. Generate AVX2 code instead.
+export CL_CONFIG_CPU_TARGET_ARCH=core-avx2
+
 echo "Running tests"
 catkin run_tests -DCOMPILER_WARNINGS=ON -DCMAKE_CXX_COMPILER=/usr/bin/$CI_TEST_COMPILER  || exit $?
 

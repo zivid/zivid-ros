@@ -67,7 +67,12 @@ if [[ "$CI_TEST_COMPILER" == "g++"    ||
       ]]; then
 
     apt-yes install software-properties-common || exit $?
-    add-apt-repository -y ppa:ubuntu-toolchain-r/test || exit $?
+    for attempt in 1 2 3 4 5; do
+        add-apt-repository -y ppa:ubuntu-toolchain-r/test && break
+        if [[ $attempt == 5 ]]; then exit 1; fi
+        echo "add-apt-repository failed (attempt $attempt), retrying"
+        sleep 15
+    done
     apt-yes update || exit $?
     apt-yes install $CI_TEST_COMPILER || exit $?
 

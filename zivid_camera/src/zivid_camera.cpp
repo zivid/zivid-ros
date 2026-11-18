@@ -15,7 +15,9 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/predef.h>
 
+#include <future>
 #include <numeric>
+#include <optional>
 #include <sstream>
 #include <thread>
 #include <cstdint>
@@ -449,7 +451,7 @@ bool ZividCamera::captureServiceHandler(Capture::Request&, Capture::Response&)
 {
   ROS_DEBUG_STREAM(__func__);
 
-  invokeCaptureAndPublishFrame();
+  invokeCaptureAndPublishFrame(false);
 
   return true;
 }
@@ -458,7 +460,7 @@ bool ZividCamera::captureAndSaveServiceHandler(CaptureAndSave::Request& req, Cap
 {
   ROS_DEBUG_STREAM(__func__);
 
-  const auto frame = invokeCaptureAndPublishFrame();
+  const auto frame = invokeCaptureAndPublishFrame(true);
   ROS_INFO("Saving frame to '%s'", req.file_path.c_str());
   frame.save(req.file_path);
 
@@ -471,7 +473,6 @@ bool ZividCamera::capture2DServiceHandler(Capture2D::Request&, Capture2D::Respon
 
   serviceHandlerHandleCameraConnectionLoss();
 
-  const auto color_space = colorSpace();
   const auto settings2D = current_settings_2d_;  // capture_2d_settings_controller_->zividSettings();
 
   if (settings2D.acquisitions().isEmpty())
@@ -488,28 +489,7 @@ bool ZividCamera::capture2DServiceHandler(Capture2D::Request&, Capture2D::Respon
   }
   if (shouldPublishColorImg())
   {
-    const auto header = makeHeader();
-    const auto intrinsics = Zivid::Experimental::Calibration::intrinsics(camera_, settings2D);
-    switch (color_space)
-    {
-      case ColorSpace::sRGB: {
-        auto image = frame2D.imageRGBA_SRGB();
-        const auto camera_info = makeCameraInfo(header, image.width(), image.height(), intrinsics);
-        ROS_DEBUG("Publishing image with 'srgb' color space");
-        publishColorImage(header, camera_info, image);
-      }
-      break;
-      case ColorSpace::LinearRGB: {
-        auto image = frame2D.imageRGBA();
-        const auto camera_info = makeCameraInfo(header, image.width(), image.height(), intrinsics);
-        ROS_DEBUG("Publishing image with 'linear' color space");
-        publishColorImage(header, camera_info, image);
-      }
-      break;
-      default:
-        throw std::runtime_error("Internal error: Unknown color space value " +
-                                 std::to_string(static_cast<int>(color_space)));
-    }
+    publishColorImage(makeHeader(), frame2D, Zivid::Experimental::Calibration::intrinsics(camera_, settings2D));
   }
   return true;
 }
@@ -591,12 +571,11 @@ bool ZividCamera::isConnectedServiceHandler(IsConnected::Request&, IsConnected::
   return true;
 }
 
-void ZividCamera::publishFrame(const Zivid::Frame& frame)
+void ZividCamera::publishFrame(const std_msgs::Header& header, const Zivid::Frame& frame, bool publish_color_img)
 {
   const bool publish_acquisition_done = shouldPublishAcquisitionDone();
   const bool publish_points_xyz = shouldPublishPointsXYZ();
   const bool publish_points_xyzrgba = shouldPublishPointsXYZRGBA();
-  const bool publish_color_img = shouldPublishColorImg();
   const bool publish_depth_img = shouldPublishDepthImg();
   const bool publish_snr_img = shouldPublishSnrImg();
   const bool publish_normals_xyz = shouldPublishNormalsXYZ();
@@ -605,12 +584,19 @@ void ZividCamera::publishFrame(const Zivid::Frame& frame)
       publish_depth_img || publish_snr_img || publish_normals_xyz)
   {
     const auto color_space = colorSpace();
-    const auto header = makeHeader();
 
     if (publish_acquisition_done)
     {
       publishAcquisitionDone(header);
     }
+
+    const auto frame2D = frame.settings().color().hasValue() ? frame.frame2D() : std::nullopt;
+    if (publish_color_img && frame2D)
+    {
+      publishColorImage(header, *frame2D,
+                        Zivid::Experimental::Calibration::intrinsics(camera_, frame.settings().color().value()));
+    }
+    const bool publish_color_img_from_point_cloud = publish_color_img && !frame2D;
 
     auto point_cloud = frame.pointCloud();
 
@@ -627,26 +613,25 @@ void ZividCamera::publishFrame(const Zivid::Frame& frame)
     {
       publishPointCloudXYZRGBA(header, point_cloud, color_space);
     }
-    if (publish_color_img || publish_depth_img || publish_snr_img)
+    if (publish_color_img_from_point_cloud || publish_depth_img || publish_snr_img)
     {
       auto intrinsics = [&] {
         const auto intrinsics_source = intrinsicsSource();
         switch (intrinsics_source)
         {
           case IntrinsicsSource::Camera:
-            ROS_INFO("Using camera intrinsics for publishing images");
+            ROS_DEBUG("Using camera intrinsics for publishing images");
             return Zivid::Experimental::Calibration::intrinsics(camera_, frame.settings());
           case IntrinsicsSource::Frame:
-            ROS_INFO("Using frame intrinsics for publishing images");
+            ROS_DEBUG("Using frame intrinsics for publishing images");
             return Zivid::Experimental::Calibration::estimateIntrinsics(frame);
-          default:
-            throw std::runtime_error("Internal error: Unknown intrinsics source value " +
-                                     std::to_string(static_cast<int>(intrinsics_source)));
         }
+        throw std::runtime_error("Internal error: Unknown intrinsics source value " +
+                                 std::to_string(static_cast<int>(intrinsics_source)));
       }();
       const auto camera_info = makeCameraInfo(header, point_cloud.width(), point_cloud.height(), intrinsics);
 
-      if (publish_color_img)
+      if (publish_color_img_from_point_cloud)
       {
         publishColorImage(header, camera_info, point_cloud, color_space);
       }
@@ -757,10 +742,9 @@ void ZividCamera::publishPointCloudXYZRGBA(const std_msgs::Header& header, const
         return makePointCloud2Msg<Zivid::PointXYZColorBGRA_SRGB>(point_cloud, header);
       case ColorSpace::LinearRGB:
         return makePointCloud2Msg<Zivid::PointXYZColorBGRA>(point_cloud, header);
-      default:
-        throw std::runtime_error("Internal error: Unknown color space value " +
-                                 std::to_string(static_cast<int>(color_space)));
     }
+    throw std::runtime_error("Internal error: Unknown color space value " +
+                             std::to_string(static_cast<int>(color_space)));
   }();
 
   points_xyzrgba_publisher_.publish(msg);
@@ -777,12 +761,30 @@ void ZividCamera::publishColorImage(const std_msgs::Header& header, const sensor
         return makePointCloudImage<Zivid::ColorRGBA_SRGB>(point_cloud, header, sensor_msgs::image_encodings::RGBA8);
       case ColorSpace::LinearRGB:
         return makePointCloudImage<Zivid::ColorRGBA>(point_cloud, header, sensor_msgs::image_encodings::RGBA8);
-      default:
-        throw std::runtime_error("Internal error: Unknown color space value " +
-                                 std::to_string(static_cast<int>(color_space)));
     }
+    throw std::runtime_error("Internal error: Unknown color space value " +
+                             std::to_string(static_cast<int>(color_space)));
   }();
   color_image_publisher_.publish(image, camera_info);
+}
+
+void ZividCamera::publishColorImage(const std_msgs::Header& header, const Zivid::Frame2D& frame2D,
+                                    const Zivid::CameraIntrinsics& intrinsics)
+{
+  const auto color_space = colorSpace();
+  switch (color_space)
+  {
+    case ColorSpace::sRGB: {
+      const auto image = frame2D.imageRGBA_SRGB();
+      publishColorImage(header, makeCameraInfo(header, image.width(), image.height(), intrinsics), image);
+    }
+    break;
+    case ColorSpace::LinearRGB: {
+      const auto image = frame2D.imageRGBA();
+      publishColorImage(header, makeCameraInfo(header, image.width(), image.height(), intrinsics), image);
+    }
+    break;
+  }
 }
 
 void ZividCamera::publishColorImage(const std_msgs::Header& header, const sensor_msgs::CameraInfoConstPtr& camera_info,
@@ -884,7 +886,7 @@ sensor_msgs::CameraInfoConstPtr ZividCamera::makeCameraInfo(const std_msgs::Head
   return msg;
 }
 
-Zivid::Frame ZividCamera::invokeCaptureAndPublishFrame()
+Zivid::Frame ZividCamera::invokeCaptureAndPublishFrame(bool frame_needs_color)
 {
   ROS_DEBUG_STREAM(__func__);
 
@@ -899,8 +901,25 @@ Zivid::Frame ZividCamera::invokeCaptureAndPublishFrame()
 
   ROS_INFO("Capturing with %zd acquisition(s)", settings.acquisitions().size());
   ROS_DEBUG_STREAM(settings);
-  const auto frame = camera_.capture(settings);
-  publishFrame(frame);
+
+  const bool publish_color_img = shouldPublishColorImg();
+  const bool capture_2d_separately =
+      settings.color().hasValue() && publish_color_img && !frame_needs_color && !shouldPublishPointsXYZRGBA();
+  if (!capture_2d_separately)
+  {
+    const auto frame = camera_.capture(settings);
+    publishFrame(makeHeader(), frame, publish_color_img);
+    return frame;
+  }
+
+  ROS_DEBUG("Capturing 2D and 3D separately to publish the color image before the 3D acquisition is done");
+  const auto intrinsics_2d = Zivid::Experimental::Calibration::intrinsics(camera_, settings.color().value());
+  const auto frame2D = camera_.capture2D(settings);
+  auto frame_future = std::async(std::launch::async, [this, &settings] { return camera_.capture3D(settings); });
+  const auto header = makeHeader();
+  publishColorImage(header, frame2D, intrinsics_2d);
+  const auto frame = frame_future.get();
+  publishFrame(header, frame, false);
   return frame;
 }
 

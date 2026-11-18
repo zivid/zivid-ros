@@ -348,6 +348,17 @@ Color/RGBA image. RGBA image is published as a result of invoking the [capture](
 [capture_2d](#capture_2d) service. Images are encoded as "rgba8", where the alpha channel
 is always 255.
 
+When the 3D settings contain 2D settings (`Settings/Color/Settings2D`), the image published by
+[capture](#capture) has the resolution given by `Settings/Color/Settings2D/Sampling`, and
+[color/camera_info](#colorcamera_info) holds the intrinsics for that resolution. To get a color
+image that maps 1-to-1 to the point cloud, use the same `Sampling` in the 2D and the 3D settings.
+If nothing subscribes to [points/xyzrgba](#pointsxyzrgba), the driver captures 2D and 3D separately
+and publishes this image as soon as the 2D capture is done, without waiting for the 3D acquisition.
+The image has the same header as the point cloud from the same capture.
+
+When the 3D settings do not contain 2D settings, the image is taken from the point cloud and has the
+point cloud resolution.
+
 ### depth/camera_info
 [sensor_msgs/CameraInfo](http://docs.ros.org/api/sensor_msgs/html/msg/CameraInfo.html)
 

@@ -80,6 +80,7 @@ enum class IntrinsicsSource
 template <typename SettingsType>
 class CaptureSettingsController;
 class CameraHealthController;
+class CudaBufferWriter;
 class DetectorController;
 class HandEyeCalibrationController;
 class InfieldCorrectionController;
@@ -133,6 +134,10 @@ private:
     std::shared_ptr<zivid_interfaces::srv::IsConnected::Response> response);
   void publishFrame(const Zivid::Frame & frame);
   void publishFrame2D(const Zivid::Frame2D & frame2D);
+  void enableCudaBuffers();
+  void publishColorImageFromGpu(
+    const std_msgs::msg::Header & header, const Zivid::CameraIntrinsics & intrinsics,
+    const Zivid::Frame2D & frame2D, ColorSpace color_space);
   Zivid::Frame invokeCaptureAndPublishFrame(const Zivid::Settings & settings);
   bool shouldPublishPointsXYZ() const;
   bool shouldPublishPointsXYZRGBA() const;
@@ -176,6 +181,7 @@ private:
   IntrinsicsSource intrinsicsSource() const;
   static void exportFrame(
     const Zivid::Frame & frame, const std::string & file_name, ColorSpace color_space);
+  void restrictImageTransportToRawForCudaBuffers(const std::string & topic);
   image_transport::CameraPublisher createCameraPublisher(
     const std::string & topic, bool use_latched_publisher);
 
@@ -214,6 +220,9 @@ private:
   std::unique_ptr<ProjectionController> projection_controller_;
 
   std::shared_ptr<Zivid::Application> zivid_;
+  // Only set if parameter use_cuda_buffers is true. A shared_ptr is used since the type is incomplete
+  // in this header, and only defined when the driver is built with CUDA buffer support.
+  std::shared_ptr<CudaBufferWriter> cuda_buffer_writer_;
   CameraStatus camera_status_{CameraStatus::Idle};
   std::unique_ptr<CaptureSettingsController<Zivid::Settings>> settings_controller_;
   std::unique_ptr<CaptureSettingsController<Zivid::Settings2D>> settings_2d_controller_;

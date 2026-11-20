@@ -34,6 +34,30 @@ find_package(zivid_interfaces REQUIRED)
 find_package(Zivid 2.15.0 COMPONENTS Core REQUIRED)
 message(STATUS "Found Zivid SDK version ${Zivid_VERSION}")
 
+# Optional support for publishing in CUDA-backed buffers (rosidl::Buffer with the CUDA backend),
+# available from ROS 2 Lyrical when the cuda_buffer package is installed. See parameter
+# `use_cuda_buffers`.
+find_package(cuda_buffer QUIET)
+if(cuda_buffer_FOUND AND Zivid_VERSION VERSION_GREATER_EQUAL 2.18)
+  find_package(CUDAToolkit REQUIRED)
+  set(ZIVID_CAMERA_WITH_CUDA_BUFFER ON)
+  message(STATUS "Building with CUDA buffer support (cuda_buffer ${cuda_buffer_VERSION})")
+  # cuda_buffer 0.1.2 and older keep the CUDA memory pool in a header-only static. When the driver
+  # is loaded as a component library (ros2 run, component containers), the backend plugin then uses
+  # a different pool instance than the driver, and subscribers in other processes silently receive
+  # host copies instead of CUDA buffers. Fixed upstream in ros2/rosidl_buffer_backends#12.
+  if(cuda_buffer_VERSION VERSION_LESS_EQUAL 0.1.2)
+    set(ZIVID_CAMERA_CUDA_BUFFER_HAS_DSO_POOL_ISSUE ON)
+    message(WARNING
+      "cuda_buffer ${cuda_buffer_VERSION} does not include the fix for "
+      "https://github.com/ros2/rosidl_buffer_backends/pull/12. With use_cuda_buffers, "
+      "subscribers in other processes will receive host copies instead of CUDA buffers.")
+  endif()
+else()
+  set(ZIVID_CAMERA_WITH_CUDA_BUFFER OFF)
+  message(STATUS "Building without CUDA buffer support (requires the cuda_buffer package and Zivid SDK 2.18 or newer)")
+endif()
+
 set(ZIVID_DRIVER_COMPONENT_NAME ${PROJECT_NAME}_component)
 
 add_library(
@@ -62,6 +86,20 @@ rclcpp_components_register_node(${ZIVID_DRIVER_COMPONENT_NAME}
                                 "zivid_camera")
 
 target_compile_definitions(${ZIVID_DRIVER_COMPONENT_NAME} PRIVATE "ZIVID_CAMERA_ROS_EXPORTING")
+
+if(ZIVID_CAMERA_WITH_CUDA_BUFFER)
+  target_sources(${ZIVID_DRIVER_COMPONENT_NAME} PRIVATE src/cuda_buffer_writer.cpp)
+  target_compile_definitions(${ZIVID_DRIVER_COMPONENT_NAME} PRIVATE "ZIVID_CAMERA_WITH_CUDA_BUFFER")
+  if(ZIVID_CAMERA_CUDA_BUFFER_HAS_DSO_POOL_ISSUE)
+    target_compile_definitions(${ZIVID_DRIVER_COMPONENT_NAME} PRIVATE
+      "ZIVID_CAMERA_CUDA_BUFFER_HAS_DSO_POOL_ISSUE")
+  endif()
+  target_link_libraries(${ZIVID_DRIVER_COMPONENT_NAME} PRIVATE
+    cuda_buffer::cuda_buffer
+    CUDA::cudart
+    CUDA::cuda_driver
+  )
+endif()
 
 target_link_libraries(${ZIVID_DRIVER_COMPONENT_NAME} PUBLIC
   ${diagnostic_msgs_TARGETS}
@@ -149,6 +187,24 @@ if(BUILD_TESTING)
       ${ZIVID_DRIVER_COMPONENT_NAME}
   )
   target_include_directories(${TEST_TARGET_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test/include)
+
+  if(ZIVID_CAMERA_WITH_CUDA_BUFFER)
+    set(CUDA_BUFFER_TEST_TARGET_NAME ${PROJECT_NAME}_cuda_buffer_test)
+    ament_add_gtest(${CUDA_BUFFER_TEST_TARGET_NAME}
+        test/test_cuda_buffer.cpp
+        TIMEOUT 300
+    )
+    target_link_libraries(${CUDA_BUFFER_TEST_TARGET_NAME}
+        ${sensor_msgs_TARGETS}
+        ${std_srvs_TARGETS}
+        cuda_buffer::cuda_buffer
+        CUDA::cudart
+        CUDA::cuda_driver
+        rclcpp::rclcpp
+        Zivid::Core
+        ${ZIVID_DRIVER_COMPONENT_NAME}
+    )
+  endif()
 
 endif()
 

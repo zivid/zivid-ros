@@ -8,6 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org).
 * Updated CI and dev container to Zivid SDK 2.19, and added CI testing of Zivid SDK version 2.18.
 * Added camera health check (requires Zivid SDK 2.18 or newer): the `check_health` service, and periodic health
   reports on the standard `/diagnostics` topic, configured by the new `health_check_diagnostics_period` parameter.
+* Added parameter `use_cuda_buffers` for GPU zero-copy transport of point clouds and images, using the CUDA backend
+  of `rosidl::Buffer` (requires ROS 2 Lyrical or newer, the `cuda_buffer` package, and the CUDA variant of Zivid SDK
+  2.18 or newer).
 
 # 3.4.0
 

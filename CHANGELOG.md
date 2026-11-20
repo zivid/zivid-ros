@@ -2,6 +2,11 @@
 
 This project adheres to [Semantic Versioning](https://semver.org).
 
+# Unreleased
+
+* Fixes failing hand-eye calibration test with Zivid SDK 2.19.
+* Updated CI and dev container to Zivid SDK 2.19, and added CI testing of Zivid SDK version 2.18.
+
 # 3.4.0
 
 * Fixes compilation error and failing tests with Zivid SDK 2.18.

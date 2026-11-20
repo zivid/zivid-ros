@@ -11,7 +11,7 @@
             "DOCKER_REPO": "docker.io/osrf/ros",
             "ROS_DISTRO": "lyrical",
             "IMAGE_SUFFIX": "-desktop-full",
-            "ZIVID_VERSION": "2.18.0+1b44dbef-1",
+            "ZIVID_VERSION": "2.19.0+0351d3dd-1",
             "ZIVID_CORE_PACKAGE": "zivid-cuda"
         }
     },

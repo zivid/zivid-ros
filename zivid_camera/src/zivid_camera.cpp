@@ -39,6 +39,7 @@
 #include <Zivid/Version.h>
 #include <image_transport/version.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <map>
 #include <numeric>
@@ -49,6 +50,7 @@
 #include <thread>
 #include <zivid_camera/camera_health_controller.hpp>
 #include <zivid_camera/capture_settings_controller.hpp>
+#include <zivid_camera/cuda_buffer_writer.hpp>
 #include <zivid_camera/detector_controller.hpp>
 #include <zivid_camera/hand_eye_calibration_controller.hpp>
 #include <zivid_camera/infield_correction_controller.hpp>
@@ -102,14 +104,30 @@ sensor_msgs::msg::Image::SharedPtr makeImage(
   return image;
 }
 
+// Writes the point cloud data into the message's data field. The data is written to a CUDA-backed
+// buffer directly from GPU memory if `cuda_buffer_writer` is set, otherwise via host memory.
+template <typename ZividDataType, typename Msg>
+void writePointCloudData(
+  Msg & msg, const Zivid::PointCloud & point_cloud,
+  [[maybe_unused]] const zivid_camera::CudaBufferWriter * cuda_buffer_writer)
+{
+#ifdef ZIVID_CAMERA_WITH_CUDA_BUFFER
+  if (cuda_buffer_writer != nullptr) {
+    cuda_buffer_writer->write<ZividDataType>(msg.data, point_cloud);
+    return;
+  }
+#endif
+  msg.data.resize(point_cloud.size() * sizeof(ZividDataType));
+  point_cloud.copyData<ZividDataType>(reinterpret_cast<ZividDataType *>(msg.data.data()));
+}
+
 template <typename ZividDataType>
 sensor_msgs::msg::Image::SharedPtr makePointCloudImage(
   const Zivid::PointCloud & point_cloud, const std_msgs::msg::Header & header,
-  const std::string & encoding)
+  const std::string & encoding, const zivid_camera::CudaBufferWriter * cuda_buffer_writer)
 {
   auto image = makeImage(header, encoding, point_cloud.width(), point_cloud.height());
-  image->data.resize(image->step * image->height);
-  point_cloud.copyData<ZividDataType>(reinterpret_cast<ZividDataType *>(image->data.data()));
+  writePointCloudData<ZividDataType>(*image, point_cloud, cuda_buffer_writer);
   return image;
 }
 
@@ -140,7 +158,8 @@ sensor_msgs::msg::Image::SharedPtr makeImageFromZividImage(
 
 template <typename ZividDataType>
 sensor_msgs::msg::PointCloud2::UniquePtr makePointCloud2Msg(
-  const Zivid::PointCloud & point_cloud, const std_msgs::msg::Header & header)
+  const Zivid::PointCloud & point_cloud, const std_msgs::msg::Header & header,
+  const zivid_camera::CudaBufferWriter * cuda_buffer_writer)
 {
   // Note that the "rgba" field is actually byte order "bgra" on little-endian systems. For this
   // reason we use the Zivid BGRA type.
@@ -159,8 +178,7 @@ sensor_msgs::msg::PointCloud2::UniquePtr makePointCloud2Msg(
 
   msg->point_step = sizeof(ZividDataType);
   msg->row_step = msg->point_step * msg->width;
-  msg->data.resize(msg->row_step * msg->height);
-  point_cloud.copyData<ZividDataType>(reinterpret_cast<ZividDataType *>(msg->data.data()));
+  writePointCloudData<ZividDataType>(*msg, point_cloud, cuda_buffer_writer);
   return msg;
 }
 
@@ -302,6 +320,17 @@ ZividCamera::ZividCamera(
   const bool update_firmware_automatically =
     declare_parameter<bool>("update_firmware_automatically", true);
 
+  rcl_interfaces::msg::ParameterDescriptor use_cuda_buffers_descriptor;
+  use_cuda_buffers_descriptor.description =
+    "Publish point clouds and images in CUDA-backed buffers directly from GPU memory, for "
+    "zero-copy transport to GPU-accelerated subscribers.";
+  use_cuda_buffers_descriptor.read_only = true;
+  const bool use_cuda_buffers =
+    declare_parameter<bool>("use_cuda_buffers", false, use_cuda_buffers_descriptor);
+  if (use_cuda_buffers) {
+    enableCudaBuffers();
+  }
+
   camera_ = std::make_unique<Zivid::Camera>([&]() {
     if (file_camera_mode) {
       RCLCPP_INFO(get_logger(), "Creating file camera from file '%s'", file_camera_path.c_str());
@@ -426,6 +455,43 @@ ZividCamera::ZividCamera(
     *this, *camera_, *settings_2d_controller_, ControllerInterface{*this});
 
   RCLCPP_INFO(get_logger(), "Zivid camera driver is now ready!");
+}
+
+void ZividCamera::enableCudaBuffers()
+{
+#ifdef ZIVID_CAMERA_WITH_CUDA_BUFFER
+  const bool any_latched_publisher =
+    use_latched_publisher_for_points_xyz_ || use_latched_publisher_for_points_xyzrgba_ ||
+    use_latched_publisher_for_color_image_ || use_latched_publisher_for_depth_image_ ||
+    use_latched_publisher_for_snr_image_ || use_latched_publisher_for_normals_xyz_;
+  if (any_latched_publisher) {
+    logErrorAndThrowRuntimeException(
+      "The parameter use_cuda_buffers cannot be combined with any of the "
+      "use_latched_publisher_for_* parameters, since CUDA-backed buffers require volatile "
+      "durability.");
+  }
+  try {
+    cuda_buffer_writer_ = std::make_shared<CudaBufferWriter>(*zivid_);
+  } catch (const std::exception & exception) {
+    logErrorAndThrowRuntimeException(
+      std::string{"Failed to enable CUDA buffers: "} + exception.what());
+  }
+  RCLCPP_INFO(get_logger(), "Publishing point clouds and images in CUDA buffers");
+#ifdef ZIVID_CAMERA_CUDA_BUFFER_HAS_DSO_POOL_ISSUE
+  RCLCPP_WARN(
+    get_logger(),
+    "The driver was built against a cuda_buffer version without the fix for "
+    "https://github.com/ros2/rosidl_buffer_backends/pull/12. When the driver is loaded as a "
+    "component library, which is the case for 'ros2 run' and component containers, subscribers "
+    "in other processes receive host copies instead of CUDA buffers. The data is correct, but not "
+    "zero-copy. Rebuild the driver against a cuda_buffer version that includes the fix.");
+#endif
+#else
+  logErrorAndThrowRuntimeException(
+    "The parameter use_cuda_buffers is true, but the driver was built without CUDA buffer "
+    "support. CUDA buffer support requires ROS 2 Lyrical or newer, Zivid SDK 2.18 or newer, and "
+    "the cuda_buffer package to be installed when building the driver.");
+#endif
 }
 
 ZividCamera::ZividCamera(const rclcpp::NodeOptions & options)
@@ -717,6 +783,13 @@ void ZividCamera::publishFrame2D(const Zivid::Frame2D & frame2D)
     const auto intrinsics =
       Zivid::Experimental::Calibration::intrinsics(*camera_, frame2D.settings());
 
+#ifdef ZIVID_CAMERA_WITH_CUDA_BUFFER
+    if (cuda_buffer_writer_) {
+      publishColorImageFromGpu(header, intrinsics, frame2D, color_space);
+      return;
+    }
+#endif
+
     switch (color_space) {
       case ColorSpace::sRGB: {
         auto image = frame2D.imageRGBA_SRGB();
@@ -735,6 +808,34 @@ void ZividCamera::publishFrame2D(const Zivid::Frame2D & frame2D)
     }
   }
 }
+
+#ifdef ZIVID_CAMERA_WITH_CUDA_BUFFER
+void ZividCamera::publishColorImageFromGpu(
+  const std_msgs::msg::Header & header, const Zivid::CameraIntrinsics & intrinsics,
+  const Zivid::Frame2D & frame2D, ColorSpace color_space)
+{
+  RCLCPP_INFO_STREAM(
+    get_logger(), "Publishing " << color_image_publisher_.getTopic() << " from GPU memory");
+  auto msg = std::make_shared<sensor_msgs::msg::Image>();
+  const auto resolution = [&] {
+    switch (color_space) {
+      case ColorSpace::sRGB:
+        return cuda_buffer_writer_->write<Zivid::ColorRGBA_SRGB>(msg->data, frame2D);
+      case ColorSpace::LinearRGB:
+        return cuda_buffer_writer_->write<Zivid::ColorRGBA>(msg->data, frame2D);
+      default:
+        throw std::runtime_error(
+          "Internal error: Unknown color space value " +
+          std::to_string(static_cast<int>(color_space)));
+    }
+  }();
+  fillCommonMsgFields(*msg, header, resolution.width, resolution.height);
+  msg->encoding = sensor_msgs::image_encodings::RGBA8;
+  msg->step = static_cast<uint32_t>(sizeof(Zivid::ColorRGBA) * resolution.width);
+  const auto camera_info = makeCameraInfo(header, resolution.width, resolution.height, intrinsics);
+  color_image_publisher_.publish(msg, camera_info);
+}
+#endif
 
 bool ZividCamera::shouldPublishPointsXYZRGBA() const
 {
@@ -796,8 +897,7 @@ void ZividCamera::publishPointCloudXYZ(
   msg->is_dense = false;
   msg->point_step = sizeof(ZividDataType);
   msg->row_step = msg->point_step * msg->width;
-  msg->data.resize(msg->row_step * msg->height);
-  point_cloud.copyData<ZividDataType>(reinterpret_cast<ZividDataType *>(msg->data.data()));
+  writePointCloudData<ZividDataType>(*msg, point_cloud, cuda_buffer_writer_.get());
   points_xyz_publisher_->publish(std::move(msg));
 }
 
@@ -810,9 +910,11 @@ void ZividCamera::publishPointCloudXYZRGBA(
   auto msg = [&] {
     switch (color_space) {
       case ColorSpace::sRGB:
-        return makePointCloud2Msg<Zivid::PointXYZColorBGRA_SRGB>(point_cloud, header);
+        return makePointCloud2Msg<Zivid::PointXYZColorBGRA_SRGB>(
+          point_cloud, header, cuda_buffer_writer_.get());
       case ColorSpace::LinearRGB:
-        return makePointCloud2Msg<Zivid::PointXYZColorBGRA>(point_cloud, header);
+        return makePointCloud2Msg<Zivid::PointXYZColorBGRA>(
+          point_cloud, header, cuda_buffer_writer_.get());
       default:
         throw std::runtime_error(
           "Internal error: Unknown color space value " +
@@ -833,10 +935,10 @@ void ZividCamera::publishColorImage(
     switch (color_space) {
       case ColorSpace::sRGB:
         return makePointCloudImage<Zivid::ColorRGBA_SRGB>(
-          point_cloud, header, sensor_msgs::image_encodings::RGBA8);
+          point_cloud, header, sensor_msgs::image_encodings::RGBA8, cuda_buffer_writer_.get());
       case ColorSpace::LinearRGB:
         return makePointCloudImage<Zivid::ColorRGBA>(
-          point_cloud, header, sensor_msgs::image_encodings::RGBA8);
+          point_cloud, header, sensor_msgs::image_encodings::RGBA8, cuda_buffer_writer_.get());
       default:
         throw std::runtime_error(
           "Internal error: Unknown color space value " +
@@ -877,7 +979,7 @@ void ZividCamera::publishDepthImage(
 {
   RCLCPP_INFO_STREAM(get_logger(), "Publishing " << depth_image_publisher_.getTopic());
   auto image = makePointCloudImage<Zivid::PointZ>(
-    point_cloud, header, sensor_msgs::image_encodings::TYPE_32FC1);
+    point_cloud, header, sensor_msgs::image_encodings::TYPE_32FC1, cuda_buffer_writer_.get());
   depth_image_publisher_.publish(image, camera_info);
 }
 
@@ -887,8 +989,8 @@ void ZividCamera::publishSnrImage(
   const Zivid::PointCloud & point_cloud)
 {
   RCLCPP_INFO_STREAM(get_logger(), "Publishing " << snr_image_publisher_.getTopic());
-  auto image =
-    makePointCloudImage<Zivid::SNR>(point_cloud, header, sensor_msgs::image_encodings::TYPE_32FC1);
+  auto image = makePointCloudImage<Zivid::SNR>(
+    point_cloud, header, sensor_msgs::image_encodings::TYPE_32FC1, cuda_buffer_writer_.get());
   snr_image_publisher_.publish(image, camera_info);
 }
 
@@ -907,8 +1009,7 @@ void ZividCamera::publishNormalsXYZ(
   msg->is_dense = false;
   msg->point_step = sizeof(ZividDataType);
   msg->row_step = msg->point_step * msg->width;
-  msg->data.resize(msg->row_step * msg->height);
-  point_cloud.copyData<ZividDataType>(reinterpret_cast<ZividDataType *>(msg->data.data()));
+  writePointCloudData<ZividDataType>(*msg, point_cloud, cuda_buffer_writer_.get());
   normals_xyz_publisher_->publish(std::move(msg));
 }
 
@@ -1031,9 +1132,39 @@ void ZividCamera::exportFrame(
   }
 }
 
+void ZividCamera::restrictImageTransportToRawForCudaBuffers(const std::string & topic)
+{
+  // Image transport plugins other than raw, e.g. compressed, run in this process and read the image
+  // data on the CPU, which throws for CUDA-backed buffers. Therefore, only enable the raw transport
+  // by default, and reject other transports configured by the user. The parameter name is derived
+  // the same way as in image_transport::Publisher, which reads the parameter if already declared.
+  constexpr auto raw_transport = "image_transport/raw";
+  const auto resolved_topic = get_node_topics_interface()->resolve_topic_name(topic);
+  auto parameter_name = resolved_topic.substr(std::string{get_namespace()}.length());
+  std::replace(parameter_name.begin(), parameter_name.end(), '/', '.');
+  if (!parameter_name.empty() && parameter_name.front() == '.') {
+    parameter_name = parameter_name.substr(1);
+  }
+  parameter_name += ".enable_pub_plugins";
+
+  const auto transports =
+    declare_parameter<std::vector<std::string> >(parameter_name, {raw_transport});
+  for (const auto & transport : transports) {
+    if (transport != raw_transport) {
+      logErrorAndThrowRuntimeException(
+        "The parameter use_cuda_buffers cannot be combined with the image transport '" + transport +
+        "' enabled in parameter '" + parameter_name + "'. Only '" + raw_transport +
+        "' is supported, since other transports read the image data on the CPU.");
+    }
+  }
+}
+
 image_transport::CameraPublisher ZividCamera::createCameraPublisher(
   const std::string & topic, bool use_latched_publisher)
 {
+  if (cuda_buffer_writer_) {
+    restrictImageTransportToRawForCudaBuffers(topic);
+  }
 // In image_transport 6.3.0, the create_camera_publisher using rmw_qos_profile_t was deprecated in favor of the
 // rclcpp::QoS overload. Then, in 6.4.0, the latter changed from taking a Node * to a NodeInterfaces.
 // We skip adding a branch for the 6.3.x version, because it is not shipped with any of the ROS distros we support.

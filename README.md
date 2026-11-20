@@ -207,6 +207,11 @@ ros2 launch zivid_samples zivid_camera.launch serial_number:=ABCD1234
 > topic. Set to 0 to disable. Requires Zivid SDK 2.18 or newer; with older SDKs no diagnostics are published.
 > See also the [check_health](#check_health) service.
 
+`use_cuda_buffers` (bool, default: false)
+> Publish point clouds and images in CUDA-backed buffers, directly from the GPU memory of the Zivid SDK, so that
+> GPU-accelerated subscribers on the same machine receive the data without copies via host memory. See
+> [GPU zero-copy transport](#gpu-zero-copy-transport) for requirements and how to subscribe.
+
 `intrinsics_source` (string, default: "camera")
 > Specify how intrinsics are determined when publishing images from 3D captures. Valid values:
 >
@@ -628,6 +633,50 @@ as `hardware_id`. The camera health statuses are mapped to diagnostic levels as 
 `WARN`, Error to `ERROR`, and Unknown to `STALE`. The status and value of each check are given as key-value pairs. If
 the health check fails, for example because the camera is disconnected, the level is `ERROR`. Requires Zivid SDK 2.18 or
 newer.
+
+### GPU zero-copy transport
+
+With the parameter `use_cuda_buffers` set to true, the driver publishes the `data` field of all point clouds and images
+in CUDA-backed buffers, using the [`rosidl::Buffer` CUDA backend](https://github.com/ros2/rosidl_buffer_backends). The
+data is written directly from the GPU memory of the Zivid SDK, without copies via host memory. Subscribers on the same
+machine and GPU can then access the data in GPU memory without copies, also from other processes.
+
+Requirements:
+
+- ROS 2 Lyrical or newer, with the `cuda_buffer` and `cuda_buffer_backend` packages installed when building the driver
+  (e.g. `sudo apt install ros-lyrical-cuda-buffer ros-lyrical-cuda-buffer-backend`). The driver automatically builds
+  with CUDA buffer support when these packages are found.
+- Zivid SDK 2.18 or newer, with the CUDA backend (package `zivid-cuda`).
+- The `use_latched_publisher_for_*` parameters must be false, since CUDA-backed topics require volatile durability.
+- Only the raw image transport is advertised for the image topics, since other transports like `compressed` read the
+  image data on the CPU in the driver process.
+
+Subscribers must opt in to receive CUDA buffers, by setting `acceptable_buffer_backends` in the subscription options.
+All other subscribers, e.g. RViz or subscribers on other machines, automatically receive host copies:
+
+```cpp
+#include <cuda_buffer/cuda_buffer_api.hpp>
+
+rclcpp::SubscriptionOptions options;
+options.acceptable_buffer_backends = "cuda";
+auto subscription = node->create_subscription<sensor_msgs::msg::PointCloud2>(
+  "points/xyz", 10,
+  [stream](sensor_msgs::msg::PointCloud2::ConstSharedPtr msg) {
+    // Waits on the driver's write to complete. Use the device pointer on `stream`.
+    auto read_handle = cuda_buffer_backend::from_input_buffer(msg->data, stream);
+    const uint8_t * device_data = read_handle.get_ptr();
+  },
+  options);
+```
+
+The layout of the data is identical to the data published without `use_cuda_buffers`.
+
+> [!WARNING]
+> `cuda_buffer` 0.1.2 and older, as shipped with ROS 2 Lyrical at the time of writing, has a known issue that is fixed
+> upstream in [ros2/rosidl_buffer_backends#12](https://github.com/ros2/rosidl_buffer_backends/pull/12): when the driver
+> is loaded as a component library, which is the case for `ros2 run` and component containers, subscribers in other
+> processes receive host copies instead of CUDA buffers. The data is correct, but not zero-copy. The driver warns about
+> this at build time and at startup.
 
 ## Samples
 

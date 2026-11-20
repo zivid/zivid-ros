@@ -1,0 +1,9 @@
+---
+# True if the health checks ran. Note that this does not mean the camera is healthy, see `health.overall`.
+bool success
+
+# Human-readable representation of the health check result, or the error message if `success` is false.
+string message
+
+# Result of the health checks. Only valid if `success` is true.
+CameraHealth health

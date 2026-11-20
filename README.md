@@ -672,11 +672,25 @@ auto subscription = node->create_subscription<sensor_msgs::msg::PointCloud2>(
 The layout of the data is identical to the data published without `use_cuda_buffers`.
 
 > [!WARNING]
-> `cuda_buffer` 0.1.2 and older, as shipped with ROS 2 Lyrical at the time of writing, has a known issue that is fixed
+> The `cuda_buffer` 0.1.2 release, as shipped with ROS 2 Lyrical at the time of writing, has a known issue that is fixed
 > upstream in [ros2/rosidl_buffer_backends#12](https://github.com/ros2/rosidl_buffer_backends/pull/12): when the driver
 > is loaded as a component library, which is the case for `ros2 run` and component containers, subscribers in other
-> processes receive host copies instead of CUDA buffers. The data is correct, but not zero-copy. The driver warns about
-> this at build time and at startup.
+> processes receive host copies instead of CUDA buffers. The data is correct, but not zero-copy. The driver detects
+> whether the installed `cuda_buffer` includes the fix, and warns at build time and at startup if it does not.
+>
+> Until a release with the fix is available, you can build the CUDA buffer packages from source in an underlay
+> workspace, and build the driver on top of it:
+>
+> ```bash
+> mkdir -p ~/cuda_buffer_ws/src && cd ~/cuda_buffer_ws/src
+> git clone https://github.com/ros2/rosidl_buffer_backends.git
+> cd ~/cuda_buffer_ws
+> colcon build --packages-up-to cuda_buffer_backend --cmake-args -DBUILD_TESTING=OFF
+> source ~/cuda_buffer_ws/install/setup.bash
+> ```
+>
+> Then build the driver in a new terminal where `~/cuda_buffer_ws/install/setup.bash` is sourced, and also source it
+> before running the driver and the subscribers.
 
 ## Samples
 

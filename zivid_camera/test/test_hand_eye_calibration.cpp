@@ -97,6 +97,30 @@ protected:
     return response;
   }
 
+  // Residuals may be NaN, e.g. since SDK 2.19 when there are too few poses to form a
+  // leave-one-out reference, or for identical captures from a file camera. Since NaN never
+  // compares equal, treat NaN residuals as equal when they are NaN in both responses.
+  static void verifyCalibrateResponsesEqual(
+    const zivid_interfaces::srv::HandEyeCalibrationCalibrate::Response & expected,
+    const zivid_interfaces::srv::HandEyeCalibrationCalibrate::Response & actual)
+  {
+    const auto equal_or_both_nan = [](float lhs, float rhs) {
+      return lhs == rhs || (std::isnan(lhs) && std::isnan(rhs));
+    };
+
+    ASSERT_EQ(expected.success, actual.success);
+    ASSERT_EQ(expected.message, actual.message);
+    ASSERT_EQ(expected.transform, actual.transform);
+    ASSERT_EQ(expected.residuals.size(), actual.residuals.size());
+    for (std::size_t i = 0; i < expected.residuals.size(); ++i) {
+      ASSERT_PRED2(equal_or_both_nan, expected.residuals[i].rotation, actual.residuals[i].rotation)
+        << "Residual index " << i;
+      ASSERT_PRED2(
+        equal_or_both_nan, expected.residuals[i].translation, actual.residuals[i].translation)
+        << "Residual index " << i;
+    }
+  }
+
   template <typename ServiceType>
   void commonLoadAndStartInvalidTests()
   {
@@ -306,7 +330,7 @@ TEST_F(TestHandEyeWithCalibrationBoard, testHandEyeStartCaptureLoadCycle)
     handEyeCalibrate(zivid_interfaces::srv::HandEyeCalibrationCalibrate::Request::EYE_TO_HAND);
   ASSERT_TRUE(loaded_calibration_response->success);
 
-  ASSERT_EQ(*original_calibration_response, *loaded_calibration_response);
+  verifyCalibrateResponsesEqual(*original_calibration_response, *loaded_calibration_response);
 
   // Verify read-only mode, any captures should error out.
   {

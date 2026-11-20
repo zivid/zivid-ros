@@ -202,6 +202,11 @@ ros2 launch zivid_samples zivid_camera.launch serial_number:=ABCD1234
 > [2D Color Spaces and Output Formats](https://support.zivid.com/en/latest/reference-articles/color-spaces-and-output-formats.html)
 > for more details.
 
+`health_check_diagnostics_period` (double, default: 10.0)
+> Specify the period in seconds between camera health checks published on the [/diagnostics](#diagnostics)
+> topic. Set to 0 to disable; any other value must be positive. Requires Zivid SDK 2.18 or newer; with older SDKs
+> no diagnostics are published. See also the [check_health](#check_health) service.
+
 `intrinsics_source` (string, default: "camera")
 > Specify how intrinsics are determined when publishing images from 3D captures. Valid values:
 >
@@ -362,6 +367,18 @@ The connection status is updated by the driver every 10 seconds and before each 
 service call. If the camera is not in `Connected` state the driver will attempt to re-connect to
 the camera when it detects that the camera is available. This can happen if the camera is
 power-cycled or the USB/Ethernet cable is unplugged and then replugged.
+
+### check_health
+[zivid_interfaces/srv/CameraHealthCheck.srv](./zivid_interfaces/srv/CameraHealthCheck.srv)
+
+Runs the camera's health checks and returns the result as a
+[zivid_interfaces/msg/CameraHealth](./zivid_interfaces/msg/CameraHealth.msg) message. The result contains an overall
+status, and the status and measured value of each individual check: max transfer speed, DMD/LED/lens temperatures,
+fan, memory, and infield verification. Each status is one of `STATUS_OK`, `STATUS_SUBOPTIMAL`, `STATUS_ERROR` or
+`STATUS_UNKNOWN`.
+
+Note that `success` only indicates that the health checks ran. To know if the camera is healthy, check
+`health.overall`. Requires Zivid SDK 2.18 or newer. See also the [/diagnostics](#diagnostics) topic.
 
 ### hand_eye_calibration/start
 [zivid_interfaces/srv/HandEyeCalibrationStart.srv](./zivid_interfaces/srv/HandEyeCalibrationStart.srv)
@@ -600,6 +617,17 @@ Normals for the point cloud. The included fields are normal x, y and z coordinat
 Each coordinate is a float value. There are no additional padding floats, so point-step is
 12 bytes (3*4 bytes). The normals are unit vectors. Note that subscribing to this topic
 will cause some additional processing time for calculating the normals.
+
+### /diagnostics
+[diagnostic_msgs/msg/DiagnosticArray](https://docs.ros2.org/latest/api/diagnostic_msgs/msg/DiagnosticArray.html)
+
+Camera health, published periodically as configured by the parameter
+[`health_check_diagnostics_period`](#launch-parameters-advanced), and compatible with standard tools such as
+`rqt_robot_monitor`. Each message contains one status named `<fully qualified node name>: Camera health`, for example
+`/left/zivid_camera: Camera health`, with the camera serial number as `hardware_id`. The camera health statuses are
+mapped to diagnostic levels as follows: OK to `OK`, Suboptimal to `WARN`, Error to `ERROR`, and Unknown to `STALE`. The
+status and value of each check are given as key-value pairs. If the health check fails, for example because the camera
+is disconnected, the level is `ERROR`. Requires Zivid SDK 2.18 or newer.
 
 ## Samples
 

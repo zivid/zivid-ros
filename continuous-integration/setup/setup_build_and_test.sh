@@ -31,8 +31,18 @@ function install_opencl_cpu_runtime {
     echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | tee /etc/apt/sources.list.d/oneAPI.list || exit $?
     apt update || exit $?
 
-    # Install the OpenCL runtime
-    apt --assume-yes install intel-oneapi-runtime-opencl intel-oneapi-runtime-compilers || exit $?
+    # Install the OpenCL runtime. The version is pinned because runtime 2026.2.0 and newer (OpenCL 3.1)
+    # crashes with a segmentation fault on the first capture on AMD Zen 3 CPUs, such as the AMD EPYC 7763
+    # used by many GitHub-hosted runners. All runtime packages are pinned, since their dependencies only
+    # require a minimum version and would otherwise pull in the newest CPU device implementation.
+    INTEL_OPENCL_RUNTIME_VERSION=2026.1.1-325
+    apt --assume-yes install \
+        intel-oneapi-runtime-opencl=$INTEL_OPENCL_RUNTIME_VERSION \
+        intel-oneapi-runtime-dpcpp-sycl-opencl-cpu=$INTEL_OPENCL_RUNTIME_VERSION \
+        intel-oneapi-runtime-compilers=$INTEL_OPENCL_RUNTIME_VERSION \
+        intel-oneapi-runtime-compilers-common=$INTEL_OPENCL_RUNTIME_VERSION \
+        intel-oneapi-runtime-openmp=$INTEL_OPENCL_RUNTIME_VERSION \
+        || exit $?
 }
 
 install_opencl_cpu_runtime || exit $?

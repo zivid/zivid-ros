@@ -42,14 +42,23 @@ if(cuda_buffer_FOUND AND Zivid_VERSION VERSION_GREATER_EQUAL 2.18)
   find_package(CUDAToolkit REQUIRED)
   set(ZIVID_CAMERA_WITH_CUDA_BUFFER ON)
   message(STATUS "Building with CUDA buffer support (cuda_buffer ${cuda_buffer_VERSION})")
-  # cuda_buffer 0.1.2 and older keep the CUDA memory pool in a header-only static. When the driver
-  # is loaded as a component library (ros2 run, component containers), the backend plugin then uses
-  # a different pool instance than the driver, and subscribers in other processes silently receive
-  # host copies instead of CUDA buffers. Fixed upstream in ros2/rosidl_buffer_backends#12.
-  if(cuda_buffer_VERSION VERSION_LESS_EQUAL 0.1.2)
+  # cuda_buffer releases up to and including 0.1.2 keep the CUDA memory pool in a header-only static.
+  # When the driver is loaded as a component library (ros2 run, component containers), the backend
+  # plugin then uses a different pool instance than the driver, and subscribers in other processes
+  # silently receive host copies instead of CUDA buffers. Fixed upstream in
+  # ros2/rosidl_buffer_backends#12 by an out-of-line cuda_buffer_backend::get_or_create_global_pool.
+  # The package version was not bumped with the fix, so check for the function instead.
+  include(CheckCXXSourceCompiles)
+  set(CMAKE_REQUIRED_LIBRARIES cuda_buffer::cuda_buffer CUDA::cudart CUDA::cuda_driver)
+  check_cxx_source_compiles("
+    #include <cuda_buffer/cuda_buffer_impl.hpp>
+    int main() { return cuda_buffer_backend::get_or_create_global_pool() == nullptr; }"
+    ZIVID_CAMERA_CUDA_BUFFER_HAS_SHARED_POOL)
+  unset(CMAKE_REQUIRED_LIBRARIES)
+  if(NOT ZIVID_CAMERA_CUDA_BUFFER_HAS_SHARED_POOL)
     set(ZIVID_CAMERA_CUDA_BUFFER_HAS_DSO_POOL_ISSUE ON)
     message(WARNING
-      "cuda_buffer ${cuda_buffer_VERSION} does not include the fix for "
+      "The installed cuda_buffer does not include the fix for "
       "https://github.com/ros2/rosidl_buffer_backends/pull/12. With use_cuda_buffers, "
       "subscribers in other processes will receive host copies instead of CUDA buffers.")
   endif()

@@ -6,6 +6,8 @@ This project adheres to [Semantic Versioning](https://semver.org).
 
 * Fixes failing hand-eye calibration test with Zivid SDK 2.19.
 * Updated CI and dev container to Zivid SDK 2.19, and added CI testing of Zivid SDK version 2.18.
+* Added camera health check (requires Zivid SDK 2.18 or newer): the `camera_health/check` service, and periodic health
+  reports on the standard `/diagnostics` topic, configured by the new `health_check_diagnostics_period` parameter.
 
 # 3.4.0
 

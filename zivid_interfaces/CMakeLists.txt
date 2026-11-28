@@ -8,6 +8,12 @@ find_package(rosidl_default_generators REQUIRED)
 find_package(geometry_msgs REQUIRED)
 
 rosidl_generate_interfaces(zivid_interfaces
+                           "msg/CameraHealth.msg"
+                           "msg/CameraHealthFan.msg"
+                           "msg/CameraHealthInfieldVerification.msg"
+                           "msg/CameraHealthMaxTransferSpeed.msg"
+                           "msg/CameraHealthMemory.msg"
+                           "msg/CameraHealthTemperature.msg"
                            "msg/DetectionResultCalibrationBoard.msg"
                            "msg/DetectionResultFiducialMarkers.msg"
                            "msg/FixedPlacementOfCalibrationBoard.msg"
@@ -20,6 +26,7 @@ rosidl_generate_interfaces(zivid_interfaces
                            "srv/CaptureAndDetectMarkers.srv"
                            "srv/CaptureAndSave.srv"
                            "srv/CaptureAssistantSuggestSettings.srv"
+                           "srv/CameraHealthCheck.srv"
                            "srv/CameraInfoModelName.srv"
                            "srv/CameraInfoSerialNumber.srv"
                            "srv/HandEyeCalibrationCalibrate.srv"

@@ -17,6 +17,7 @@
   <depend>std_srvs</depend>
   <depend>image_transport</depend>
   <depend>builtin_interfaces</depend>
+  <depend>diagnostic_msgs</depend>
   <depend>zivid_interfaces</depend>
   <depend>tf2</depend>
   <depend>tf2_ros</depend>

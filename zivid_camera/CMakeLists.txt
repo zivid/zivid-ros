@@ -19,6 +19,7 @@ function(turn_on_compiler_warnings_if_enabled TARGET)
 endfunction()
 
 find_package(ament_cmake REQUIRED)
+find_package(diagnostic_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -38,6 +39,8 @@ set(ZIVID_DRIVER_COMPONENT_NAME ${PROJECT_NAME}_component)
 add_library(
   ${ZIVID_DRIVER_COMPONENT_NAME}
   SHARED
+  src/camera_health_controller.cpp
+  src/camera_health_conversion.cpp
   src/controller_interface.cpp
   src/hand_eye_calibration_controller.cpp
   src/infield_correction_controller.cpp
@@ -62,6 +65,7 @@ rclcpp_components_register_node(${ZIVID_DRIVER_COMPONENT_NAME}
 target_compile_definitions(${ZIVID_DRIVER_COMPONENT_NAME} PRIVATE "ZIVID_CAMERA_ROS_EXPORTING")
 
 target_link_libraries(${ZIVID_DRIVER_COMPONENT_NAME} PUBLIC
+  ${diagnostic_msgs_TARGETS}
   ${sensor_msgs_TARGETS}
   ${std_msgs_TARGETS}
   ${std_srvs_TARGETS}
@@ -82,6 +86,7 @@ target_link_libraries(${ZIVID_DRIVER_COMPONENT_NAME} PUBLIC
 #############
 
 set(ZIVID_DRIVER_DEPENDENCIES
+  diagnostic_msgs
   image_transport
   rclcpp
   sensor_msgs
@@ -127,12 +132,14 @@ if(BUILD_TESTING)
 
   ament_add_gtest(${TEST_TARGET_NAME}
       test/test_zivid_camera.cpp
+      test/test_camera_health.cpp
       test/test_detector.cpp
       test/test_hand_eye_calibration.cpp
       test/test_infield_correction.cpp
       TIMEOUT 1000
   )
   target_link_libraries(${TEST_TARGET_NAME}
+      ${diagnostic_msgs_TARGETS}
       ${sensor_msgs_TARGETS}
       ${std_msgs_TARGETS}
       ${zivid_interfaces_TARGETS}

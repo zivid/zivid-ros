@@ -1,0 +1,353 @@
+// Copyright 2026 Zivid AS
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+//    * Redistributions of source code must retain the above copyright
+//      notice, this list of conditions and the following disclaimer.
+//
+//    * Redistributions in binary form must reproduce the above copyright
+//      notice, this list of conditions and the following disclaimer in the
+//      documentation and/or other materials provided with the distribution.
+//
+//    * Neither the name of the Zivid AS nor the names of its
+//      contributors may be used to endorse or promote products derived from
+//      this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <cstdint>
+#include <diagnostic_msgs/msg/key_value.hpp>
+#include <iomanip>
+#include <optional>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <vector>
+#include <zivid_camera/camera_health_conversion.hpp>
+
+namespace zivid_camera::detail
+{
+namespace
+{
+using CameraHealthMsg = zivid_interfaces::msg::CameraHealth;
+using diagnostic_msgs::msg::DiagnosticStatus;
+
+std::string statusToString(uint8_t status)
+{
+  switch (status) {
+    case CameraHealthMsg::STATUS_OK:
+      return "OK";
+    case CameraHealthMsg::STATUS_SUBOPTIMAL:
+      return "Suboptimal";
+    case CameraHealthMsg::STATUS_ERROR:
+      return "Error";
+    case CameraHealthMsg::STATUS_UNKNOWN:
+      return "Unknown";
+    default:
+      throw std::runtime_error("Unhandled camera health status: " + std::to_string(status));
+  }
+}
+
+// Diagnostic level of a check status that is known, i.e. not Unknown.
+uint8_t knownStatusToDiagnosticLevel(uint8_t status)
+{
+  switch (status) {
+    case CameraHealthMsg::STATUS_OK:
+      return DiagnosticStatus::OK;
+    case CameraHealthMsg::STATUS_SUBOPTIMAL:
+      return DiagnosticStatus::WARN;
+    case CameraHealthMsg::STATUS_ERROR:
+      return DiagnosticStatus::ERROR;
+    default:
+      throw std::runtime_error("Unhandled camera health status: " + std::to_string(status));
+  }
+}
+
+struct NamedCheckStatus
+{
+  std::string name;
+  uint8_t status;
+};
+
+std::vector<NamedCheckStatus> checkStatuses(const CameraHealthMsg & health)
+{
+  return {
+    {"Max transfer speed", health.max_transfer_speed.status},
+    {"DMD temperature", health.temperature_dmd.status},
+    {"LED temperature", health.temperature_led.status},
+    {"Lens temperature", health.temperature_lens.status},
+    {"Fan", health.fan.status},
+    {"Memory", health.memory.status},
+    {"Infield verification", health.infield_verification.status},
+  };
+}
+
+// The level is derived from the individual checks rather than from the overall status, since the
+// SDK ranks Unknown above Suboptimal in the overall status. Some checks are Unknown on healthy
+// cameras, for example the infield verification of a camera that was never verified in the field,
+// and an overall Unknown would hide Suboptimal and Error checks. Unknown checks are therefore
+// ignored, unless all checks are Unknown (e.g. a file camera). Then the level is STALE, the closest
+// match for a state that could not be determined, since diagnostics have no "unknown" level.
+uint8_t diagnosticLevel(const std::vector<NamedCheckStatus> & checks)
+{
+  bool any_known = false;
+  uint8_t level = DiagnosticStatus::OK;
+  for (const auto & check : checks) {
+    if (check.status != CameraHealthMsg::STATUS_UNKNOWN) {
+      any_known = true;
+      level = std::max(level, knownStatusToDiagnosticLevel(check.status));
+    }
+  }
+  return any_known ? level : DiagnosticStatus::STALE;
+}
+
+// Summarizes which checks are not OK, most severe first, e.g. "Error: Fan; Unknown: Memory".
+std::string diagnosticMessage(const std::vector<NamedCheckStatus> & checks)
+{
+  std::string message;
+  for (const auto status : {
+         CameraHealthMsg::STATUS_ERROR,
+         CameraHealthMsg::STATUS_SUBOPTIMAL,
+         CameraHealthMsg::STATUS_UNKNOWN,
+       }) {
+    std::string names;
+    for (const auto & check : checks) {
+      if (check.status == status) {
+        names += (names.empty() ? "" : ", ") + check.name;
+      }
+    }
+    if (!names.empty()) {
+      message += (message.empty() ? "" : "; ") + statusToString(status) + ": " + names;
+    }
+  }
+  return message.empty() ? "All checks OK" : message;
+}
+
+std::string fanValueToString(uint8_t value)
+{
+  switch (value) {
+    case zivid_interfaces::msg::CameraHealthFan::FAN_OK:
+      return "OK";
+    case zivid_interfaces::msg::CameraHealthFan::FAN_UNEXPECTED_STOP:
+      return "Unexpected fan stop";
+    default:
+      throw std::runtime_error("Unhandled camera health fan value: " + std::to_string(value));
+  }
+}
+
+// Formats seconds since the epoch as an ISO 8601 UTC date and time, e.g. "2025-10-27T09:56:55Z".
+// Uses the days-to-civil algorithm by Howard Hinnant, since std::gmtime is not thread-safe and
+// C++17 has no calendar support in <chrono>.
+std::string toIso8601Utc(int64_t seconds_since_epoch)
+{
+  constexpr int64_t seconds_per_day = 86400;
+  int64_t days = seconds_since_epoch / seconds_per_day;
+  int64_t seconds_of_day = seconds_since_epoch % seconds_per_day;
+  if (seconds_of_day < 0) {
+    seconds_of_day += seconds_per_day;
+    days -= 1;
+  }
+  const int64_t shifted_days = days + 719468;
+  const int64_t era = (shifted_days >= 0 ? shifted_days : shifted_days - 146096) / 146097;
+  const int64_t day_of_era = shifted_days - era * 146097;
+  const int64_t year_of_era =
+    (day_of_era - day_of_era / 1460 + day_of_era / 36524 - day_of_era / 146096) / 365;
+  const int64_t day_of_year =
+    day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
+  const int64_t month_index = (5 * day_of_year + 2) / 153;
+  const int64_t day = day_of_year - (153 * month_index + 2) / 5 + 1;
+  const int64_t month = month_index < 10 ? month_index + 3 : month_index - 9;
+  const int64_t year = year_of_era + era * 400 + (month <= 2 ? 1 : 0);
+
+  std::ostringstream stream;
+  stream << std::setfill('0') << std::setw(4) << year << '-' << std::setw(2) << month << '-'
+         << std::setw(2) << day << 'T' << std::setw(2) << seconds_of_day / 3600 << ':'
+         << std::setw(2) << seconds_of_day / 60 % 60 << ':' << std::setw(2) << seconds_of_day % 60
+         << 'Z';
+  return stream.str();
+}
+
+diagnostic_msgs::msg::KeyValue makeKeyValue(const std::string & key, const std::string & value)
+{
+  diagnostic_msgs::msg::KeyValue key_value;
+  key_value.key = key;
+  key_value.value = value;
+  return key_value;
+}
+
+template <typename Check>
+void appendCheck(DiagnosticStatus & status, const std::string & name, const Check & check)
+{
+  status.values.push_back(makeKeyValue(name + " status", statusToString(check.status)));
+}
+
+void appendDiagnosticValues(DiagnosticStatus & status, const CameraHealthMsg & health)
+{
+  appendCheck(status, "Max transfer speed", health.max_transfer_speed);
+  if (health.max_transfer_speed.has_value) {
+    status.values.push_back(makeKeyValue(
+      "Max transfer speed (Mbps)", std::to_string(health.max_transfer_speed.value_mbps)));
+  }
+
+  const auto append_temperature = [&](const std::string & name, const auto & temperature) {
+    appendCheck(status, name, temperature);
+    if (temperature.has_value) {
+      status.values.push_back(
+        makeKeyValue(name + " (Celsius)", std::to_string(temperature.value_celsius)));
+    }
+  };
+  append_temperature("DMD temperature", health.temperature_dmd);
+  append_temperature("LED temperature", health.temperature_led);
+  append_temperature("Lens temperature", health.temperature_lens);
+
+  appendCheck(status, "Fan", health.fan);
+  if (health.fan.has_value) {
+    status.values.push_back(makeKeyValue("Fan", fanValueToString(health.fan.value)));
+  }
+
+  appendCheck(status, "Memory", health.memory);
+  if (health.memory.has_value) {
+    status.values.push_back(
+      makeKeyValue("Memory error count", std::to_string(health.memory.error_count)));
+  }
+
+  appendCheck(status, "Infield verification", health.infield_verification);
+  if (health.infield_verification.has_value) {
+    status.values.push_back(makeKeyValue(
+      "Last infield verification",
+      toIso8601Utc(health.infield_verification.last_verification.sec)));
+  }
+}
+
+#ifdef ZIVID_CAMERA_HAS_CAMERA_HEALTH
+template <typename ZividStatus>
+uint8_t toRosStatus(const ZividStatus & status)
+{
+  using ValueType = typename ZividStatus::ValueType;
+  switch (status.value()) {
+    case ValueType::ok:
+      return CameraHealthMsg::STATUS_OK;
+    case ValueType::suboptimal:
+      return CameraHealthMsg::STATUS_SUBOPTIMAL;
+    case ValueType::error:
+      return CameraHealthMsg::STATUS_ERROR;
+    case ValueType::unknown:
+      return CameraHealthMsg::STATUS_UNKNOWN;
+    default:
+      throw std::runtime_error("Unhandled Zivid camera health status: " + status.toString());
+  }
+}
+
+template <typename ZividCheck>
+zivid_interfaces::msg::CameraHealthTemperature toRosTemperature(const ZividCheck & check)
+{
+  zivid_interfaces::msg::CameraHealthTemperature result;
+  result.status = toRosStatus(check.status());
+  result.has_value = check.value().hasValue();
+  if (result.has_value) {
+    result.value_celsius = check.value().value();
+  }
+  return result;
+}
+
+uint8_t toRosFanValue(const Zivid::CameraHealth::Fan::Value & value)
+{
+  using ValueType = Zivid::CameraHealth::Fan::Value::ValueType;
+  switch (value.value()) {
+    case ValueType::ok:
+      return zivid_interfaces::msg::CameraHealthFan::FAN_OK;
+    case ValueType::unexpectedFanStop:
+      return zivid_interfaces::msg::CameraHealthFan::FAN_UNEXPECTED_STOP;
+    default:
+      throw std::runtime_error("Unhandled Zivid camera fan value: " + value.toString());
+  }
+}
+#endif
+}  // namespace
+
+std::optional<std::chrono::nanoseconds> toDiagnosticsPeriod(double seconds)
+{
+  if (seconds == 0.0) {
+    return std::nullopt;
+  }
+  constexpr double min_seconds = 1.0;
+  const auto max_seconds = std::chrono::duration<double>{std::chrono::nanoseconds::max()}.count();
+  if (!std::isfinite(seconds) || seconds < min_seconds || seconds >= max_seconds) {
+    throw std::invalid_argument(
+      "Parameter health_check_diagnostics_period must be 0 (disabled) or a finite number of "
+      "seconds of at least 1, got " +
+      std::to_string(seconds));
+  }
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(
+    std::chrono::duration<double>{seconds});
+}
+
+#ifdef ZIVID_CAMERA_HAS_CAMERA_HEALTH
+zivid_interfaces::msg::CameraHealth toRosCameraHealth(const Zivid::CameraHealth & health)
+{
+  CameraHealthMsg msg;
+  msg.overall = toRosStatus(health.overall());
+
+  const auto & transfer_speed = health.maxTransferSpeed();
+  msg.max_transfer_speed.status = toRosStatus(transfer_speed.status());
+  msg.max_transfer_speed.has_value = transfer_speed.value().hasValue();
+  if (msg.max_transfer_speed.has_value) {
+    msg.max_transfer_speed.value_mbps = transfer_speed.value().value();
+  }
+
+  msg.temperature_dmd = toRosTemperature(health.temperature().dmd());
+  msg.temperature_led = toRosTemperature(health.temperature().led());
+  msg.temperature_lens = toRosTemperature(health.temperature().lens());
+
+  const auto & fan = health.fan();
+  msg.fan.status = toRosStatus(fan.status());
+  msg.fan.has_value = fan.value().hasValue();
+  if (msg.fan.has_value) {
+    msg.fan.value = toRosFanValue(fan.value());
+  }
+
+  const auto & memory = health.memory();
+  msg.memory.status = toRosStatus(memory.status());
+  msg.memory.has_value = memory.value().hasValue();
+  if (msg.memory.has_value) {
+    msg.memory.error_count = memory.value().value();
+  }
+
+  const auto & infield_verification = health.infieldVerification();
+  msg.infield_verification.status = toRosStatus(infield_verification.status());
+  msg.infield_verification.has_value = infield_verification.value().hasValue();
+  if (msg.infield_verification.has_value) {
+    const auto since_epoch = infield_verification.value().value().time_since_epoch();
+    const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(since_epoch);
+    msg.infield_verification.last_verification.sec = static_cast<int32_t>(seconds.count());
+    msg.infield_verification.last_verification.nanosec = static_cast<uint32_t>(
+      std::chrono::duration_cast<std::chrono::nanoseconds>(since_epoch - seconds).count());
+  }
+
+  return msg;
+}
+#endif
+
+void fillDiagnosticStatus(DiagnosticStatus & status, const CameraHealthMsg & health)
+{
+  const auto checks = checkStatuses(health);
+  status.level = diagnosticLevel(checks);
+  status.message = diagnosticMessage(checks);
+  status.values.push_back(makeKeyValue("Overall status", statusToString(health.overall)));
+  appendDiagnosticValues(status, health);
+}
+}  // namespace zivid_camera::detail

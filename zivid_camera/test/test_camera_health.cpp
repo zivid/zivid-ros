@@ -38,6 +38,7 @@
 #include <string>
 #include <test_zivid_camera.hpp>
 #include <zivid_camera/camera_health_controller.hpp>
+#include <zivid_camera/camera_health_conversion.hpp>
 #include <zivid_interfaces/msg/camera_health.hpp>
 #include <zivid_interfaces/srv/camera_health_check.hpp>
 #include <zivid_interfaces/srv/camera_info_serial_number.hpp>
@@ -68,6 +69,114 @@ std::string findValue(const DiagnosticStatus & status, const std::string & key)
   }
   return it->value;
 }
+
+#ifdef ZIVID_CAMERA_HAS_CAMERA_HEALTH
+bool hasValue(const DiagnosticStatus & status, const std::string & key)
+{
+  return std::any_of(status.values.begin(), status.values.end(), [&](const auto & key_value) {
+    return key_value.key == key;
+  });
+}
+
+// Captured with CameraHealth::save() from a Zivid 3 XL250. The infield verification is old, so
+// it is Suboptimal, and so is the overall status.
+constexpr auto camera_health_zivid3_xl250_yaml = R"(__version__: 1
+CameraHealth:
+  Fan:
+    Status: OK
+    Value: ok
+  InfieldVerification:
+    Status: Suboptimal
+    Value: 2025-10-27 09:56:55
+  MaxTransferSpeed:
+    Status: OK
+    Value: 10000
+  Memory:
+    Status: OK
+    Value: 0
+  Overall: Suboptimal
+  Temperature:
+    DMD:
+      Status: OK
+      Value: 29.066404342651367
+    LED:
+      Status: OK
+      Value: 28.834449768066406
+    Lens:
+      Status: OK
+      Value: 28.679813385009766
+)";
+
+// Captured with CameraHealth::save() from a Zivid 2+ L110 that has never been verified in the
+// field. Every check except the infield verification is OK, but the overall status is Unknown.
+constexpr auto camera_health_zivid2plus_l110_yaml = R"(__version__: 1
+CameraHealth:
+  Fan:
+    Status: OK
+    Value: ok
+  InfieldVerification:
+    Status: Unknown
+    Value: __not_set__
+  MaxTransferSpeed:
+    Status: OK
+    Value: 10000
+  Memory:
+    Status: OK
+    Value: 0
+  Overall: Unknown
+  Temperature:
+    DMD:
+      Status: OK
+      Value: 35.338932037353516
+    LED:
+      Status: OK
+      Value: 34.571205139160156
+    Lens:
+      Status: OK
+      Value: 34.850379943847656
+)";
+
+// Synthetic, to cover the Error status, the fan stop, a non-zero memory error count and a check
+// without value.
+constexpr auto camera_health_synthetic_yaml = R"(__version__: 1
+CameraHealth:
+  Fan:
+    Status: Error
+    Value: unexpectedFanStop
+  InfieldVerification:
+    Status: OK
+    Value: 2025-11-24 16:00:00
+  MaxTransferSpeed:
+    Status: Suboptimal
+    Value: 1000
+  Memory:
+    Status: Error
+    Value: 3
+  Overall: Error
+  Temperature:
+    DMD:
+      Status: Error
+      Value: 71.5
+    LED:
+      Status: Suboptimal
+      Value: 55.25
+    Lens:
+      Status: Unknown
+      Value: __not_set__
+)";
+
+// Infield verification times in the YAML fixtures, in seconds since the epoch. The SDK reads the
+// times as UTC.
+constexpr int32_t zivid3_xl250_infield_verification_time = 1761559015;  // 2025-10-27 09:56:55
+constexpr int32_t synthetic_infield_verification_time = 1764000000;     // 2025-11-24 16:00:00
+
+template <typename Check>
+void verifyCheck(const Check & check, uint8_t expected_status, bool expected_has_value)
+{
+  EXPECT_EQ(check.status, expected_status);
+  EXPECT_EQ(check.has_value, expected_has_value);
+}
+#endif
 }  // namespace
 
 class CameraHealthTest : public ZividNodeTest
@@ -175,6 +284,104 @@ TEST_F(CameraHealthTest, testHealthDiagnosticsStatusNameIsUniqueAcrossNamespaces
   EXPECT_EQ(status_names, expected_names);
 }
 
+// Provides the Zivid Application that the SDK requires for parsing CameraHealth YAML.
+class CameraHealthConversionTest : public ZividNodeTest
+{
+protected:
+  static zivid_interfaces::msg::CameraHealth convert(const std::string & yaml)
+  {
+    return zivid_camera::detail::toRosCameraHealth(Zivid::CameraHealth::fromSerialized(yaml));
+  }
+};
+
+TEST_F(CameraHealthConversionTest, testConversionRealCameraZivid3XL250)
+{
+  const auto health = convert(camera_health_zivid3_xl250_yaml);
+  EXPECT_EQ(health.overall, CameraHealthMsg::STATUS_SUBOPTIMAL);
+
+  verifyCheck(health.max_transfer_speed, CameraHealthMsg::STATUS_OK, true);
+  EXPECT_EQ(health.max_transfer_speed.value_mbps, 10000U);
+
+  verifyCheck(health.temperature_dmd, CameraHealthMsg::STATUS_OK, true);
+  EXPECT_DOUBLE_EQ(health.temperature_dmd.value_celsius, 29.066404342651367);
+  verifyCheck(health.temperature_led, CameraHealthMsg::STATUS_OK, true);
+  EXPECT_DOUBLE_EQ(health.temperature_led.value_celsius, 28.834449768066406);
+  verifyCheck(health.temperature_lens, CameraHealthMsg::STATUS_OK, true);
+  EXPECT_DOUBLE_EQ(health.temperature_lens.value_celsius, 28.679813385009766);
+
+  verifyCheck(health.fan, CameraHealthMsg::STATUS_OK, true);
+  EXPECT_EQ(health.fan.value, zivid_interfaces::msg::CameraHealthFan::FAN_OK);
+
+  verifyCheck(health.memory, CameraHealthMsg::STATUS_OK, true);
+  EXPECT_EQ(health.memory.error_count, 0U);
+
+  verifyCheck(health.infield_verification, CameraHealthMsg::STATUS_SUBOPTIMAL, true);
+  EXPECT_EQ(
+    health.infield_verification.last_verification.sec, zivid3_xl250_infield_verification_time);
+  EXPECT_EQ(health.infield_verification.last_verification.nanosec, 0U);
+}
+
+TEST_F(CameraHealthConversionTest, testConversionRealCameraZivid2PlusL110)
+{
+  const auto health = convert(camera_health_zivid2plus_l110_yaml);
+  EXPECT_EQ(health.overall, CameraHealthMsg::STATUS_UNKNOWN);
+  verifyCheck(health.max_transfer_speed, CameraHealthMsg::STATUS_OK, true);
+  verifyCheck(health.temperature_dmd, CameraHealthMsg::STATUS_OK, true);
+  EXPECT_DOUBLE_EQ(health.temperature_dmd.value_celsius, 35.338932037353516);
+  verifyCheck(health.temperature_led, CameraHealthMsg::STATUS_OK, true);
+  verifyCheck(health.temperature_lens, CameraHealthMsg::STATUS_OK, true);
+  verifyCheck(health.fan, CameraHealthMsg::STATUS_OK, true);
+  verifyCheck(health.memory, CameraHealthMsg::STATUS_OK, true);
+  verifyCheck(health.infield_verification, CameraHealthMsg::STATUS_UNKNOWN, false);
+}
+
+TEST_F(CameraHealthConversionTest, testConversionSynthetic)
+{
+  const auto health = convert(camera_health_synthetic_yaml);
+  EXPECT_EQ(health.overall, CameraHealthMsg::STATUS_ERROR);
+
+  verifyCheck(health.max_transfer_speed, CameraHealthMsg::STATUS_SUBOPTIMAL, true);
+  EXPECT_EQ(health.max_transfer_speed.value_mbps, 1000U);
+
+  verifyCheck(health.temperature_dmd, CameraHealthMsg::STATUS_ERROR, true);
+  EXPECT_DOUBLE_EQ(health.temperature_dmd.value_celsius, 71.5);
+  verifyCheck(health.temperature_led, CameraHealthMsg::STATUS_SUBOPTIMAL, true);
+  EXPECT_DOUBLE_EQ(health.temperature_led.value_celsius, 55.25);
+  verifyCheck(health.temperature_lens, CameraHealthMsg::STATUS_UNKNOWN, false);
+
+  verifyCheck(health.fan, CameraHealthMsg::STATUS_ERROR, true);
+  EXPECT_EQ(health.fan.value, zivid_interfaces::msg::CameraHealthFan::FAN_UNEXPECTED_STOP);
+
+  verifyCheck(health.memory, CameraHealthMsg::STATUS_ERROR, true);
+  EXPECT_EQ(health.memory.error_count, 3U);
+
+  verifyCheck(health.infield_verification, CameraHealthMsg::STATUS_OK, true);
+  EXPECT_EQ(health.infield_verification.last_verification.sec, synthetic_infield_verification_time);
+}
+
+TEST_F(CameraHealthConversionTest, testDiagnosticStatusSynthetic)
+{
+  DiagnosticStatus status;
+  zivid_camera::detail::fillDiagnosticStatus(status, convert(camera_health_synthetic_yaml));
+
+  EXPECT_EQ(status.level, DiagnosticStatus::ERROR);
+  EXPECT_EQ(status.message, "Overall: Error");
+  EXPECT_EQ(findValue(status, "Max transfer speed status"), "Suboptimal");
+  EXPECT_EQ(findValue(status, "Max transfer speed (Mbps)"), "1000");
+  EXPECT_EQ(findValue(status, "DMD temperature status"), "Error");
+  EXPECT_EQ(findValue(status, "DMD temperature (Celsius)"), std::to_string(71.5));
+  EXPECT_EQ(findValue(status, "Lens temperature status"), "Unknown");
+  EXPECT_FALSE(hasValue(status, "Lens temperature (Celsius)"));
+  EXPECT_EQ(findValue(status, "Fan status"), "Error");
+  EXPECT_EQ(findValue(status, "Fan"), "Unexpected fan stop");
+  EXPECT_EQ(findValue(status, "Memory status"), "Error");
+  EXPECT_EQ(findValue(status, "Memory error count"), "3");
+  EXPECT_EQ(findValue(status, "Infield verification status"), "OK");
+  EXPECT_EQ(
+    findValue(status, "Last infield verification (seconds since epoch)"),
+    std::to_string(synthetic_infield_verification_time));
+}
+
 #else
 
 TEST_F(CameraHealthTest, testCheckHealthServiceUnsupportedSdk)
@@ -205,4 +412,19 @@ TEST_F(CameraHealthTest, testHealthDiagnosticsInvalidPeriodThrows)
 TEST_F(CameraHealthTest, testHealthDiagnosticsSmallPositivePeriodIsAccepted)
 {
   EXPECT_NO_THROW(makeCameraNode("zivid_camera_small_period", "", 1e-6));
+}
+
+TEST(CameraHealthDiagnosticLevelTest, testOverallStatusToDiagnosticLevel)
+{
+  const auto level_for_overall = [](uint8_t overall) {
+    CameraHealthMsg health;
+    health.overall = overall;
+    DiagnosticStatus status;
+    zivid_camera::detail::fillDiagnosticStatus(status, health);
+    return status.level;
+  };
+  EXPECT_EQ(level_for_overall(CameraHealthMsg::STATUS_OK), DiagnosticStatus::OK);
+  EXPECT_EQ(level_for_overall(CameraHealthMsg::STATUS_SUBOPTIMAL), DiagnosticStatus::WARN);
+  EXPECT_EQ(level_for_overall(CameraHealthMsg::STATUS_ERROR), DiagnosticStatus::ERROR);
+  EXPECT_EQ(level_for_overall(CameraHealthMsg::STATUS_UNKNOWN), DiagnosticStatus::STALE);
 }

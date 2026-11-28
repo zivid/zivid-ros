@@ -40,6 +40,7 @@ add_library(
   ${ZIVID_DRIVER_COMPONENT_NAME}
   SHARED
   src/camera_health_controller.cpp
+  src/camera_health_conversion.cpp
   src/controller_interface.cpp
   src/hand_eye_calibration_controller.cpp
   src/infield_correction_controller.cpp

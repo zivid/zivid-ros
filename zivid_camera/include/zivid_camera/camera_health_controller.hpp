@@ -28,15 +28,10 @@
 
 #pragma once
 
-#include <Zivid/VersionConstants.h>
-#if ZIVID_CORE_VERSION_MAJOR > 2 || \
-  (ZIVID_CORE_VERSION_MAJOR == 2 && ZIVID_CORE_VERSION_MINOR >= 18)
-#define ZIVID_CAMERA_HAS_CAMERA_HEALTH
-#endif
-
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
+#include <zivid_camera/camera_health_conversion.hpp>
 #include <zivid_interfaces/srv/camera_health_check.hpp>
 
 namespace Zivid

@@ -31,6 +31,7 @@
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <memory>
 #include <rclcpp/rclcpp.hpp>
+#include <string>
 #include <zivid_camera/camera_health_conversion.hpp>
 #include <zivid_interfaces/srv/camera_health_check.hpp>
 
@@ -59,5 +60,7 @@ private:
   rclcpp::Service<zivid_interfaces::srv::CameraHealthCheck>::SharedPtr check_health_service_;
   rclcpp::Publisher<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagnostics_publisher_;
   rclcpp::TimerBase::SharedPtr diagnostics_timer_;
+  // Message of the last failed periodic health check, or empty if the last check succeeded.
+  std::string last_diagnostics_failure_;
 };
 }  // namespace zivid_camera

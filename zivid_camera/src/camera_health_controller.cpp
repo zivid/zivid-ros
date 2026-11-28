@@ -138,9 +138,19 @@ void CameraHealthController::onDiagnosticsTimeout()
   try {
     status.hardware_id = camera_.info().serialNumber().value();
     detail::fillDiagnosticStatus(status, detail::toRosCameraHealth(camera_.checkHealth()));
+    if (!last_diagnostics_failure_.empty()) {
+      RCLCPP_INFO(node_.get_logger(), "Periodic camera health checks succeed again");
+      last_diagnostics_failure_.clear();
+    }
   } catch (const std::exception & exception) {
     status.level = DiagnosticStatus::ERROR;
     status.message = "Camera health check failed: " + Zivid::toString(exception);
+    // Log when the failure starts or changes, rather than every period, so that the log is not
+    // flooded while the camera is e.g. disconnected.
+    if (status.message != last_diagnostics_failure_) {
+      RCLCPP_WARN_STREAM(node_.get_logger(), status.message);
+      last_diagnostics_failure_ = status.message;
+    }
   }
 
   diagnostic_msgs::msg::DiagnosticArray array;

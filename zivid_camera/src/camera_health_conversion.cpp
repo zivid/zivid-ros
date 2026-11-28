@@ -26,11 +26,13 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <diagnostic_msgs/msg/key_value.hpp>
 #include <stdexcept>
 #include <string>
+#include <vector>
 #include <zivid_camera/camera_health_conversion.hpp>
 
 namespace zivid_camera::detail
@@ -56,9 +58,8 @@ std::string statusToString(uint8_t status)
   }
 }
 
-// The diagnostics levels do not have an "unknown" severity. STALE is the closest match, since it
-// signals that the state could not be determined.
-uint8_t statusToDiagnosticLevel(uint8_t status)
+// Diagnostic level of a check status that is known, i.e. not Unknown.
+uint8_t knownStatusToDiagnosticLevel(uint8_t status)
 {
   switch (status) {
     case CameraHealthMsg::STATUS_OK:
@@ -67,11 +68,69 @@ uint8_t statusToDiagnosticLevel(uint8_t status)
       return DiagnosticStatus::WARN;
     case CameraHealthMsg::STATUS_ERROR:
       return DiagnosticStatus::ERROR;
-    case CameraHealthMsg::STATUS_UNKNOWN:
-      return DiagnosticStatus::STALE;
     default:
       throw std::runtime_error("Unhandled camera health status: " + std::to_string(status));
   }
+}
+
+struct NamedCheckStatus
+{
+  std::string name;
+  uint8_t status;
+};
+
+std::vector<NamedCheckStatus> checkStatuses(const CameraHealthMsg & health)
+{
+  return {
+    {"Max transfer speed", health.max_transfer_speed.status},
+    {"DMD temperature", health.temperature_dmd.status},
+    {"LED temperature", health.temperature_led.status},
+    {"Lens temperature", health.temperature_lens.status},
+    {"Fan", health.fan.status},
+    {"Memory", health.memory.status},
+    {"Infield verification", health.infield_verification.status},
+  };
+}
+
+// The level is derived from the individual checks rather than from the overall status, since the
+// SDK ranks Unknown above Suboptimal in the overall status. Some checks are Unknown on healthy
+// cameras, for example the infield verification of a camera that was never verified in the field,
+// and an overall Unknown would hide Suboptimal and Error checks. Unknown checks are therefore
+// ignored, unless all checks are Unknown (e.g. a file camera). Then the level is STALE, the closest
+// match for a state that could not be determined, since diagnostics have no "unknown" level.
+uint8_t diagnosticLevel(const std::vector<NamedCheckStatus> & checks)
+{
+  bool any_known = false;
+  uint8_t level = DiagnosticStatus::OK;
+  for (const auto & check : checks) {
+    if (check.status != CameraHealthMsg::STATUS_UNKNOWN) {
+      any_known = true;
+      level = std::max(level, knownStatusToDiagnosticLevel(check.status));
+    }
+  }
+  return any_known ? level : DiagnosticStatus::STALE;
+}
+
+// Summarizes which checks are not OK, most severe first, e.g. "Error: Fan; Unknown: Memory".
+std::string diagnosticMessage(const std::vector<NamedCheckStatus> & checks)
+{
+  std::string message;
+  for (const auto status : {
+         CameraHealthMsg::STATUS_ERROR,
+         CameraHealthMsg::STATUS_SUBOPTIMAL,
+         CameraHealthMsg::STATUS_UNKNOWN,
+       }) {
+    std::string names;
+    for (const auto & check : checks) {
+      if (check.status == status) {
+        names += (names.empty() ? "" : ", ") + check.name;
+      }
+    }
+    if (!names.empty()) {
+      message += (message.empty() ? "" : "; ") + statusToString(status) + ": " + names;
+    }
+  }
+  return message.empty() ? "All checks OK" : message;
 }
 
 diagnostic_msgs::msg::KeyValue makeKeyValue(const std::string & key, const std::string & value)
@@ -224,8 +283,10 @@ zivid_interfaces::msg::CameraHealth toRosCameraHealth(const Zivid::CameraHealth 
 
 void fillDiagnosticStatus(DiagnosticStatus & status, const CameraHealthMsg & health)
 {
-  status.level = statusToDiagnosticLevel(health.overall);
-  status.message = "Overall: " + statusToString(health.overall);
+  const auto checks = checkStatuses(health);
+  status.level = diagnosticLevel(checks);
+  status.message = diagnosticMessage(checks);
+  status.values.push_back(makeKeyValue("Overall status", statusToString(health.overall)));
   appendDiagnosticValues(status, health);
 }
 }  // namespace zivid_camera::detail

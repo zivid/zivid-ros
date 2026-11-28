@@ -624,10 +624,13 @@ will cause some additional processing time for calculating the normals.
 Camera health, published periodically as configured by the parameter
 [`health_check_diagnostics_period`](#launch-parameters-advanced), and compatible with standard tools such as
 `rqt_robot_monitor`. Each message contains one status named `<fully qualified node name>: Camera health`, for example
-`/left/zivid_camera: Camera health`, with the camera serial number as `hardware_id`. The camera health statuses are
-mapped to diagnostic levels as follows: OK to `OK`, Suboptimal to `WARN`, Error to `ERROR`, and Unknown to `STALE`. The
-status and value of each check are given as key-value pairs. If the health check fails, for example because the camera
-is disconnected, the level is `ERROR`. Requires Zivid SDK 2.18 or newer.
+`/left/zivid_camera: Camera health`, with the camera serial number as `hardware_id`. The diagnostic level is the most
+severe status of the checks whose status is known: `OK` if they are all OK, `WARN` if any is Suboptimal, and `ERROR` if
+any is Error. Checks with status Unknown, such as the infield verification of a camera that was never verified in the
+field, do not affect the level. If all checks are Unknown, the level is `STALE`. The message lists the checks that are
+not OK, and the SDK's overall status is given as `Overall status`. The status and value of each check are given as
+key-value pairs. If the health check fails, for example because the camera is disconnected, the level is `ERROR`.
+Requires Zivid SDK 2.18 or newer.
 
 ## Samples
 

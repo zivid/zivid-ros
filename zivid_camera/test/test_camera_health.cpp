@@ -245,7 +245,11 @@ TEST_F(CameraHealthTest, testHealthDiagnosticsPublishedFileCamera)
   EXPECT_EQ(status.name, "/zivid_camera: Camera health");
   EXPECT_EQ(status.hardware_id, serial_number);
   EXPECT_EQ(status.level, DiagnosticStatus::STALE);
-  EXPECT_EQ(status.message, "Overall: Unknown");
+  EXPECT_EQ(
+    status.message,
+    "Unknown: Max transfer speed, DMD temperature, LED temperature, Lens temperature, Fan, "
+    "Memory, Infield verification");
+  EXPECT_EQ(findValue(status, "Overall status"), "Unknown");
   EXPECT_EQ(findValue(status, "Max transfer speed status"), "Unknown");
   EXPECT_EQ(findValue(status, "DMD temperature status"), "Unknown");
   EXPECT_EQ(findValue(status, "LED temperature status"), "Unknown");
@@ -365,7 +369,11 @@ TEST_F(CameraHealthConversionTest, testDiagnosticStatusSynthetic)
   zivid_camera::detail::fillDiagnosticStatus(status, convert(camera_health_synthetic_yaml));
 
   EXPECT_EQ(status.level, DiagnosticStatus::ERROR);
-  EXPECT_EQ(status.message, "Overall: Error");
+  EXPECT_EQ(
+    status.message,
+    "Error: DMD temperature, Fan, Memory; Suboptimal: Max transfer speed, LED temperature; "
+    "Unknown: Lens temperature");
+  EXPECT_EQ(findValue(status, "Overall status"), "Error");
   EXPECT_EQ(findValue(status, "Max transfer speed status"), "Suboptimal");
   EXPECT_EQ(findValue(status, "Max transfer speed (Mbps)"), "1000");
   EXPECT_EQ(findValue(status, "DMD temperature status"), "Error");
@@ -380,6 +388,24 @@ TEST_F(CameraHealthConversionTest, testDiagnosticStatusSynthetic)
   EXPECT_EQ(
     findValue(status, "Last infield verification (seconds since epoch)"),
     std::to_string(synthetic_infield_verification_time));
+}
+
+TEST_F(CameraHealthConversionTest, testDiagnosticStatusRealCameras)
+{
+  DiagnosticStatus xl250_status;
+  zivid_camera::detail::fillDiagnosticStatus(
+    xl250_status, convert(camera_health_zivid3_xl250_yaml));
+  EXPECT_EQ(xl250_status.level, DiagnosticStatus::WARN);
+  EXPECT_EQ(xl250_status.message, "Suboptimal: Infield verification");
+
+  // The overall status is Unknown only because the camera was never verified in the field. That
+  // must not hide that all other checks are OK.
+  DiagnosticStatus l110_status;
+  zivid_camera::detail::fillDiagnosticStatus(
+    l110_status, convert(camera_health_zivid2plus_l110_yaml));
+  EXPECT_EQ(l110_status.level, DiagnosticStatus::OK);
+  EXPECT_EQ(l110_status.message, "Unknown: Infield verification");
+  EXPECT_EQ(findValue(l110_status, "Overall status"), "Unknown");
 }
 
 #else
@@ -414,17 +440,40 @@ TEST_F(CameraHealthTest, testHealthDiagnosticsSmallPositivePeriodIsAccepted)
   EXPECT_NO_THROW(makeCameraNode("zivid_camera_small_period", "", 1e-6));
 }
 
-TEST(CameraHealthDiagnosticLevelTest, testOverallStatusToDiagnosticLevel)
+TEST(CameraHealthDiagnosticLevelTest, testDiagnosticLevelFromChecks)
 {
-  const auto level_for_overall = [](uint8_t overall) {
+  // Overall status and per-check statuses, with the infield verification status set separately.
+  const auto diagnose = [](uint8_t overall, uint8_t checks, uint8_t infield_verification) {
     CameraHealthMsg health;
     health.overall = overall;
+    health.max_transfer_speed.status = checks;
+    health.temperature_dmd.status = checks;
+    health.temperature_led.status = checks;
+    health.temperature_lens.status = checks;
+    health.fan.status = checks;
+    health.memory.status = checks;
+    health.infield_verification.status = infield_verification;
     DiagnosticStatus status;
     zivid_camera::detail::fillDiagnosticStatus(status, health);
-    return status.level;
+    return status;
   };
-  EXPECT_EQ(level_for_overall(CameraHealthMsg::STATUS_OK), DiagnosticStatus::OK);
-  EXPECT_EQ(level_for_overall(CameraHealthMsg::STATUS_SUBOPTIMAL), DiagnosticStatus::WARN);
-  EXPECT_EQ(level_for_overall(CameraHealthMsg::STATUS_ERROR), DiagnosticStatus::ERROR);
-  EXPECT_EQ(level_for_overall(CameraHealthMsg::STATUS_UNKNOWN), DiagnosticStatus::STALE);
+  constexpr auto ok = CameraHealthMsg::STATUS_OK;
+  constexpr auto suboptimal = CameraHealthMsg::STATUS_SUBOPTIMAL;
+  constexpr auto error = CameraHealthMsg::STATUS_ERROR;
+  constexpr auto unknown = CameraHealthMsg::STATUS_UNKNOWN;
+
+  EXPECT_EQ(diagnose(ok, ok, ok).level, DiagnosticStatus::OK);
+  EXPECT_EQ(diagnose(ok, ok, ok).message, "All checks OK");
+  EXPECT_EQ(diagnose(suboptimal, ok, suboptimal).level, DiagnosticStatus::WARN);
+  EXPECT_EQ(diagnose(error, suboptimal, error).level, DiagnosticStatus::ERROR);
+  EXPECT_EQ(diagnose(error, error, ok).level, DiagnosticStatus::ERROR);
+
+  // Unknown checks do not affect the level when other checks are known, also when the SDK reports
+  // an overall Unknown.
+  EXPECT_EQ(diagnose(unknown, ok, unknown).level, DiagnosticStatus::OK);
+  EXPECT_EQ(diagnose(unknown, suboptimal, unknown).level, DiagnosticStatus::WARN);
+  EXPECT_EQ(diagnose(unknown, unknown, error).level, DiagnosticStatus::ERROR);
+
+  // STALE only when all checks are Unknown.
+  EXPECT_EQ(diagnose(unknown, unknown, unknown).level, DiagnosticStatus::STALE);
 }

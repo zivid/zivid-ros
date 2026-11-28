@@ -86,11 +86,11 @@ std::shared_ptr<zivid_camera::ZividCamera> ZividCameraNodeWrapper::getOrConstruc
     !m_fileCameraMode.has_value() || reusePolicy == NodeReusePolicy::RestartNode ||
     m_fileCameraMode.value() != fileCamera) {
     std::string fileCameraPath = fileCameraModeToPath(fileCamera);
-    // The shortest allowed health check period, so that tests do not have to wait long for
-    // /diagnostics.
+    // Diagnostics are disabled, so that periodic health checks do not interleave with the tests.
+    // The diagnostics tests construct their own nodes.
     auto node_options = rclcpp::NodeOptions{}
                           .append_parameter_override("file_camera_path", fileCameraPath)
-                          .append_parameter_override("health_check_diagnostics_period", 1.0);
+                          .append_parameter_override("health_check_diagnostics_period", 0.0);
     m_zividRosNode.reset();
     m_fileCameraMode = fileCamera;
     m_zividRosNode = std::make_shared<zivid_camera::ZividCamera>(node_options);

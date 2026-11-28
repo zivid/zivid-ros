@@ -33,9 +33,9 @@
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <limits>
+#include <map>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
 #include <test_zivid_camera.hpp>
 #include <zivid_camera/camera_health_controller.hpp>
@@ -60,6 +60,7 @@ void verifyCheckIsUnknownWithoutValue(const Check & check)
   EXPECT_FALSE(check.has_value);
 }
 
+#ifdef ZIVID_CAMERA_HAS_CAMERA_HEALTH
 std::string findValue(const DiagnosticStatus & status, const std::string & key)
 {
   const auto it = std::find_if(
@@ -71,7 +72,6 @@ std::string findValue(const DiagnosticStatus & status, const std::string & key)
   return it->value;
 }
 
-#ifdef ZIVID_CAMERA_HAS_CAMERA_HEALTH
 bool hasValue(const DiagnosticStatus & status, const std::string & key)
 {
   return std::any_of(status.values.begin(), status.values.end(), [&](const auto & key_value) {
@@ -183,17 +183,6 @@ void verifyCheck(const Check & check, uint8_t expected_status, bool expected_has
 class CameraHealthTest : public ZividNodeTest
 {
 protected:
-  std::shared_ptr<const DiagnosticArray> waitForDiagnostics(
-    const SubscriptionWrapper<DiagnosticArray> & subscription)
-  {
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds{10};
-    while (subscription.numMessages() == 0 && std::chrono::steady_clock::now() < deadline) {
-      executor_.spin_some();
-      rclcpp::sleep_for(std::chrono::milliseconds{50});
-    }
-    return subscription.lastMessage();
-  }
-
   // Constructs another driver node that shares the Application of the node under test.
   std::shared_ptr<zivid_camera::ZividCamera> makeCameraNode(
     const std::string & name, const std::string & node_namespace, double diagnostics_period)
@@ -231,20 +220,43 @@ TEST_F(CameraHealthTest, testCheckHealthServiceFileCamera)
   verifyCheckIsUnknownWithoutValue(health.infield_verification);
 }
 
-TEST_F(CameraHealthTest, testHealthDiagnosticsPublishedFileCamera)
+TEST_F(CameraHealthTest, testHealthDiagnosticsPublishedPerNamespace)
 {
-  const auto diagnostics_sub = subscribe<DiagnosticArray>(diagnostics_topic_name);
-  const auto diagnostics = waitForDiagnostics(diagnostics_sub);
-  ASSERT_NE(diagnostics, nullptr) << "No message received on " << diagnostics_topic_name;
-  ASSERT_EQ(diagnostics->status.size(), 1U);
+  // Two drivers with the same node name in different namespaces. Both publish on the global
+  // /diagnostics topic, so the status names must differ.
+  const auto left_node = makeCameraNode("zivid_camera", "left", 1.0);
+  const auto right_node = makeCameraNode("zivid_camera", "right", 1.0);
+  executor_.add_node(left_node);
+  executor_.add_node(right_node);
 
-  const auto serial_number =
-    doEmptySrvRequest<zivid_interfaces::srv::CameraInfoSerialNumber>("camera_info/serial_number")
-      ->serial_number;
+  std::map<std::string, DiagnosticStatus> statuses;
+  const auto subscription = test_node_->create_subscription<DiagnosticArray>(
+    diagnostics_topic_name, rclcpp::SystemDefaultsQoS(),
+    [&](const DiagnosticArray::ConstSharedPtr message) {
+      for (const auto & status : message->status) {
+        statuses[status.name] = status;
+      }
+    });
 
-  const auto & status = diagnostics->status.front();
-  EXPECT_EQ(status.name, "/zivid_camera: Camera health");
-  EXPECT_EQ(status.hardware_id, serial_number);
+  constexpr auto left_status_name = "/left/zivid_camera: Camera health";
+  constexpr auto right_status_name = "/right/zivid_camera: Camera health";
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds{10};
+  while (statuses.size() < 2 && std::chrono::steady_clock::now() < deadline) {
+    executor_.spin_some();
+    rclcpp::sleep_for(std::chrono::milliseconds{50});
+  }
+  const auto left_serial_number = doEmptySrvRequest<zivid_interfaces::srv::CameraInfoSerialNumber>(
+                                    "/left/camera_info/serial_number")
+                                    ->serial_number;
+  executor_.remove_node(left_node);
+  executor_.remove_node(right_node);
+
+  ASSERT_EQ(statuses.size(), 2U);
+  ASSERT_EQ(statuses.count(left_status_name), 1U);
+  ASSERT_EQ(statuses.count(right_status_name), 1U);
+
+  const auto & status = statuses.at(left_status_name);
+  EXPECT_EQ(status.hardware_id, left_serial_number);
   EXPECT_EQ(status.level, DiagnosticStatus::STALE);
   EXPECT_EQ(
     status.message,
@@ -258,35 +270,24 @@ TEST_F(CameraHealthTest, testHealthDiagnosticsPublishedFileCamera)
   EXPECT_EQ(findValue(status, "Fan status"), "Unknown");
   EXPECT_EQ(findValue(status, "Memory status"), "Unknown");
   EXPECT_EQ(findValue(status, "Infield verification status"), "Unknown");
-  EXPECT_THROW(findValue(status, "Max transfer speed (Mbps)"), std::runtime_error);
+  EXPECT_FALSE(hasValue(status, "Max transfer speed (Mbps)"));
 }
 
-TEST_F(CameraHealthTest, testHealthDiagnosticsStatusNameIsUniqueAcrossNamespaces)
+TEST_F(CameraHealthTest, testHealthDiagnosticsDisabled)
 {
-  // Same node name as the node under test, but in a namespace. Both publish on the global
-  // /diagnostics topic, so the status names must differ.
-  const auto namespaced_node = makeCameraNode("zivid_camera", "left", 1.0);
-  executor_.add_node(namespaced_node);
-
-  std::set<std::string> status_names;
-  const auto subscription = test_node_->create_subscription<DiagnosticArray>(
-    diagnostics_topic_name, rclcpp::SystemDefaultsQoS(),
-    [&](const DiagnosticArray::ConstSharedPtr message) {
-      for (const auto & status : message->status) {
-        status_names.insert(status.name);
-      }
-    });
-
-  const std::set<std::string> expected_names{
-    "/zivid_camera: Camera health", "/left/zivid_camera: Camera health"};
-  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds{10};
-  while (status_names != expected_names && std::chrono::steady_clock::now() < deadline) {
+  // The node under test runs with health_check_diagnostics_period 0.
+  const auto diagnostics_sub = subscribe<DiagnosticArray>(diagnostics_topic_name);
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds{2500};
+  while (std::chrono::steady_clock::now() < deadline) {
     executor_.spin_some();
     rclcpp::sleep_for(std::chrono::milliseconds{50});
   }
-  executor_.remove_node(namespaced_node);
+  EXPECT_EQ(diagnostics_sub.numMessages(), 0U);
 
-  EXPECT_EQ(status_names, expected_names);
+  // The service is not affected.
+  const auto response =
+    doEmptySrvRequest<zivid_interfaces::srv::CameraHealthCheck>(check_health_service_name);
+  EXPECT_TRUE(response->success) << response->message;
 }
 
 // Provides the Zivid Application that the SDK requires for parsing CameraHealth YAML.

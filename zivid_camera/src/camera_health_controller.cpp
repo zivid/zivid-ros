@@ -260,7 +260,7 @@ CameraHealthController::CameraHealthController(
   using namespace std::placeholders;
 
   check_health_service_ = node_.create_service<zivid_interfaces::srv::CameraHealthCheck>(
-    "check_health",
+    "camera_health/check",
     std::bind(&CameraHealthController::checkHealthServiceHandler, this, _1, _2, _3));
 
   rcl_interfaces::msg::ParameterDescriptor period_descriptor;

@@ -48,7 +48,7 @@ using CameraHealthMsg = zivid_interfaces::msg::CameraHealth;
 using diagnostic_msgs::msg::DiagnosticArray;
 using diagnostic_msgs::msg::DiagnosticStatus;
 
-constexpr auto check_health_service_name = "check_health";
+constexpr auto check_health_service_name = "camera_health/check";
 constexpr auto diagnostics_topic_name = "/diagnostics";
 
 template <typename Check>

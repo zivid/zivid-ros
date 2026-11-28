@@ -205,7 +205,7 @@ ros2 launch zivid_samples zivid_camera.launch serial_number:=ABCD1234
 `health_check_diagnostics_period` (double, default: 10.0)
 > Specify the period in seconds between camera health checks published on the [/diagnostics](#diagnostics)
 > topic. Set to 0 to disable; any other value must be positive. Requires Zivid SDK 2.18 or newer; with older SDKs
-> no diagnostics are published. See also the [check_health](#check_health) service.
+> no diagnostics are published. See also the [camera_health/check](#camera_healthcheck) service.
 
 `intrinsics_source` (string, default: "camera")
 > Specify how intrinsics are determined when publishing images from 3D captures. Valid values:
@@ -349,6 +349,18 @@ This service has two parameters:
 
 See [Sample Capture Assistant](#sample-capture-assistant) for code example.
 
+### camera_health/check
+[zivid_interfaces/srv/CameraHealthCheck.srv](./zivid_interfaces/srv/CameraHealthCheck.srv)
+
+Runs the camera's health checks and returns the result as a
+[zivid_interfaces/msg/CameraHealth](./zivid_interfaces/msg/CameraHealth.msg) message. The result contains an overall
+status, and the status and measured value of each individual check: max transfer speed, DMD/LED/lens temperatures,
+fan, memory, and infield verification. Each status is one of `STATUS_OK`, `STATUS_SUBOPTIMAL`, `STATUS_ERROR` or
+`STATUS_UNKNOWN`.
+
+Note that `success` only indicates that the health checks ran. To know if the camera is healthy, check
+`health.overall`. Requires Zivid SDK 2.18 or newer. See also the [/diagnostics](#diagnostics) topic.
+
 ### camera_info/model_name
 [zivid_interfaces/srv/CameraInfoModelName.srv](./zivid_interfaces/srv/CameraInfoModelName.srv)
 
@@ -367,18 +379,6 @@ The connection status is updated by the driver every 10 seconds and before each 
 service call. If the camera is not in `Connected` state the driver will attempt to re-connect to
 the camera when it detects that the camera is available. This can happen if the camera is
 power-cycled or the USB/Ethernet cable is unplugged and then replugged.
-
-### check_health
-[zivid_interfaces/srv/CameraHealthCheck.srv](./zivid_interfaces/srv/CameraHealthCheck.srv)
-
-Runs the camera's health checks and returns the result as a
-[zivid_interfaces/msg/CameraHealth](./zivid_interfaces/msg/CameraHealth.msg) message. The result contains an overall
-status, and the status and measured value of each individual check: max transfer speed, DMD/LED/lens temperatures,
-fan, memory, and infield verification. Each status is one of `STATUS_OK`, `STATUS_SUBOPTIMAL`, `STATUS_ERROR` or
-`STATUS_UNKNOWN`.
-
-Note that `success` only indicates that the health checks ran. To know if the camera is healthy, check
-`health.overall`. Requires Zivid SDK 2.18 or newer. See also the [/diagnostics](#diagnostics) topic.
 
 ### hand_eye_calibration/start
 [zivid_interfaces/srv/HandEyeCalibrationStart.srv](./zivid_interfaces/srv/HandEyeCalibrationStart.srv)

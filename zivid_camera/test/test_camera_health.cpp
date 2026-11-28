@@ -34,6 +34,7 @@
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <test_zivid_camera.hpp>
@@ -264,7 +265,7 @@ TEST_F(CameraHealthTest, testHealthDiagnosticsStatusNameIsUniqueAcrossNamespaces
 {
   // Same node name as the node under test, but in a namespace. Both publish on the global
   // /diagnostics topic, so the status names must differ.
-  const auto namespaced_node = makeCameraNode("zivid_camera", "left", 0.2);
+  const auto namespaced_node = makeCameraNode("zivid_camera", "left", 1.0);
   executor_.add_node(namespaced_node);
 
   std::set<std::string> status_names;
@@ -422,22 +423,30 @@ TEST_F(CameraHealthTest, testCheckHealthServiceUnsupportedSdk)
 
 TEST_F(CameraHealthTest, testHealthDiagnosticsInvalidPeriodThrows)
 {
+  EXPECT_THROW(makeCameraNode("zivid_camera_invalid_period", "", 0.5), std::runtime_error);
+}
+
+TEST(CameraHealthDiagnosticsPeriodTest, testDiagnosticsPeriod)
+{
+  using zivid_camera::detail::toDiagnosticsPeriod;
+  EXPECT_EQ(toDiagnosticsPeriod(0.0), std::nullopt);
+  EXPECT_EQ(toDiagnosticsPeriod(1.0), std::chrono::seconds{1});
+  EXPECT_EQ(toDiagnosticsPeriod(2.5), std::chrono::milliseconds{2500});
+  EXPECT_EQ(toDiagnosticsPeriod(10.0), std::chrono::seconds{10});
+
   for (const auto period : {
          -1.0,
          -std::numeric_limits<double>::min(),
-         1e-10,  // Positive, but rounds to a zero-duration timer
+         1e-10,
+         0.5,
+         0.999,
          std::numeric_limits<double>::quiet_NaN(),
          std::numeric_limits<double>::infinity(),
          1e20,  // Larger than the maximum timer period
        }) {
     SCOPED_TRACE("period " + std::to_string(period));
-    EXPECT_THROW(makeCameraNode("zivid_camera_invalid_period", "", period), std::runtime_error);
+    EXPECT_THROW(toDiagnosticsPeriod(period), std::invalid_argument);
   }
-}
-
-TEST_F(CameraHealthTest, testHealthDiagnosticsSmallPositivePeriodIsAccepted)
-{
-  EXPECT_NO_THROW(makeCameraNode("zivid_camera_small_period", "", 1e-6));
 }
 
 TEST(CameraHealthDiagnosticLevelTest, testDiagnosticLevelFromChecks)

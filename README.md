@@ -204,8 +204,8 @@ ros2 launch zivid_samples zivid_camera.launch serial_number:=ABCD1234
 
 `health_check_diagnostics_period` (double, default: 10.0)
 > Specify the period in seconds between camera health checks published on the [/diagnostics](#diagnostics)
-> topic. Set to 0 to disable; any other value must be positive. Requires Zivid SDK 2.18 or newer; with older SDKs
-> no diagnostics are published. See also the [camera_health/check](#camera_healthcheck) service.
+> topic, at least 1. Set to 0 to disable. Requires Zivid SDK 2.18 or newer; with older SDKs no diagnostics are
+> published. See also the [camera_health/check](#camera_healthcheck) service.
 
 `intrinsics_source` (string, default: "camera")
 > Specify how intrinsics are determined when publishing images from 3D captures. Valid values:

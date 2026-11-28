@@ -34,7 +34,9 @@
 #define ZIVID_CAMERA_HAS_CAMERA_HEALTH
 #endif
 
+#include <chrono>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
+#include <optional>
 #include <zivid_interfaces/msg/camera_health.hpp>
 
 #ifdef ZIVID_CAMERA_HAS_CAMERA_HEALTH
@@ -45,6 +47,12 @@
 // declared in a header so that they can be tested without a camera.
 namespace zivid_camera::detail
 {
+// Converts the value of the health_check_diagnostics_period parameter to a timer period. Returns
+// nullopt for 0, which disables diagnostics. Any other value must be finite and at least 1 second,
+// since the camera health check is intended to run at most about once per second. Throws
+// std::invalid_argument otherwise.
+std::optional<std::chrono::nanoseconds> toDiagnosticsPeriod(double seconds);
+
 #ifdef ZIVID_CAMERA_HAS_CAMERA_HEALTH
 zivid_interfaces::msg::CameraHealth toRosCameraHealth(const Zivid::CameraHealth & health);
 #endif

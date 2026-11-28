@@ -29,7 +29,6 @@
 #include <Zivid/Camera.h>
 
 #include <chrono>
-#include <cmath>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <string>
 #include <zivid_camera/camera_health_controller.hpp>
@@ -43,29 +42,6 @@ namespace
 using diagnostic_msgs::msg::DiagnosticStatus;
 
 constexpr auto health_check_diagnostics_period_param = "health_check_diagnostics_period";
-
-// Converts the diagnostics period parameter to a timer period. Exactly 0 disables diagnostics and
-// is handled by the caller. Any other value must be a positive duration that is representable as a
-// timer period, since a zero-duration timer would be ready continuously.
-std::chrono::nanoseconds toDiagnosticsPeriod(const rclcpp::Logger & logger, double seconds)
-{
-  const auto max_seconds = std::chrono::duration<double>{std::chrono::nanoseconds::max()}.count();
-  const auto make_message = [&](const std::string & requirement) {
-    return std::string{"Parameter "} + health_check_diagnostics_period_param + " must be " +
-           requirement + ", got " + std::to_string(seconds);
-  };
-  if (!std::isfinite(seconds) || seconds < 0.0 || seconds >= max_seconds) {
-    logErrorToLoggerAndThrowRuntimeException(
-      logger, make_message("0 (disabled) or a positive finite number of seconds"));
-  }
-  const auto period =
-    std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::duration<double>{seconds});
-  if (period <= std::chrono::nanoseconds::zero()) {
-    logErrorToLoggerAndThrowRuntimeException(
-      logger, make_message("0 (disabled) or at least 1 nanosecond"));
-  }
-  return period;
-}
 
 #ifndef ZIVID_CAMERA_HAS_CAMERA_HEALTH
 constexpr auto sdk_version_error_message =
@@ -86,22 +62,28 @@ CameraHealthController::CameraHealthController(
 
   rcl_interfaces::msg::ParameterDescriptor period_descriptor;
   period_descriptor.description =
-    "Period in seconds between camera health checks published on /diagnostics. Set to 0 to "
-    "disable.";
+    "Period in seconds between camera health checks published on /diagnostics, at least 1. Set "
+    "to 0 to disable.";
   period_descriptor.read_only = true;
   const auto period_seconds =
     node_.declare_parameter<double>(health_check_diagnostics_period_param, 10.0, period_descriptor);
 
-  if (period_seconds == 0.0) {
+  const auto period = [&] {
+    try {
+      return detail::toDiagnosticsPeriod(period_seconds);
+    } catch (const std::invalid_argument & exception) {
+      logErrorToLoggerAndThrowRuntimeException(node_.get_logger(), exception.what());
+    }
+  }();
+  if (!period.has_value()) {
     RCLCPP_INFO(node_.get_logger(), "Camera health diagnostics are disabled");
     return;
   }
-  const auto period = toDiagnosticsPeriod(node_.get_logger(), period_seconds);
 #ifdef ZIVID_CAMERA_HAS_CAMERA_HEALTH
   diagnostics_publisher_ = node_.create_publisher<diagnostic_msgs::msg::DiagnosticArray>(
     "/diagnostics", rclcpp::SystemDefaultsQoS());
   diagnostics_timer_ = rclcpp::create_timer(
-    &node_, node_.get_clock(), period,
+    &node_, node_.get_clock(), period.value(),
     std::bind(&CameraHealthController::onDiagnosticsTimeout, this));
 #else
   static_cast<void>(period);

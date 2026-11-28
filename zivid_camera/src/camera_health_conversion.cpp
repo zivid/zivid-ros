@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <diagnostic_msgs/msg/key_value.hpp>
 #include <stdexcept>
@@ -233,6 +234,23 @@ uint8_t toRosFanValue(const Zivid::CameraHealth::Fan::Value & value)
 }
 #endif
 }  // namespace
+
+std::optional<std::chrono::nanoseconds> toDiagnosticsPeriod(double seconds)
+{
+  if (seconds == 0.0) {
+    return std::nullopt;
+  }
+  constexpr double min_seconds = 1.0;
+  const auto max_seconds = std::chrono::duration<double>{std::chrono::nanoseconds::max()}.count();
+  if (!std::isfinite(seconds) || seconds < min_seconds || seconds >= max_seconds) {
+    throw std::invalid_argument(
+      "Parameter health_check_diagnostics_period must be 0 (disabled) or a finite number of "
+      "seconds of at least 1, got " +
+      std::to_string(seconds));
+  }
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(
+    std::chrono::duration<double>{seconds});
+}
 
 #ifdef ZIVID_CAMERA_HAS_CAMERA_HEALTH
 zivid_interfaces::msg::CameraHealth toRosCameraHealth(const Zivid::CameraHealth & health)

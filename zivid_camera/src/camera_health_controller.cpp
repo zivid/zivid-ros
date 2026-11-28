@@ -30,6 +30,8 @@
 
 #include <chrono>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
+#include <functional>
+#include <stdexcept>
 #include <string>
 #include <zivid_camera/camera_health_controller.hpp>
 #include <zivid_camera/camera_health_conversion.hpp>
@@ -87,13 +89,21 @@ CameraHealthController::CameraHealthController(
     std::bind(&CameraHealthController::onDiagnosticsTimeout, this));
 #else
   static_cast<void>(period);
-  RCLCPP_WARN(
+  RCLCPP_INFO(
     node_.get_logger(), "Camera health diagnostics are not available. %s",
     sdk_version_error_message);
 #endif
 }
 
-CameraHealthController::~CameraHealthController() = default;
+CameraHealthController::~CameraHealthController()
+{
+  // The camera is owned by ZividCamera and destroyed before this controller. Stop the timer first,
+  // so that it cannot fire with a dangling camera reference, e.g. in a multithreaded executor.
+  if (diagnostics_timer_) {
+    diagnostics_timer_->cancel();
+    diagnostics_timer_.reset();
+  }
+}
 
 void CameraHealthController::checkHealthServiceHandler(
   const std::shared_ptr<rmw_request_id_t> /*request_header*/,

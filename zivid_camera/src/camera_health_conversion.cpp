@@ -31,6 +31,9 @@
 #include <cmath>
 #include <cstdint>
 #include <diagnostic_msgs/msg/key_value.hpp>
+#include <iomanip>
+#include <optional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -134,6 +137,50 @@ std::string diagnosticMessage(const std::vector<NamedCheckStatus> & checks)
   return message.empty() ? "All checks OK" : message;
 }
 
+std::string fanValueToString(uint8_t value)
+{
+  switch (value) {
+    case zivid_interfaces::msg::CameraHealthFan::FAN_OK:
+      return "OK";
+    case zivid_interfaces::msg::CameraHealthFan::FAN_UNEXPECTED_STOP:
+      return "Unexpected fan stop";
+    default:
+      throw std::runtime_error("Unhandled camera health fan value: " + std::to_string(value));
+  }
+}
+
+// Formats seconds since the epoch as an ISO 8601 UTC date and time, e.g. "2025-10-27T09:56:55Z".
+// Uses the days-to-civil algorithm by Howard Hinnant, since std::gmtime is not thread-safe and
+// C++17 has no calendar support in <chrono>.
+std::string toIso8601Utc(int64_t seconds_since_epoch)
+{
+  constexpr int64_t seconds_per_day = 86400;
+  int64_t days = seconds_since_epoch / seconds_per_day;
+  int64_t seconds_of_day = seconds_since_epoch % seconds_per_day;
+  if (seconds_of_day < 0) {
+    seconds_of_day += seconds_per_day;
+    days -= 1;
+  }
+  const int64_t shifted_days = days + 719468;
+  const int64_t era = (shifted_days >= 0 ? shifted_days : shifted_days - 146096) / 146097;
+  const int64_t day_of_era = shifted_days - era * 146097;
+  const int64_t year_of_era =
+    (day_of_era - day_of_era / 1460 + day_of_era / 36524 - day_of_era / 146096) / 365;
+  const int64_t day_of_year =
+    day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
+  const int64_t month_index = (5 * day_of_year + 2) / 153;
+  const int64_t day = day_of_year - (153 * month_index + 2) / 5 + 1;
+  const int64_t month = month_index < 10 ? month_index + 3 : month_index - 9;
+  const int64_t year = year_of_era + era * 400 + (month <= 2 ? 1 : 0);
+
+  std::ostringstream stream;
+  stream << std::setfill('0') << std::setw(4) << year << '-' << std::setw(2) << month << '-'
+         << std::setw(2) << day << 'T' << std::setw(2) << seconds_of_day / 3600 << ':'
+         << std::setw(2) << seconds_of_day / 60 % 60 << ':' << std::setw(2) << seconds_of_day % 60
+         << 'Z';
+  return stream.str();
+}
+
 diagnostic_msgs::msg::KeyValue makeKeyValue(const std::string & key, const std::string & value)
 {
   diagnostic_msgs::msg::KeyValue key_value;
@@ -169,10 +216,7 @@ void appendDiagnosticValues(DiagnosticStatus & status, const CameraHealthMsg & h
 
   appendCheck(status, "Fan", health.fan);
   if (health.fan.has_value) {
-    status.values.push_back(makeKeyValue(
-      "Fan", health.fan.value == zivid_interfaces::msg::CameraHealthFan::FAN_OK
-               ? "OK"
-               : "Unexpected fan stop"));
+    status.values.push_back(makeKeyValue("Fan", fanValueToString(health.fan.value)));
   }
 
   appendCheck(status, "Memory", health.memory);
@@ -184,8 +228,8 @@ void appendDiagnosticValues(DiagnosticStatus & status, const CameraHealthMsg & h
   appendCheck(status, "Infield verification", health.infield_verification);
   if (health.infield_verification.has_value) {
     status.values.push_back(makeKeyValue(
-      "Last infield verification (seconds since epoch)",
-      std::to_string(health.infield_verification.last_verification.sec)));
+      "Last infield verification",
+      toIso8601Utc(health.infield_verification.last_verification.sec)));
   }
 }
 
@@ -208,10 +252,10 @@ uint8_t toRosStatus(const ZividStatus & status)
   }
 }
 
-template <typename RosCheck, typename ZividCheck>
-RosCheck toRosTemperature(const ZividCheck & check)
+template <typename ZividCheck>
+zivid_interfaces::msg::CameraHealthTemperature toRosTemperature(const ZividCheck & check)
 {
-  RosCheck result;
+  zivid_interfaces::msg::CameraHealthTemperature result;
   result.status = toRosStatus(check.status());
   result.has_value = check.value().hasValue();
   if (result.has_value) {
@@ -265,10 +309,9 @@ zivid_interfaces::msg::CameraHealth toRosCameraHealth(const Zivid::CameraHealth 
     msg.max_transfer_speed.value_mbps = transfer_speed.value().value();
   }
 
-  using zivid_interfaces::msg::CameraHealthTemperature;
-  msg.temperature_dmd = toRosTemperature<CameraHealthTemperature>(health.temperature().dmd());
-  msg.temperature_led = toRosTemperature<CameraHealthTemperature>(health.temperature().led());
-  msg.temperature_lens = toRosTemperature<CameraHealthTemperature>(health.temperature().lens());
+  msg.temperature_dmd = toRosTemperature(health.temperature().dmd());
+  msg.temperature_led = toRosTemperature(health.temperature().led());
+  msg.temperature_lens = toRosTemperature(health.temperature().lens());
 
   const auto & fan = health.fan();
   msg.fan.status = toRosStatus(fan.status());

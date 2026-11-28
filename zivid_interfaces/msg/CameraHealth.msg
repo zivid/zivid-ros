@@ -6,6 +6,9 @@
 #
 # A check that was not performed, or whose outcome could not be determined, has status STATUS_UNKNOWN. For example, all
 # checks are STATUS_UNKNOWN for a file camera.
+#
+# The thresholds that determine each status are defined by the Zivid SDK and can change between SDK versions. See the
+# Zivid SDK documentation of CameraHealth for the thresholds of the SDK in use.
 
 # Optimal.
 uint8 STATUS_OK = 0
@@ -20,27 +23,27 @@ uint8 STATUS_UNKNOWN = 3
 uint8 overall
 
 # End-to-end link speed between the camera and the host computer, the minimum of the camera's and the PC's link speed.
-#   - STATUS_OK: Max transfer speed > 1 Gbps.
-#   - STATUS_SUBOPTIMAL: Max transfer speed = 1 Gbps.
-#   - STATUS_ERROR: Max transfer speed < 1 Gbps.
+#   - STATUS_OK: The link is fast enough for optimal performance.
+#   - STATUS_SUBOPTIMAL: The link works, but limits performance.
+#   - STATUS_ERROR: The link is too slow.
 CameraHealthMaxTransferSpeed max_transfer_speed
 
 # DMD (Digital Micromirror Device) temperature.
-#   - STATUS_OK: Temperature in (0, 50) degrees Celsius.
-#   - STATUS_SUBOPTIMAL: Temperature in [50, 60] degrees Celsius.
-#   - STATUS_ERROR: Temperature < 0 or > 60 degrees Celsius.
+#   - STATUS_OK: Within the normal operating range.
+#   - STATUS_SUBOPTIMAL: Elevated, but within the operating range.
+#   - STATUS_ERROR: Outside the operating range.
 CameraHealthTemperature temperature_dmd
 
 # LED temperature.
-#   - STATUS_OK: Temperature in (0, 60) degrees Celsius.
-#   - STATUS_SUBOPTIMAL: Temperature in [60, 70] degrees Celsius.
-#   - STATUS_ERROR: Temperature < 0 or > 70 degrees Celsius.
+#   - STATUS_OK: Within the normal operating range.
+#   - STATUS_SUBOPTIMAL: Elevated, but within the operating range.
+#   - STATUS_ERROR: Outside the operating range.
 CameraHealthTemperature temperature_led
 
 # Lens temperature.
-#   - STATUS_OK: Temperature in (0, 50) degrees Celsius.
-#   - STATUS_SUBOPTIMAL: Temperature in [50, 60] degrees Celsius.
-#   - STATUS_ERROR: Temperature < 0 or > 60 degrees Celsius.
+#   - STATUS_OK: Within the normal operating range.
+#   - STATUS_SUBOPTIMAL: Elevated, but within the operating range.
+#   - STATUS_ERROR: Outside the operating range.
 CameraHealthTemperature temperature_lens
 
 # The camera's fan.
@@ -55,7 +58,7 @@ CameraHealthFan fan
 CameraHealthMemory memory
 
 # The camera's most recent infield verification.
-#   - STATUS_OK: Last verification performed within the past year.
-#   - STATUS_SUBOPTIMAL: Last verification older than one year.
-#   - STATUS_UNKNOWN: Camera has never been verified in the field.
+#   - STATUS_OK: The camera was verified in the field recently.
+#   - STATUS_SUBOPTIMAL: The last verification is old.
+#   - STATUS_UNKNOWN: The camera has never been verified in the field.
 CameraHealthInfieldVerification infield_verification

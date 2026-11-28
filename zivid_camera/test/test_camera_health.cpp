@@ -387,9 +387,7 @@ TEST_F(CameraHealthConversionTest, testDiagnosticStatusSynthetic)
   EXPECT_EQ(findValue(status, "Memory status"), "Error");
   EXPECT_EQ(findValue(status, "Memory error count"), "3");
   EXPECT_EQ(findValue(status, "Infield verification status"), "OK");
-  EXPECT_EQ(
-    findValue(status, "Last infield verification (seconds since epoch)"),
-    std::to_string(synthetic_infield_verification_time));
+  EXPECT_EQ(findValue(status, "Last infield verification"), "2025-11-24T16:00:00Z");
 }
 
 TEST_F(CameraHealthConversionTest, testDiagnosticStatusRealCameras)
@@ -399,6 +397,7 @@ TEST_F(CameraHealthConversionTest, testDiagnosticStatusRealCameras)
     xl250_status, convert(camera_health_zivid3_xl250_yaml));
   EXPECT_EQ(xl250_status.level, DiagnosticStatus::WARN);
   EXPECT_EQ(xl250_status.message, "Suboptimal: Infield verification");
+  EXPECT_EQ(findValue(xl250_status, "Last infield verification"), "2025-10-27T09:56:55Z");
 
   // The overall status is Unknown only because the camera was never verified in the field. That
   // must not hide that all other checks are OK.
